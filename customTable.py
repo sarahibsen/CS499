@@ -1,30 +1,9 @@
 import tkinter as tk
-from pandastable import Table, ToolBar
+from tkinter import simpledialog
+
+from pandastable import Table, ToolBar, RowHeader, ColumnHeader
 from pandastable.dialogs import addButton
 
-
-class CustomTable():
-      """ Table class without inheritance from pandastable Table class. 
-      Only 'import csv' is active, unwanted toolbar buttons are destroyed by checking button text.
-      Tkinter frame only for testing, in deployment we would use the figma tkinter framework and
-      only instantiate our custom table class """
-
-      def __init__(self):
-        root = tk.Tk()
-        root.title("Statistical Analyzer")
-        frame = tk.Frame(root)
-        frame.pack(fill='both', expand=True)
-
-        table = Table(frame, showtoolbar=True, showstatusbar=False)
-        table.show()
-
-        toolbar = table.toolbar
-        for button in toolbar.winfo_children(): # Instead of subclassing ToolBar, we can remove buttons from the toolbar by text name
-                if button.cget("text") in ["Save", "Copy", "Paste", "Plot", "Table from selection", "Clear", "Load excel", "Load table", "Transpose", "Aggregate", "Pivot", "Melt", "Merge", "Query", "Evaluate function", "Stats models"]:
-                        button.destroy()
-
-        # Run the main loop
-        root.mainloop()
 
 class GUIToolbar(ToolBar):
     """ Inherits from pandastable ToolBar class to only show 'import csv' button """
@@ -63,58 +42,126 @@ class GUIToolbar(ToolBar):
         addButton(self, 'Import', self.func, self.img, 'import csv')
 
 
+class CustomRowHeader(RowHeader):
+        """ Subclass to remove row menu options not needed """
+        def __init__(self, parent, **kwargs):
+                RowHeader.__init__(self, parent, **kwargs)
+                return
+        
+        def popupMenu(self, event, rows=None, cols=None, outside=None):
+                """Add left and right click behaviour for canvas, should not have to override
+                this function, it will take its values from defined dicts in constructor"""
+
+                defaultactions = {"Add Row(s)" : lambda: self.table.addRows(),
+                                  "Delete Row(s)" : lambda: self.table.deleteRow(ask=True)}
+
+                main = ["Add Row(s)","Delete Row(s)"]
+
+                popupmenu = Menu(self, tearoff = 0)
+                def popupFocusOut(event):
+                        popupmenu.unpost()
+                for action in main:
+                        popupmenu.add_command(label=action, command=defaultactions[action])
+
+                popupmenu.bind("<FocusOut>", popupFocusOut)
+                popupmenu.focus_set()
+                popupmenu.post(event.x_root, event.y_root)
+                applyStyle(popupmenu)
+                return popupmenu
+
 class GUITable(Table):
     """ Extends the Table class within pandastable. 
         Intention would be to override the toolbar variable
         to a custom toolbar we define """
     
     def __init__(self, parent, **kwargs):
-        super().__init__(parent, **kwargs)
-
-        def show(self, callback=None):
-                """Adds column header and scrollbars and combines them with
-                the current table adding all to the master frame provided in constructor.
-                Table is then redrawn."""
-                
-                #Add the table and header to the frame
-                self.rowheader = super().RowHeader(self.parentframe, self)
-                self.colheader = super().ColumnHeader(self.parentframe, self, bg='gray25')
-                self.rowindexheader = super().IndexHeader(self.parentframe, self, bg='gray75')
-                self.Yscrollbar = super().AutoScrollbar(self.parentframe,orient=super().VERTICAL,command=self.set_yviews)
-                self.Yscrollbar.grid(row=1,column=2,rowspan=1,sticky='news',pady=0,ipady=0)
-                self.Xscrollbar = super().AutoScrollbar(self.parentframe,orient=super().HORIZONTAL,command=self.set_xviews)
-                self.Xscrollbar.grid(row=2,column=1,columnspan=1,sticky='news')
-                self['xscrollcommand'] = self.Xscrollbar.set
-                self['yscrollcommand'] = self.Yscrollbar.set
-                self.colheader['xscrollcommand'] = self.Xscrollbar.set
-                self.rowheader['yscrollcommand'] = self.Yscrollbar.set
-                self.parentframe.rowconfigure(1,weight=1)
-                self.parentframe.columnconfigure(1,weight=1)
-
-                self.rowindexheader.grid(row=0,column=0,rowspan=1,sticky='news')
-                self.colheader.grid(row=0,column=1,rowspan=1,sticky='news')
-                self.rowheader.grid(row=1,column=0,rowspan=1,sticky='news')
-                self.grid(row=1,column=1,rowspan=1,sticky='news',pady=0,ipady=0)
-
-                self.adjustColumnWidths()
-                #bind redraw to resize, may trigger redraws when widgets added
-                self.parentframe.bind("<Configure>", self.resized) #self.redrawVisible)
-                self.colheader.xview("moveto", 0)
-                self.xview("moveto", 0)
-                if self.showtoolbar == True:
-                        self.toolbar = GUIToolbar(self.parentframe, self)
-                        self.toolbar.grid(row=0,column=3,rowspan=2,sticky='news')
-                if self.showstatusbar == True:
-                        self.statusbar = super().statusBar(self.parentframe, self)
-                        self.statusbar.grid(row=3,column=0,columnspan=2,sticky='ew')
-                #self.redraw(callback=callback)
-                self.currwidth = self.parentframe.winfo_width()
-                self.currheight = self.parentframe.winfo_height()
-                if hasattr(self, 'pf'):
-                        self.pf.updateData()
+        Table.__init__(self, parent, **kwargs)
+        return
+    
+    def addRows(self, num=None):
+        """ Add new rows
+        Override Table add row number dialog to correct 'Now Many Rows' text and
+        need to correct auto integer datatype conversion to float
+        when adding new rows """
+        if num == None:
+                num = simpledialog.askinteger("How many rows?",
+                                                "Number of rows:",initialvalue=1,
+                                                parent=self.parentframe)
+        if not num:
                 return
-                #Table.toolbar = guiToolbar(parent, self)
+        self.storeCurrent()
+        keys = self.model.autoAddRows(num)
+        self.update_rowcolors()
+        self.redraw()
+        self.tableChanged()
+        return
 
+#     def show(self, callback=None):
+#         """Adds column header and scrollbars and combines them with
+#         the current table adding all to the master frame provided in constructor.
+#         Table is then redrawn."""
+                
+        # Add the table and header to the frame
+        # self.rowheader = CustomRowHeader(self.parentframe, self)
+        # self.colheader = ColumnHeader(self.parentframe, self, bg='gray25')
+        # self.rowindexheader = self.IndexHeader(self.parentframe, self, bg='gray75')
+        # self.Yscrollbar = self.AutoScrollbar(self.parentframe,orient=self.VERTICAL,command=self.set_yviews)
+        # self.Yscrollbar.grid(row=1,column=2,rowspan=1,sticky='news',pady=0,ipady=0)
+        # self.Xscrollbar = self.AutoScrollbar(self.parentframe,orient=self.HORIZONTAL,command=self.set_xviews)
+        # self.Xscrollbar.grid(row=2,column=1,columnspan=1,sticky='news')
+        # self['xscrollcommand'] = self.Xscrollbar.set
+        # self['yscrollcommand'] = self.Yscrollbar.set
+        # self.colheader['xscrollcommand'] = self.Xscrollbar.set
+        # self.rowheader['yscrollcommand'] = self.Yscrollbar.set
+        # self.parentframe.rowconfigure(1,weight=1)
+        # self.parentframe.columnconfigure(1,weight=1)
+
+        # self.rowindexheader.grid(row=0,column=0,rowspan=1,sticky='news')
+        # self.colheader.grid(row=0,column=1,rowspan=1,sticky='news')
+        # self.rowheader.grid(row=1,column=0,rowspan=1,sticky='news')
+        # self.grid(row=1,column=1,rowspan=1,sticky='news',pady=0,ipady=0)
+
+        # self.adjustColumnWidths()
+        # #bind redraw to resize, may trigger redraws when widgets added
+        # self.parentframe.bind("<Configure>", self.resized) #self.redrawVisible)
+        # self.colheader.xview("moveto", 0)
+        # self.xview("moveto", 0)
+        # if self.showtoolbar == True:
+        #         self.toolbar = GUIToolbar(self.parentframe, self)
+        #         self.toolbar.grid(row=0,column=3,rowspan=2,sticky='news')
+        # if self.showstatusbar == True:
+        #         self.statusbar = self.statusBar(self.parentframe, self)
+        #         self.statusbar.grid(row=3,column=0,columnspan=2,sticky='ew')
+        #         #self.redraw(callback=callback)
+        # self.currwidth = self.parentframe.winfo_width()
+        # self.currheight = self.parentframe.winfo_height()
+        # if hasattr(self, 'pf'):
+        #         self.pf.updateData()
+        # return
+        
+
+class CustomTable(GUITable):
+      """ Table class without inheritance from pandastable Table class. 
+      Only 'import csv' is active, unwanted toolbar buttons are destroyed by checking button text.
+      Tkinter frame only for testing, in deployment we would use the figma tkinter framework and
+      only instantiate our custom table class """
+
+      def __init__(self):
+        root = tk.Tk()
+        root.title("Statistical Analyzer")
+        frame = tk.Frame(root)
+        frame.pack(fill='both', expand=True)
+
+        table = GUITable(frame, showtoolbar=True, showstatusbar=False)
+        table.show()
+
+        toolbar = table.toolbar
+        for button in toolbar.winfo_children(): # Instead of subclassing ToolBar, we can remove buttons from the toolbar by text name
+                if button.cget("text") in ["Save", "Copy", "Paste", "Plot", "Table from selection", "Clear", "Load excel", "Load table", "Transpose", "Aggregate", "Pivot", "Melt", "Merge", "Query", "Evaluate function", "Stats models"]:
+                        button.destroy()
+
+        # Run the main loop
+        root.mainloop()
 
 if __name__ == "__main__":
         CustomTable()
