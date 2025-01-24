@@ -1,0 +1,145 @@
+= Statistical Analyzer [STAT]
+Sarah Ibsen; Natalia Miller; Jarett Miller; Matthew Sim;
+:doctitle: Statistical Analyzer [STAT]
+:toc:
+
+== Project Overview
+This project aims to design and implement a software solution for users to input data, select statistical operations to perform on the data, and visualize the results using different types of graphs. The application will cater to both novice and advanced users by providing an easy-to-use interface with flexibility for more complex statistical operations. 
+
+
+== Project Schedule
+.Timeline View of Project Schedule
+
+[cols = "1,1,1,1"]
+|===
+|*Schedule* | *Frontend* | *Backend* | *Security*
+|01/12 - 01/19 |  Wireframe | Design Brief | Coding Standards
+|01/20 - 01/26 | Implement basic form fields | Create statistic functions | Parsing Logic for CSV / TXT files 
+|01/27 - 02/02 | Implement real-time feedback/input validation for data selection | Code review for CSV/TXT parsing | Initial Code review 
+|02/03 - 02/09 | Graphics | Integrate logging and auditing to help with debugging | Incorporate multi-selection for graphics selection 
+|02/10 - 02/16 | Ensure responsive design or cross-platform UI consistency | | Validate flows from file upload -> processing -> results -> graph generation
+|02/17 - 02/23 | Finalize UI/UX | MVP | MVP 
+|4/20 - 4/27 | Final Presentation | Final Presentation | Final Presentation
+|===
+=== Important Dates 
+* *1/26* SDP Presentation and Documentation
+* *2/23* Architectural Design Presentation 
+* *4/20* Final Presentation
+* *4/27* Final Project Due 
+
+
+== Team Members and Roles 
+
+*Name*: Sarah Ibsen
+
+*Primary Role*: Team Lead
+
+						* Moderate Team meetings and help with the communication process.
+						* Ensure that the project is on track and that all team members are completing their tasks.
+						* Help with the design and implementation of the software.
+	
+*Email*: sai0002@uah.edu
+
+*Current Assignments*:
+
+* AI-01:Research Libraries to use
+
+* AI-02: How do we want the app to be layed out? Classes/Functions/Mjor UI
+
+* AI-05: Compile a list of code standards we each have (name conventions, commenting, etc.)
+
+* AI-07: Set up github version control & repo
+
+* AI-08: Set up all stories and github issues for the project. 
+
+* AI-10: SDP document to be transformed into a presentation. 
+
+*Short Bio*: I am a Computer Science major with a minor in Art Studio, hopefully graduating December 2025. I am working as a Software Engineer Intern at Axient for 2 years, with my main projects being a full stack developer on an internal chat service, a VR video game for data analysts, and a semantic search chatbot to help search users documents to answer their queries.
+
+.Sarah
+image::images/sarah.png[Sarah]
+
+*Name*: Natalia Miller
+
+*Primary Role*: Admin
+
+*Email*: nnm000@uah.edu
+
+*Current Assignments*: AI-04, AI-09, US09, US10, US13, US14
+
+*Short Bio*: I am a Computer Science major with a concentration in Data Science and a minor in Math. I have been working part-time as a Junior Business Intelligence Analyst at i3 for 7 months, where my day-to-day projects involve data visualization and analytics using Power BI and/or Python.
+
+.Natalia
+image::images/natalia.png[natalia]
+
+*Name*: Jarrett Miller
+
+*Primary Role*: Software Developer
+
+*Email*: jm0283@uah.edu
+
+*Current Assignments*: AI-01, AI-02, AI-05, AI-06, AI-09, US01, US02, US03
+
+*Short Bio*: Computer Science major. I currently work full-time as a GIS specialist for a broadband engineering company where I help deploy and manage databases hosted through ArcGIS.
+
+.Jarrett
+image::images/jarrett.png[jarrett]
+
+
+*Name*: Matthew Sim
+
+*Primary Role*: Software Developer
+
+*Email*: mes0070@uah.edu
+
+*Current Assignments*: AI-01, AI-02, AI-07, AI-08, AI-09
+
+*Short Bio*: I am a Computer Science major. I previously worked as an IT intern at a utilities company in Pacific, MO where I coded scripts that modified users in Active Directory using .csv files and earned my Security+ certification. 
+
+.Matthew
+image::images/matthew.png[matthew]
+
+
+== Software Development Tools
+
+=== Primary Tools:
+	* GitHub for version control
+	* Figma for UI/UX design
+	* Github and Google Sheets for project management (using an Agile Environment)
+	* Python as the programming language 
+	
+	
+== Software Development Environments
+
+=== Development Environment
+	* Repository: GitHub
+	* Platform: Cross-Platform (Windows, MacOS, Linux)
+	* CI/CD Tools: GitHub Actions
+	
+	
+== Risks, Issues, and Opportunities 
+
+
+[cols = "1,1,1"]
+|===
+|*Risk Title*	|	*Risk Score*	|	*Mitigation*
+| Team member drop | 5 | Preload Tasks
+| Legacy Systems | 3 | Ensure libraries are up to date/when was the last version updated
+| Library chosen won't work the way we want it to. | 6 | Have back up libraries
+|Plagiarism or copyright infringement | 5 | Ensure that team members do not inadvertently include code that is not original or is protected by copyright.
+|Cross-Platform Incompatibilities| 8 | Test the application thoroughly on all platforms to ensure compatibility
+| Incompatible Statistical Calculations | 8 | Implement robust input validation, error handling, and data cleaning to catch issues like unexpected delimiters or characters
+|Incorrect Statistical Calculations| 8 | Implement a thorough testing process, using known data sets to verify that the statistical calculations are correct.
+|Inadequate Graphing| 8 | Thoroughly test each type of graph with various data sets to ensure correct display and accurate representation of data.
+|Difficult Code Expansion| 10 | Implement code reviews to ensure that new features are developed according to coding standards.
+|Library not compatible with required Operating Systems| 6 | Read the pypi.org operating system section for each library and test on all required operating systems early.
+|=== 
+
+
+
+
+
+== Lessons Learned 
+
+No lessons learned yet : ) 
+
