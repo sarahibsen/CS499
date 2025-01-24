@@ -108,6 +108,8 @@ class statistic():
         std_dev = self.standardDeviation()
         return std_dev / mean
     
+    
+    
 
     """
     additional math functions needed to add: 
@@ -155,8 +157,10 @@ class plotCreation():
 
     #TODO: create the rest of the functions for plotting <3 
     
-
+'''
 # Function to extract numeric columns
+# shouldn't need this function when jarrett implements the loading of csv and the extraction of numerical data from the file 
+# if not, this function will be used to extract the numerical data from the file
 def extract_numeric_data(dataframe):
     """
     Extract only numeric columns from a DataFrame and flatten the data.
@@ -170,6 +174,10 @@ def extract_numeric_data(dataframe):
     numeric_data = dataframe.select_dtypes(include=[np.number])
     return numeric_data.to_numpy().flatten()
 
+'''
+
+'''
+# Example usage of the Statistic class
 if __name__ == "__main__":
     # Path to the CSV file
     path = r"C:\Users\sarah\Desktop\programs\CS499\Test Data\FrequencyDataTest.csv"
@@ -197,3 +205,4 @@ if __name__ == "__main__":
     print("Standard Deviation:", standard_deviation)
     print("Variance:", stats.variance())
     print("Coefficient of Variation:", stats.coefficientOfVariation())
+'''

@@ -57,7 +57,7 @@ def relative_to_assets(path: str) -> Path:
     """
     # TODO: Change this path
     assets_path = Path(__file__).parent / Path(
-        r"C:\Users\natalia.miller\Downloads\stats\CS 499\assets"
+        r"assets"
     )
     return assets_path / Path(path)
 
