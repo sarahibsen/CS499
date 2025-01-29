@@ -29,6 +29,12 @@ class statistic():
             return self.median()
         elif userChoice == 'mode':
             return self.mode()
+        elif userChoice == 'variance':
+            return self.variance()
+        elif userChoice == 'standard deviation':
+            return self.standardDeviation()
+        elif userChoice == 'coefficient of variation':
+            return self.coefficientOfVariation()
         elif userChoice == 'percentiles':
             return self.percentiles()
         elif userChoice == 'probability distribution':
@@ -53,32 +59,100 @@ class statistic():
         """
         return np.mode(self.data)
     
-    def percentiles(self, percentiles):
+    def standardDeviation(self):
+        """
+        Calculate and return the sample standard deviation of the given data set.
+        Returns:
+            float: The sample standard deviation of the data.
+        """
+        # Validate the data
+        if not isinstance(self.data, (list, np.ndarray)):
+            raise TypeError("Data must be a list or NumPy array of numbers")
+        if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in self.data):
+            raise TypeError("All elements in the data must be numbers")
+        if len(self.data) == 0:
+            raise ValueError("Data cannot be empty")
+        
+        # Calculate and return the standard deviation
+        return np.std(self.data, ddof=1)
+    
+    def variance(self):
+        """
+        Calculate and return the sample variance of the given data set.
+        Returns:
+            float: The sample variance of the data.
+        """
+        # Validate the data
+        if not isinstance(self.data, (list, np.ndarray)):
+            raise TypeError("Data must be a list or NumPy array of numbers")
+        if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in self.data):
+            raise TypeError("All elements in the data must be numbers")
+        if len(self.data) == 0:
+            raise ValueError("Data cannot be empty")
+        
+        # Calculate and return the variance
+        return np.var(self.data, ddof=1)
+
+    def coefficientOfVariation(self):
+        """
+        Calculate and return the coefficient of variation of the given data set.
+        Returns:
+            float: The coefficient of variation of the data.
+        """
+        # Validate the data
+        if not isinstance(self.data, (list, np.ndarray)):
+            raise TypeError("Data must be a list or NumPy array of numbers")
+        if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in self.data):
+            raise TypeError("All elements in the data must be numbers")
+        if len(self.data) == 0:
+            raise ValueError("Data cannot be empty")
+        
+        # Calculate and return the coefficient of variation
+        mean = self.mean()
+        std_dev = self.standardDeviation()
+        return std_dev / mean
+    
+    def percentiles(self):
         """
         Return the specified percentiles for EACH COLUMN in the dataset (not row).
         Parameters:
-            percentiles (list): List of percentiles. (temporarily hardcoded an example w/ values [25, 50, 75] at line 152).
+            List of percentiles (to be integrated with graphing)
+            axis = 0 is for columns, axis = 1 is for rows, unspecified is for the entire dataset.
         """
         # TODO: Associate choice with H/V Bar graphs, Normal Distribution Curve, X-Y graph.
+        print("Would you like to calculate the percentiles for the columns or rows?")
+        axis = int(input("Enter '0' for columns or '1' for rows: ")) 
+        psequence = list(map(int, input("Enter the percentiles you would like to calculate (e.g. 25, 50, 75): ").split(",")))
 
-        result = {}
-        for column in self.data.columns:
-            result[column] = np.percentile(self.data[column].dropna(), percentiles, axis=0)
-        return result
-    
-    
+        return np.percentile(self.data, psequence, axis=axis)
+
     def ProbabilityDistribution(self):
         """
         Return the probability distribution of the data set
         """
-        loc = input("Enter the mean: ")
-        scale = input("Enter the standard deviation: ")
-        size = input("Enter the size of the sample: ")
+        loc = float(input("Enter the mean: "))
+        scale = float(input("Enter the standard deviation: "))
+        size = int(input("Enter the size of the sample: "))
         return np.random.normal(loc, scale, size)
+
     
-    # TODO: set up more of the statistics functions 
+    
+    
+
+    """
+    additional math functions needed to add: 
+    Percentiles 
+    Probability Distribution
+    Least Square Line
+    Chi Squared
+    Correlation Coefficient 
+    Rank Sum Test
+    Spearman rank correlation coefficient 
 
 
+    """
+
+    
 
 class plotCreation():
     def __init__(self, data):
@@ -110,8 +184,11 @@ class plotCreation():
         pass
 
     #TODO: create the rest of the functions for plotting <3 
-
-    # Function to extract numeric columns
+    
+'''
+# Function to extract numeric columns
+# shouldn't need this function when jarrett implements the loading of csv and the extraction of numerical data from the file 
+# if not, this function will be used to extract the numerical data from the file
 def extract_numeric_data(dataframe):
     """
     Extract only numeric columns from a DataFrame and flatten the data.
@@ -125,9 +202,13 @@ def extract_numeric_data(dataframe):
     numeric_data = dataframe.select_dtypes(include=[np.number])
     return numeric_data.to_numpy().flatten()
 
+'''
+
+'''
+# Example usage of the Statistic class
 if __name__ == "__main__":
     # Path to the CSV file
-    path = r"C:\Users\matte\Desktop\CS499 - copy\Test Data\OrdinalDataTest.csv"
+    path = r"C:\Users\sarah\Desktop\programs\CS499\Test Data\FrequencyDataTest.csv"
 
     # Load the CSV file
     try:
@@ -136,30 +217,24 @@ if __name__ == "__main__":
         print(f"Error reading the file: {e}")
         exit()
 
-    # Print the entire DataFrame
-    print("DataFrame content:\n", data)
-        
     # Extract numeric data
-    numeric_data = data.select_dtypes(include=[np.number])
+    numeric_data = extract_numeric_data(data)
     
-    if numeric_data.empty:
+    if numeric_data.size == 0:
         print("No numeric data found in the file.")
         exit()
+
 
     # Creating an instance of the Statistic class with the numeric data
     stats = statistic(numeric_data)
 
-    # Calculate the 25th, 50th (median), and 75th percentiles for each column
-    percentiles_to_calculate = [25, 50, 75]
-    percentiles_result = stats.percentiles(percentiles_to_calculate)
+    # Calculating the standard deviation
+    standard_deviation = stats.standardDeviation()
+    print("Standard Deviation:", standard_deviation)
+    print("Variance:", stats.variance())
+    print("Coefficient of Variation:", stats.coefficientOfVariation())
 
-    # Print the results
-    for column, values in percentiles_result.items():
-        print(f"Percentiles for column '{column}':")
-        for p, v in zip(percentiles_to_calculate, values):
-            print(f"  {p}th percentile: {v}")
-
-    # Calculating the mean
-    print("Mean:", stats.mean())
-
-
+    # Calculating inferential statistics
+    print("Percentiles:", stats.percentiles())
+    print("Probability Distribution:", stats.ProbabilityDistribution())
+'''
