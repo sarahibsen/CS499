@@ -47,8 +47,8 @@ class GUITable(Table):
         Intention would be to override the toolbar variable
         to a custom toolbar we define """
     
-    def __init__(self, parent, **kwargs):
-        Table.__init__(self, parent, **kwargs)
+    def __init__(self, parent, dataframe= None, **kwargs):
+        Table.__init__(self, parent, dataframe = dataframe,**kwargs)
         return
     
     def addRows(self, num=None):

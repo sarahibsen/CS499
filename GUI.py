@@ -1,7 +1,11 @@
 import tkinter as tk
-from tkinter import Canvas, Button, PhotoImage
+from tkinter import Canvas, Button, PhotoImage, filedialog
+import pandas as pd
+import numpy as np
 from pathlib import Path
 
+from customTable import *
+from statisticsLogic import *
 
 class App(tk.Tk):
     """
@@ -11,8 +15,8 @@ class App(tk.Tk):
         super().__init__()
         self.geometry("900x700")
         self.configure(bg="#FFFFFF")
-        self.resizable(False, False)
-        self.title("Multi-Page App")
+        #self.resizable(False, False)
+        self.title("Statistical Analyzer")
 
         # Container to hold all pages
         self.container = tk.Frame(self)
@@ -69,6 +73,8 @@ class BasePage(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
+
+
 
 
 def add_button(canvas, x, y, w, h, normal_image, hover_image, message, callback=None):
@@ -171,18 +177,64 @@ class LaunchPage(BasePage):
         """
         Display continue button when either the enter data or upload data button is clicked.
         """
-        print("upload_data called")
+        file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])  
+        if file_path:
+            try:
+                # Load the CSV data using pandas
+                data = pd.read_csv(file_path)
+                # Embed the custom table within this GUI
+                self.display_table(data)
+                
+                # Store numeric data and initialize statistics logic
+                numeric_data = data.select_dtypes(include=[np.number]).values.flatten()
+                self.stat_logic = statistic(numeric_data)
 
+                # Optionally show computed statistics (just to test)
+                print(f"Mean: {self.stat_logic.mean()}")
+                print(f"Standard Deviation: {self.stat_logic.standardDeviation()}")
+            
+            except Exception as e:
+                print(f"Error loading CSV: {e}")
         # TODO: Use input validation to determine whether continue button should display after user enters data
         #   this function can be appended to whatever function is created to add functionality to the enter data buttons
         self.continue_button.place(x=70, y=584, width=300, height=60)
 
+    def display_table(self, data):
+        """
+        embeds the custom table within the gui displaying the loaded data
+        """
+        # Create a Toplevel window for the popup
+        popup = tk.Toplevel(self)
+        popup.title("Data Table")
+        popup.geometry("800x600")  # Adjust the size as needed
+
+        # Create a frame inside the popup to host the table
+        table_frame = tk.Frame(popup)
+        table_frame.pack(fill='both', expand=True)
+
+        # Create and display the table using custom GUITable
+        table = GUITable(table_frame, dataframe=data, showtoolbar=True, showstatusbar=False)
+        table.show()
+        
+        # Store shared data for statistics logic
+        self.shared_data = {"numeric_data": data.select_dtypes(include=[np.number]).values.flatten()}
+        
     # TODO: Decide if this button is necessary. If yes, add functionality to this button by finishing this function
     def enter_data(self):
         """
         Display continue button when either the enter data or upload data button is clicked.
         """
-        print("enter_data called")
+        user_input = simpledialog.askstring("Enter Data", "Enter numeric calues separated by commas: ")
+        if user_input:
+            try:
+                data = np.array([float(x) for x in user_input.split(",")])
+                self.stat_logic = statistic(data)
+                print("Data entered successfully.")
+                
+                # show continue button
+                self.continue_button.place(x=70, y=584, width=300, height=60)
+            except ValueError:
+                print("Invalid data entered. Please enter numeric values separated by commas.")
 
         # TODO: Use input validation to determine whether continue button should display after user enters data
         #   this function can be appended to whatever function is created to add functionality to the enter data buttons
@@ -203,6 +255,10 @@ class MeasureSelectionPage(BasePage):
             highlightthickness=0, relief="ridge"
         )
         canvas.pack(fill="both", expand=True)
+
+        canvas.create_text(27, 0, anchor="nw", text="Select a statistic to calculate:",
+                           fill="#000000", font=("Roboto Light", 24))
+# TODO: create a drop down menu for the user to select the statistic 
 
         # ----- Background ----- #
         canvas.create_rectangle(0, 0, 900, 700, fill="#FFFFFF", outline="")
