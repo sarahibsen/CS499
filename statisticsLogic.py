@@ -1,6 +1,6 @@
 import numpy as np
 import sys 
-import pandas 
+import pandas as pd
 import matplotlib.pyplot as plt
 import tkinter 
 
@@ -55,9 +55,76 @@ class statistic():
         """
         return np.mode(self.data)
     
-    # TODO: set up more of the statistics functions 
+    def standardDeviation(self):
+        """
+        Calculate and return the sample standard deviation of the given data set.
+        Returns:
+            float: The sample standard deviation of the data.
+        """
+        # Validate the data
+        if not isinstance(self.data, (list, np.ndarray)):
+            raise TypeError("Data must be a list or NumPy array of numbers")
+        if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in self.data):
+            raise TypeError("All elements in the data must be numbers")
+        if len(self.data) == 0:
+            raise ValueError("Data cannot be empty")
+        
+        # Calculate and return the standard deviation
+        return np.std(self.data, ddof=1)
+    
+    def variance(self):
+        """
+        Calculate and return the sample variance of the given data set.
+        Returns:
+            float: The sample variance of the data.
+        """
+        # Validate the data
+        if not isinstance(self.data, (list, np.ndarray)):
+            raise TypeError("Data must be a list or NumPy array of numbers")
+        if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in self.data):
+            raise TypeError("All elements in the data must be numbers")
+        if len(self.data) == 0:
+            raise ValueError("Data cannot be empty")
+        
+        # Calculate and return the variance
+        return np.var(self.data, ddof=1)
+
+    def coefficientOfVariation(self):
+        """
+        Calculate and return the coefficient of variation of the given data set.
+        Returns:
+            float: The coefficient of variation of the data.
+        """
+        # Validate the data
+        if not isinstance(self.data, (list, np.ndarray)):
+            raise TypeError("Data must be a list or NumPy array of numbers")
+        if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in self.data):
+            raise TypeError("All elements in the data must be numbers")
+        if len(self.data) == 0:
+            raise ValueError("Data cannot be empty")
+        
+        # Calculate and return the coefficient of variation
+        mean = self.mean()
+        std_dev = self.standardDeviation()
+        return std_dev / mean
+    
+    
+    
+
+    """
+    additional math functions needed to add: 
+    Percentiles 
+    Probability Distribution
+    Least Square Line
+    Chi Squared
+    Correlation Coefficient 
+    Rank Sum Test
+    Spearman rank correlation coefficient 
 
 
+    """
+
+    
 
 class plotCreation():
     def __init__(self, data):
@@ -89,4 +156,4 @@ class plotCreation():
         pass
 
     #TODO: create the rest of the functions for plotting <3 
-    
+

@@ -1,0 +1,316 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?asciidoc-toc?>
+<?asciidoc-numbered?>
+<article xmlns="http://docbook.org/ns/docbook" xmlns:xl="http://www.w3.org/1999/xlink" version="5.0" xml:lang="en">
+<info>
+<title>Statistical Analyzer [STAT]</title>
+<date>2025-01-23</date>
+<authorgroup>
+<author>
+<personname>
+<firstname>Sarah</firstname>
+<surname>Ibsen</surname>
+</personname>
+</author>
+<author>
+<personname>
+<firstname>Natalia</firstname>
+<surname>Miller</surname>
+</personname>
+</author>
+<author>
+<personname>
+<firstname>Jarett</firstname>
+<surname>Miller</surname>
+</personname>
+</author>
+<author>
+<personname>
+<firstname>Matthew</firstname>
+<surname>Sim</surname>
+</personname>
+</author>
+</authorgroup>
+</info>
+<section xml:id="_project_overview">
+<title>Project Overview</title>
+<simpara>This project aims to design and implement a software solution for users to input data, select statistical operations to perform on the data, and visualize the results using different types of graphs. The application will cater to both novice and advanced users by providing an easy-to-use interface with flexibility for more complex statistical operations.</simpara>
+</section>
+<section xml:id="_project_schedule">
+<title>Project Schedule</title>
+<table frame="all" rowsep="1" colsep="1">
+<title>Timeline View of Project Schedule</title>
+<tgroup cols="4">
+<colspec colname="col_1" colwidth="25*"/>
+<colspec colname="col_2" colwidth="25*"/>
+<colspec colname="col_3" colwidth="25*"/>
+<colspec colname="col_4" colwidth="25*"/>
+<tbody>
+<row>
+<entry align="left" valign="top"><simpara><emphasis role="strong">Schedule</emphasis></simpara></entry>
+<entry align="left" valign="top"><simpara><emphasis role="strong">Frontend</emphasis></simpara></entry>
+<entry align="left" valign="top"><simpara><emphasis role="strong">Backend</emphasis></simpara></entry>
+<entry align="left" valign="top"><simpara><emphasis role="strong">Security</emphasis></simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>01/12 - 01/19</simpara></entry>
+<entry align="left" valign="top"><simpara>Wireframe</simpara></entry>
+<entry align="left" valign="top"><simpara>Design Brief</simpara></entry>
+<entry align="left" valign="top"><simpara>Coding Standards</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>01/20 - 01/26</simpara></entry>
+<entry align="left" valign="top"><simpara>Implement basic form fields</simpara></entry>
+<entry align="left" valign="top"><simpara>Create statistic functions</simpara></entry>
+<entry align="left" valign="top"><simpara>Parsing Logic for CSV / TXT files</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>01/27 - 02/02</simpara></entry>
+<entry align="left" valign="top"><simpara>Implement real-time feedback/input validation for data selection</simpara></entry>
+<entry align="left" valign="top"><simpara>Code review for CSV/TXT parsing</simpara></entry>
+<entry align="left" valign="top"><simpara>Initial Code review</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>02/03 - 02/09</simpara></entry>
+<entry align="left" valign="top"><simpara>Graphics</simpara></entry>
+<entry align="left" valign="top"><simpara>Integrate logging and auditing to help with debugging</simpara></entry>
+<entry align="left" valign="top"><simpara>Incorporate multi-selection for graphics selection</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>02/10 - 02/16</simpara></entry>
+<entry align="left" valign="top"><simpara>Ensure responsive design or cross-platform UI consistency</simpara></entry>
+<entry align="left" valign="top"></entry>
+<entry align="left" valign="top"><simpara>Validate flows from file upload &#8594; processing &#8594; results &#8594; graph generation</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>02/17 - 02/23</simpara></entry>
+<entry align="left" valign="top"><simpara>Finalize UI/UX</simpara></entry>
+<entry align="left" valign="top"><simpara>MVP</simpara></entry>
+<entry align="left" valign="top"><simpara>MVP</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>4/20 - 4/27</simpara></entry>
+<entry align="left" valign="top"><simpara>Final Presentation</simpara></entry>
+<entry align="left" valign="top"><simpara>Final Presentation</simpara></entry>
+<entry align="left" valign="top"><simpara>Final Presentation</simpara></entry>
+</row>
+</tbody>
+</tgroup>
+</table>
+<section xml:id="_important_dates">
+<title>Important Dates</title>
+<itemizedlist>
+<listitem>
+<simpara><emphasis role="strong">1/26</emphasis> SDP Presentation and Documentation</simpara>
+</listitem>
+<listitem>
+<simpara><emphasis role="strong">2/23</emphasis> Architectural Design Presentation</simpara>
+</listitem>
+<listitem>
+<simpara><emphasis role="strong">4/20</emphasis> Final Presentation</simpara>
+</listitem>
+<listitem>
+<simpara><emphasis role="strong">4/27</emphasis> Final Project Due</simpara>
+</listitem>
+</itemizedlist>
+</section>
+</section>
+<section xml:id="_team_members_and_roles">
+<title>Team Members and Roles</title>
+<simpara><emphasis role="strong">Name</emphasis>: Sarah Ibsen</simpara>
+<simpara><emphasis role="strong">Primary Role</emphasis>: Team Lead</simpara>
+<itemizedlist>
+<listitem>
+<simpara>Moderate Team meetings and help with the communication process.</simpara>
+</listitem>
+<listitem>
+<simpara>Ensure that the project is on track and that all team members are completing their tasks.</simpara>
+</listitem>
+<listitem>
+<simpara>Help with the design and implementation of the software.</simpara>
+</listitem>
+</itemizedlist>
+<simpara><emphasis role="strong">Email</emphasis>: <link xl:href="mailto:sai0002@uah.edu">sai0002@uah.edu</link></simpara>
+<simpara><emphasis role="strong">Current Assignments</emphasis>:</simpara>
+<itemizedlist>
+<listitem>
+<simpara>AI-01:Research Libraries to use</simpara>
+</listitem>
+<listitem>
+<simpara>AI-02: How do we want the app to be layed out? Classes/Functions/Mjor UI</simpara>
+</listitem>
+<listitem>
+<simpara>AI-05: Compile a list of code standards we each have (name conventions, commenting, etc.)</simpara>
+</listitem>
+<listitem>
+<simpara>AI-07: Set up github version control &amp; repo</simpara>
+</listitem>
+<listitem>
+<simpara>AI-08: Set up all stories and github issues for the project.</simpara>
+</listitem>
+<listitem>
+<simpara>AI-10: SDP document to be transformed into a presentation.</simpara>
+</listitem>
+</itemizedlist>
+<simpara><emphasis role="strong">Short Bio</emphasis>: I am a Computer Science major with a minor in Art Studio, hopefully graduating December 2025. I am working as a Software Engineer Intern at Axient for 2 years, with my main projects being a full stack developer on an internal chat service, a VR video game for data analysts, and a semantic search chatbot to help search users documents to answer their queries.</simpara>
+<figure>
+<title>Sarah</title>
+<mediaobject>
+<imageobject>
+<imagedata fileref="images/sarah.png"/>
+</imageobject>
+<textobject><phrase>Sarah</phrase></textobject>
+</mediaobject>
+</figure>
+<simpara><emphasis role="strong">Name</emphasis>: Natalia Miller</simpara>
+<simpara><emphasis role="strong">Primary Role</emphasis>: Admin</simpara>
+<simpara><emphasis role="strong">Email</emphasis>: <link xl:href="mailto:nnm000@uah.edu">nnm000@uah.edu</link></simpara>
+<simpara><emphasis role="strong">Current Assignments</emphasis>: AI-04, AI-09, US09, US10, US13, US14</simpara>
+<simpara><emphasis role="strong">Short Bio</emphasis>: I am a Computer Science major with a concentration in Data Science and a minor in Math. I have been working part-time as a Junior Business Intelligence Analyst at i3 for 7 months, where my day-to-day projects involve data visualization and analytics using Power BI and/or Python.</simpara>
+<figure>
+<title>Natalia</title>
+<mediaobject>
+<imageobject>
+<imagedata fileref="images/natalia.png"/>
+</imageobject>
+<textobject><phrase>natalia</phrase></textobject>
+</mediaobject>
+</figure>
+<simpara><emphasis role="strong">Name</emphasis>: Jarrett Miller</simpara>
+<simpara><emphasis role="strong">Primary Role</emphasis>: Software Developer</simpara>
+<simpara><emphasis role="strong">Email</emphasis>: <link xl:href="mailto:jm0283@uah.edu">jm0283@uah.edu</link></simpara>
+<simpara><emphasis role="strong">Current Assignments</emphasis>: AI-01, AI-02, AI-05, AI-06, AI-09, US01, US02, US03</simpara>
+<simpara><emphasis role="strong">Short Bio</emphasis>: Computer Science major. I currently work full-time as a GIS specialist for a broadband engineering company where I help deploy and manage databases hosted through ArcGIS.</simpara>
+<figure>
+<title>Jarrett</title>
+<mediaobject>
+<imageobject>
+<imagedata fileref="images/jarrett.png"/>
+</imageobject>
+<textobject><phrase>jarrett</phrase></textobject>
+</mediaobject>
+</figure>
+<simpara><emphasis role="strong">Name</emphasis>: Matthew Sim</simpara>
+<simpara><emphasis role="strong">Primary Role</emphasis>: Software Developer</simpara>
+<simpara><emphasis role="strong">Email</emphasis>: <link xl:href="mailto:mes0070@uah.edu">mes0070@uah.edu</link></simpara>
+<simpara><emphasis role="strong">Current Assignments</emphasis>: AI-01, AI-02, AI-07, AI-08, AI-09</simpara>
+<simpara><emphasis role="strong">Short Bio</emphasis>: I am a Computer Science major. I previously worked as an IT intern at a utilities company in Pacific, MO where I coded scripts that modified users in Active Directory using .csv files and earned my Security+ certification.</simpara>
+<figure>
+<title>Matthew</title>
+<mediaobject>
+<imageobject>
+<imagedata fileref="images/matthew.png"/>
+</imageobject>
+<textobject><phrase>matthew</phrase></textobject>
+</mediaobject>
+</figure>
+</section>
+<section xml:id="_software_development_tools">
+<title>Software Development Tools</title>
+<section xml:id="_primary_tools">
+<title>Primary Tools:</title>
+<itemizedlist>
+<listitem>
+<simpara>GitHub for version control</simpara>
+</listitem>
+<listitem>
+<simpara>Figma for UI/UX design</simpara>
+</listitem>
+<listitem>
+<simpara>Github and Google Sheets for project management (using an Agile Environment)</simpara>
+</listitem>
+<listitem>
+<simpara>Python as the programming language</simpara>
+</listitem>
+</itemizedlist>
+</section>
+</section>
+<section xml:id="_software_development_environments">
+<title>Software Development Environments</title>
+<section xml:id="_development_environment">
+<title>Development Environment</title>
+<itemizedlist>
+<listitem>
+<simpara>Repository: GitHub</simpara>
+</listitem>
+<listitem>
+<simpara>Platform: Cross-Platform (Windows, MacOS, Linux)</simpara>
+</listitem>
+<listitem>
+<simpara>CI/CD Tools: GitHub Actions</simpara>
+</listitem>
+</itemizedlist>
+</section>
+</section>
+<section xml:id="_risks_issues_and_opportunities">
+<title>Risks, Issues, and Opportunities</title>
+<informaltable frame="all" rowsep="1" colsep="1">
+<tgroup cols="3">
+<colspec colname="col_1" colwidth="33.3333*"/>
+<colspec colname="col_2" colwidth="33.3333*"/>
+<colspec colname="col_3" colwidth="33.3334*"/>
+<tbody>
+<row>
+<entry align="left" valign="top"><simpara><emphasis role="strong">Risk Title</emphasis></simpara></entry>
+<entry align="left" valign="top"><simpara><emphasis role="strong">Risk Score</emphasis></simpara></entry>
+<entry align="left" valign="top"><simpara><emphasis role="strong">Mitigation</emphasis></simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>Team member drop</simpara></entry>
+<entry align="left" valign="top"><simpara>5</simpara></entry>
+<entry align="left" valign="top"><simpara>Preload Tasks</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>Legacy Systems</simpara></entry>
+<entry align="left" valign="top"><simpara>3</simpara></entry>
+<entry align="left" valign="top"><simpara>Ensure libraries are up to date/when was the last version updated</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>Library chosen won&#8217;t work the way we want it to.</simpara></entry>
+<entry align="left" valign="top"><simpara>6</simpara></entry>
+<entry align="left" valign="top"><simpara>Have back up libraries</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>Plagiarism or copyright infringement</simpara></entry>
+<entry align="left" valign="top"><simpara>5</simpara></entry>
+<entry align="left" valign="top"><simpara>Ensure that team members do not inadvertently include code that is not original or is protected by copyright.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>Cross-Platform Incompatibilities</simpara></entry>
+<entry align="left" valign="top"><simpara>8</simpara></entry>
+<entry align="left" valign="top"><simpara>Test the application thoroughly on all platforms to ensure compatibility</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>Incompatible Statistical Calculations</simpara></entry>
+<entry align="left" valign="top"><simpara>8</simpara></entry>
+<entry align="left" valign="top"><simpara>Implement robust input validation, error handling, and data cleaning to catch issues like unexpected delimiters or characters</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>Incorrect Statistical Calculations</simpara></entry>
+<entry align="left" valign="top"><simpara>8</simpara></entry>
+<entry align="left" valign="top"><simpara>Implement a thorough testing process, using known data sets to verify that the statistical calculations are correct.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>Inadequate Graphing</simpara></entry>
+<entry align="left" valign="top"><simpara>8</simpara></entry>
+<entry align="left" valign="top"><simpara>Thoroughly test each type of graph with various data sets to ensure correct display and accurate representation of data.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>Difficult Code Expansion</simpara></entry>
+<entry align="left" valign="top"><simpara>10</simpara></entry>
+<entry align="left" valign="top"><simpara>Implement code reviews to ensure that new features are developed according to coding standards.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>Library not compatible with required Operating Systems</simpara></entry>
+<entry align="left" valign="top"><simpara>6</simpara></entry>
+<entry align="left" valign="top"><simpara>Read the pypi.org operating system section for each library and test on all required operating systems early.</simpara></entry>
+</row>
+</tbody>
+</tgroup>
+</informaltable>
+</section>
+<section xml:id="_lessons_learned">
+<title>Lessons Learned</title>
+<simpara>No lessons learned yet : )</simpara>
+</section>
+</article>
