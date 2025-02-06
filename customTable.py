@@ -4,13 +4,14 @@ from tkinter import ttk
 from tkinter.font import Font
 from tkinter import simpledialog, filedialog, messagebox
 
-DEFAULT_HEADINGS = ['A', 'B', 'C', 'D']
+DEFAULT_HEADINGS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']
      
 class CustomTable(tk.Tk):
       def __init__(self):
         super().__init__()
         self.title("Statistical Analyzer")
-        self.geometry('900x400')
+
+        self.geometry("%dx%d" % (self.winfo_screenwidth(), self.winfo_screenheight()))
         self.toolbar = GUIToolbar(self)
         
         self.mainloop()
@@ -22,25 +23,28 @@ class TkTable(ttk.Frame):
         """
         def __init__(self, parent, headings=DEFAULT_HEADINGS, data=None):
                 super().__init__(parent)
-                self.table = ttk.Treeview(self, columns=headings, show='headings')
-                self.setup_table(headings, data)
+                self.table = ttk.Treeview(self, columns=headings, show='headings', selectmode='extended')
+                self.setup_table(data, headings=DEFAULT_HEADINGS)
                 
                 #self.table.config(yscrollcommand=self.scroll.set)
-                self.pack(side="left", fill='both', expand=True)
+                self.pack(fill='both', expand=True)
                 
-        def setup_table(self, headings, data):
+        def setup_table(self, data, headings):
                 """ Sets up a blank table when the TkTable Class is initialized OR imports data from CSV.
                     If data already exists in table before calling CSV import from GUIToolBar Class, wipe the
                     existing table instance and build a new one.
                 """
                 for row in self.table.get_children():
-                        self.table.delete(row) # Cleanup any old table for when a CSV is imported
-                        
+                        self.table.delete(row) # Cleanup any old table if a CSV is imported
+        
                 
-                for txt in DEFAULT_HEADINGS:   # Headings will either be defaulted to 'A', 'B', 'C', ... OR users will need to be able to supply manually or from CSV.
-                        self.table.heading(txt, text=txt)
+                #for e, txt in enumerate(headings):   # Headings will either be defaulted to 'A', 'B', 'C', ... OR users will need to be able to supply manually or from CSV.
+                        #self.table.heading(e, text=txt)
 
-                self.table.pack(side="left",fill='both', expand=True)
+                self.add_column(headings, True)
+
+
+                self.table.pack(side="left", fill='both', expand=True)
 
                 if data is None:
                         for e, _ in enumerate(headings):
@@ -54,6 +58,7 @@ class TkTable(ttk.Frame):
 
                 self.menu = tk.Menu(self.table, tearoff=0)
                 self.menu.add_command(label="Add Row(s)", command=self.add_row)
+                self.menu.add_command(label="Add Column(s)", command=self.add_column)
                 self.table.bind("<Button-3>",self.popup_menu) # Bind right-click to show Add/Delete Rows & Columns
 
                 self.pack(fill='both', expand=True)
@@ -74,10 +79,24 @@ class TkTable(ttk.Frame):
                 """ Column menu popup for right-click.
                     Needs to include Add Column(s) & Delete Column
                 """
+                
                 pass
 
-        def add_column(self):
-                pass
+        def add_column(self, headings, startup=False):
+                if startup:
+                        for e, i in enumerate(headings):
+                                print('#' + str(e))
+                                print(type(self.table["columns"]))
+                                #self.table["columns"] = self.table["columns"] + ('#' + str(e), )
+                                
+                                self.table.heading('#' + str(e), text=i)
+                else:
+                        input = simpledialog.askinteger("Add Column(s)", "How many Columns?")
+                        for i in range(input):
+                                print(f'Column: {self.table["columns"]}')
+                                column_index = len(self.table["columns"])
+                                self.table.heading('#' + str(column_index), text='')
+                                print(column_index)
 
         def popup_menu(self, event):
                 try:
@@ -173,6 +192,34 @@ class GUIToolbar(TkTable):
                 +'jJgwYKR0CfJAoIVOSZQsqSEmihMmR5BoscHgX4RNWcyUkfHFC5ctTbD8UCDQ'
                 +'QSYrVKqg4HBBAo0rO0QQENjgkyZMlyxZIkVqAg4SsgA0PLAggfcDBgoHIBgg'
                 +'IIDAgAA7')
+
+
+        self.img = tk.PhotoImage(format='gif', data='R0lGODlhGQAZAIe1ACpgtyxity5kth57AyxltC5luS9lujBluiJ7DjBmuiN6HTFmuyV'
+                                                     +'/ADNpvDhxvzWHCjt2xDx4wTuLETqMFUJ5vz98xEB8xEOPF0V+wkKAxUKAxkiRG0mRHU'
+                                                     +'WCxUWCxkaCxEaDxkeExkaULkmFxEqUMkmIxkqIxkuIxVGXI0uJxUuJxkyJxleYKE2LyE'
+                                                     +'+Lx0+MyE+MyU+NyFubKWOeMl6fOmOfMVygPGWfMV+hQ2SS22miNmKjRmWU22ujN2ukQW'
+                                                     +'alSG+kOmilRm+lPXKoRnSrT3yvVYGzWoCzYYK1Z1W0+Fa091S194W2ZoW2aom4a32w4X'
+                                                     +'2y4o66b5C8dIS24me9/GW++2i//ZbBgJfCgm7C/ZjCg57FiKHGiqHHiqXIjanKkKjLkK'
+                                                     +'rLka3NlLDOlrPS8Z7X/6DY/7XU87jW9LrW9bvW9bTY9rvY9rzZ9r3a9sHb+MLc+MTd+c'
+                                                     +'Xf+cff+sfg+sjg+cjg+sjg+8nh+8rh+szh+8ni+8vi+83j+83j/M7j+8/j/Mnl+s/k/N'
+                                                     +'Dk+9Hk/M3m/NPl/dLm/NXl/tPm/Nfm8tTm/NTm/dPn/dXn/dbn/dbn/tfn/tbo/tfo/t'
+                                                     +'jo/t/p9Nzq9t7q9t7r9t/r9d/s9+Pt9+nv9ebw9+jx+Orx+Ory+uvy+Ozy9+zy+Ovz+u'
+                                                     +'zz+e3z+O30+O30+e30+u70+O/0+e/0+vD0+PD0+fH1+fL2+vP3+/j7+Pj7/fj7/////w'
+                                                     +'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+                                                     +'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+                                                     +'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+                                                     +'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+                                                     +'AAAAAAAAAAAAAAAAAAAAAAACH+EUNyZWF0ZWQgd2l0aCBHSU1QACH5BAEKALUALAAAAA'
+                                                     +'AZABkAQAj/AGsJbNHihcGDMWLAcOEiBQQIAiNGVOHKVaJFixoRItSnjx04cNScOUOmVa'
+                                                     +'sPEjN48oTIkMsePcaMERMmDBgpUroECfJAYq0DBxYkGDoUqIECBRAMGCAgQACfJ2DBoo'
+                                                     +'MHz547d+TIeYMGDa01a57kyOGzBCpUlNJOggTJJSE9eobcuAEnVSoPEh1kymSFCpUqKF'
+                                                     +'Bw4HBBggQaV67sECGCgMQRokSpOnXKlGXLoyIrggKFh0+BKl69AjRokCA/fvLkidOmTa'
+                                                     +'XIsThxwiDRxKpVkR49csSI0aFDeubMgePGDRtWrEBI7BAqFCTdj4QIAQJEx4wZRWoS2b'
+                                                     +'ChgkQLnTol+lGiZEmNGmLERHHihMmRI0i0aLHBgIHABp8+acKE6ZKl/5aQIuAEOOBAgi'
+                                                     +'yyAOATQQchpBBDDkH0WS1RTVXVVVlt1dVXYY3l0wqi+fHHH33wwUcddcCRRhqzFFJIIF'
+                                                     +'NMQYFEoY1W2mmprdbaa6LENlttt+W2W2+/BTdcccclJ5FZaKnFlltwyUWXXXhFFEIppU'
+                                                     +'gyySTQOeKIIaX5YIQRLIACigbLNfecbtJRZx122nHnXUTgiUeeeeipx5578MlHn321RL'
+                                                     +'DJJlmYYUYZMsjwxRdecMHFFk00gcUPPyiQ1159/RXYYIUdlthijfkElFBEJWAUUkox5VREAQEAOw==')
         
         ttk.Button(self, text="Import CSV", image=self.img, command=self.import_csv).pack(fill='y', expand=False)
         super(TkTable, self).pack(side="right", fill="y", expand=True) # Places on ttk.Frame
@@ -191,7 +238,7 @@ class GUIToolbar(TkTable):
 
         ask_headers = messagebox.askyesno("Headers", "Does your data have headers?")
         if ask_headers:
-               self.setup_table(data[0], data[1:])      # Need to add the ability for users to provide their own headings
+               self.setup_table(data[1:], data[0])      # Need to add the ability for users to provide their own headings
         else:
                self.setup_table(DEFAULT_HEADINGS, data) # Need to change to populate based on the number of commas, this will represent A-Z default headings
 
