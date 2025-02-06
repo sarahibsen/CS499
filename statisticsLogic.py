@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import stats
 import sys 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -35,10 +36,6 @@ class statistic():
             return self.standardDeviation()
         elif userChoice == 'coefficient of variation':
             return self.coefficientOfVariation()
-        elif userChoice == 'percentiles':
-            return self.percentiles()
-        elif userChoice == 'probability distribution':
-            return self.ProbabilityDistribution()
         else:
             return "Invalid input"
         
@@ -111,7 +108,7 @@ class statistic():
         mean = self.mean()
         std_dev = self.standardDeviation()
         return std_dev / mean
-    
+        
     def percentiles(self):
         """
         Return the specified percentiles for EACH COLUMN in the dataset (not row).
@@ -124,35 +121,56 @@ class statistic():
         axis = int(input("Enter '0' for columns or '1' for rows: ")) 
         psequence = list(map(int, input("Enter the percentiles you would like to calculate (e.g. 25, 50, 75): ").split(",")))
 
-        return np.percentile(self.data, psequence, axis=axis)
-
-    def ProbabilityDistribution(self):
+        return np.percentile(self.data, psequence, axis=axis)  
+    
+    def probabilityDistribution(self):
         """
         Return the probability distribution of the data set
         """
+        #TODO: Tests function's accuracy on output table & graph (needs more example cases)
         loc = float(input("Enter the mean: "))
         scale = float(input("Enter the standard deviation: "))
         size = int(input("Enter the size of the sample: "))
         return np.random.normal(loc, scale, size)
-
     
+    def binomialDistribution(self):
+        """
+        Return the binomial distribution of the data set
+        """
+        #TODO: Tests function's accuracy on output table & graph
+        n = int(input("Enter the number of trials: "))
+        p = float(input("Enter the probability of success: "))
+        size = int(input("Enter the size of the sample: "))
+        return np.random.binomial(n, p, size)
     
-    
+    def leastSquareLine(self):
+        """
+        Return the least square line of the data set
+        Parameters: Grabs first column as x and second column as y (e.g. Expected/Actual Freq. Data). 
+        """
+        # TODO: Handling events with a 2D-array. X-Y graph, build graph as well (matlibplot)
+        x = self.data[:, 0]
+        y = self.data[:, 1]
+        slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
+        #returns to matlibplot graphing function
+        return slope, intercept
 
-    """
-    additional math functions needed to add: 
-    Percentiles 
-    Probability Distribution
-    Least Square Line
-    Chi Squared
-    Correlation Coefficient 
-    Rank Sum Test
-    Spearman rank correlation coefficient 
+    def chiSquare(self):
+        """
+        Return the chi-square value of the data set
+        """
+        pass
 
+"""
+6. Correlation coefficient
+7. Sign test
+8. Rank Sum test
+9. Spearman rank correlation coefficient
 
-    """
+10. Histogram
+11. Check for overlap?
+"""
 
-    
 
 class plotCreation():
     def __init__(self, data):
@@ -233,8 +251,4 @@ if __name__ == "__main__":
     print("Standard Deviation:", standard_deviation)
     print("Variance:", stats.variance())
     print("Coefficient of Variation:", stats.coefficientOfVariation())
-
-    # Calculating inferential statistics
-    print("Percentiles:", stats.percentiles())
-    print("Probability Distribution:", stats.ProbabilityDistribution())
 '''
