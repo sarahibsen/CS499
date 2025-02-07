@@ -12,7 +12,7 @@ class CustomTable(tk.Frame): # changed to handle the embedded in the GUI
         self.title("Statistical Analyzer")
 
         self.geometry("%dx%d" % (self.winfo_screenwidth(), self.winfo_screenheight()))
-       # self.toolbar = GUIToolbar(self)
+        self.toolbar = GUIToolbar(self)
 
       #  self.mainloop()
 
@@ -51,9 +51,10 @@ class TkTable(ttk.Frame):
                 
                 #for e, txt in enumerate(headings):   # Headings will either be defaulted to 'A', 'B', 'C', ... OR users will need to be able to supply manually or from CSV.
                         #self.table.heading(e, text=txt)
-
-                self.add_column(headings, True)
-
+                # add headings 
+                for i, heading in enumerate(headings):
+                        self.table.heading(f'#{i+1}', text=heading)
+                        self.table.column(f'#{i+1}', width=150, anchor='center', stretch=True)
 
                 self.table.pack(side="left", fill='both', expand=True)
 
@@ -64,15 +65,11 @@ class TkTable(ttk.Frame):
                         for e, row in enumerate(data):
                                 self.table.insert("", "end", text=f"Item {e}", values=(row))
 
-                
-                self.table.bind("<Double-Button-1>", self.edit_cell) # Bind double-click to edit cell
-
+                self.table.bind("<Double-Button-1>", self.edit_cell)
                 self.menu = tk.Menu(self.table, tearoff=0)
                 self.menu.add_command(label="Add Row(s)", command=self.add_row)
                 self.menu.add_command(label="Add Column(s)", command=self.add_column)
-                self.table.bind("<Button-3>",self.popup_menu) # Bind right-click to show Add/Delete Rows & Columns
-
-                self.pack(fill='both', expand=True)
+                self.table.bind("<Button-3>", self.popup_menu)
 
         def row_menu(self, event):
                 """ Row menu popup for right-click.
@@ -96,15 +93,15 @@ class TkTable(ttk.Frame):
         def add_column(self, headings, startup=False):
                 if startup:
                         for e, i in enumerate(headings):
-                                print('#' + str(e))
-                                print(type(self.table["columns"]))
+                               # print('#' + str(e))
+                               # print(type(self.table["columns"]))
                                 #self.table["columns"] = self.table["columns"] + ('#' + str(e), )
                                 
                                 self.table.heading('#' + str(e), text=i)
                 else:
                         input = simpledialog.askinteger("Add Column(s)", "How many Columns?")
                         for i in range(input):
-                                print(f'Column: {self.table["columns"]}')
+                              #  print(f'Column: {self.table["columns"]}')
                                 column_index = len(self.table["columns"])
                                 self.table.heading('#' + str(column_index), text='')
                                # print(column_index)

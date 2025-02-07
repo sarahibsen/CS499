@@ -6,6 +6,7 @@ from pathlib import Path
 
 from customTable import *
 from statisticsLogic import *
+from main import *
 
 class App(tk.Tk):
     """
@@ -171,72 +172,98 @@ class LaunchPage(BasePage):
         self.image_image_3 = image_image_3  # Keep a reference to avoid garbage collection
 
     # TODO: Add functionality to this upload data button by finishing this function
-    def upload_data(self):
-        """
-        Display continue button when either the enter data or upload data button is clicked.
-        """
-        file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])  
-        if file_path:
-            try:
-                # Load the CSV data using pandas
-                data = pd.read_csv(file_path)
-                # Embed the custom table within this GUI
-                self.display_table(data)
-                
-                # Store numeric data and initialize statistics logic
-                numeric_data = data.select_dtypes(include=[np.number]).values.flatten()
-                self.stat_logic = statistic(numeric_data)
+def upload_data(self):
+    """
+    Display continue button when either the enter data or upload data button is clicked.
+    """
+    file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])  
+    if file_path:
+        try:
+            # Load the CSV data using pandas
+            data = pd.read_csv(file_path)
 
-                # Optionally show computed statistics (just to test)
-                print(f"Mean: {self.stat_logic.mean()}")
-                print(f"Standard Deviation: {self.stat_logic.standardDeviation()}")
+            # Separate numeric and categorical data
+            numeric_data = data.select_dtypes(include=[np.number]).values.flatten()
+            categorical_data = data.select_dtypes(exclude=[np.number]).values.flatten()
+
+            # Ask user to classify numeric data into discrete or continuous
+            user_input = simpledialog.askstring(
+                "Data Classification", 
+                "Is your numeric data discrete or continuous? (Enter 'discrete' or 'continuous')"
+            )
+
+            # Instantiate the appropriate statistics class
+            if user_input.lower() == 'discrete':
+                self.stat_logic = discreteStatistics(numeric_data)
+            elif user_input.lower() == 'continuous':
+                self.stat_logic = continuousStatistics(numeric_data)
+
+            # Optionally, handle nominal/ordinal (if present)
+            if len(categorical_data) > 0:
+                category_input = simpledialog.askstring(
+                    "Categorical Data Classification", 
+                    "Is your categorical data nominal or ordinal? (Enter 'nominal' or 'ordinal')"
+                )
+                if category_input.lower() == 'nominal':
+                    self.cat_stat_logic = nominalStatistics(categorical_data)
+                elif category_input.lower() == 'ordinal':
+                    self.cat_stat_logic = ordinalStatistics(categorical_data)
+
+            # Example usage of calculated statistics
+            print(f"Mean: {self.stat_logic.mean()}")
+            print(f"Standard Deviation: {self.stat_logic.standard_deviation()}")
+
+        except Exception as e:
+            print(f"Error loading CSV: {e}")
+
+
+def display_table(self, data):
+    """
+    Embeds the custom table within the GUI and displays the loaded data.
+    """
+    # Create a Toplevel window for the popup
+    popup = tk.Toplevel(self)
+    popup.title("Data Table")
+    popup.geometry("800x600")  # Adjust as needed
+
+    # Create a frame inside the popup to host the table
+    table_frame = tk.Frame(popup)
+    table_frame.pack(fill='both', expand=True)
+
+    # Create and display the table using CustomTable
+    table = CustomTable(table_frame)
+    table.pack(fill='both', expand=True)  # Ensure it takes full space
+
+    # Set up table with data
+    headings = data.columns if isinstance(data, pd.DataFrame) else ["Data"]
+    rows = data.values.tolist() if isinstance(data, pd.DataFrame) else [[x] for x in data]
+
+    # Initialize and configure the table
+    tk_table = TkTable(table, headings=headings, data=rows)
+    tk_table.pack(fill='both', expand=True)  # Make the table expand in the frame
+
+
             
-            except Exception as e:
-                print(f"Error loading CSV: {e}")
-        # TODO: Use input validation to determine whether continue button should display after user enters data
-        #   this function can be appended to whatever function is created to add functionality to the enter data buttons
-        self.continue_button.place(x=70, y=584, width=300, height=60)
-
-    def display_table(self, data):
-        """
-        embeds the custom table within the gui displaying the loaded data
-        """
-        # Create a Toplevel window for the popup
-        popup = tk.Toplevel(self)
-        popup.title("Data Table")
-        popup.geometry("800x600")  # Adjust the size as needed
-
-        # Create a frame inside the popup to host the table
-        table_frame = tk.Frame(popup)
-        table_frame.pack(fill='both', expand=True)
-
-        # Create and display the table using custom GUITable
-        table = CustomTable()
-        table.show()
-        
-        # Store shared data for statistics logic
-        self.shared_data = {"numeric_data": data.select_dtypes(include=[np.number]).values.flatten()}
-        
     # TODO: Decide if this button is necessary. If yes, add functionality to this button by finishing this function
-    def enter_data(self):
-        """
-        Display continue button when either the enter data or upload data button is clicked.
-        """
-        user_input = simpledialog.askstring("Enter Data", "Enter numeric calues separated by commas: ")
-        if user_input:
-            try:
+def enter_data(self):
+    """
+    Display continue button when either the enter data or upload data button is clicked.
+    """
+    user_input = simpledialog.askstring("Enter Data", "Enter numeric calues separated by commas: ")
+    if user_input:
+        try:
                 data = np.array([float(x) for x in user_input.split(",")])
                 self.stat_logic = statistic(data)
                 print("Data entered successfully.")
                 
                 # show continue button
                 self.continue_button.place(x=70, y=584, width=300, height=60)
-            except ValueError:
+        except ValueError:
                 print("Invalid data entered. Please enter numeric values separated by commas.")
 
         # TODO: Use input validation to determine whether continue button should display after user enters data
         #   this function can be appended to whatever function is created to add functionality to the enter data buttons
-        self.continue_button.place(x=70, y=584, width=300, height=60)
+    self.continue_button.place(x=70, y=584, width=300, height=60)
 
 
 class MeasureSelectionPage(BasePage):
@@ -278,8 +305,9 @@ class MeasureSelectionPage(BasePage):
         # ----- Pandas Table ----- #
         self.table_frame = tk.Frame(self)
         self.table_frame.place(x=600, y=150, width=600, height=500)
-        self.table = TkTable(self)
+        self.table = TkTable(self.table_frame)
         self.table.pack(fill='both', expand=True)
+
 
 
         # ----- Data Type Combobox ----- #

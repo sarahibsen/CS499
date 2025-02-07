@@ -1,35 +1,63 @@
-from statisticsLogic import *
+from statisticsLogic import statistic
+import numpy as np
 
 
+class nominalStatistics:
+    '''
+    parameters : 
+    data : list of data
 
-'''
-Setting up all of the main classes 
-'''
-
-class nominalStatistics():
-    """
-    Class for nominal statistics
-    Parameters that nominal statistics will need:
+    '''
+    def __init__(self, data):
+        self.data = data
     
-    """
-    pass
+    def mode(self):
+        stat = statistic(self.data)
+        return stat.mode()
 
+class ordinalStatistics:
+    '''
+    ordinal statistics class
+    '''
+    def __init__(self, data):
+        self.data = data
+    
+    def median(self):
+        stat = statistic(self.data)
+        return stat.median()
 
-class ordinalStatistics():
-    """
-    Class for ordinal statistics
-    """
-    pass
+class discreteStatistics:
+    def __init__(self, data):
+        self.data = data
+    
+    def mean(self):
+        stat = statistic(self.data)
+        return stat.mean()
+    
+    def variance(self):
+        stat = statistic(self.data)
+        return stat.variance()
 
-class discreteStatistics():
-    """
-    Class for discrete statistics
-    """
-    pass
+    def standard_deviation(self):
+        stat = statistic(self.data)
+        return stat.standardDeviation()
 
-class continuousStatistics():
-    """
-    Class for continuous statistics
-    """
-    pass
+class continuousStatistics:
+    def __init__(self, data):
+        self.data = data
+    
+    def mean(self):
+        stat = statistic(self.data)
+        return stat.mean()
+    
+    def variance(self):
+        stat = statistic(self.data)
+        return stat.variance()
+    
+    def standard_deviation(self):
+        stat = statistic(self.data)
+        return stat.standardDeviation()
 
+    def coefficient_of_variation(self):
+        stat = statistic(self.data)
+        return stat.coefficientOfVariation()
