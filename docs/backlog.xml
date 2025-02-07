@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?asciidoc-toc?>
+<?asciidoc-numbered?>
+<article xmlns="http://docbook.org/ns/docbook" xmlns:xl="http://www.w3.org/1999/xlink" version="5.0" xml:lang="en">
+<info>
+<title>Backlog/Requirements</title>
+<date>2025-02-05</date>
+</info>
+<section xml:id="_team_members">
+<title>Team Members</title>
+<simpara><emphasis role="strong">Sarah Ibsen</emphasis> (Team Lead)
+<emphasis role="strong">Natalia Miller</emphasis> (Admin)
+<emphasis role="strong">Jarrett Miller</emphasis> (Software Developer)
+<emphasis role="strong">Matthew Sim</emphasis> (Software Developer)</simpara>
+</section>
+<section xml:id="_project_overview">
+<title>Project Overview</title>
+<simpara>The Statistical Analyzer [STAT] project aims to develop a flexible and comprehensive software tool designed for researchers, particularly in the social sciences, to perform in-depth statistical analysis on datasets. The system will enable users to input data, select appropriate statistical methods, visualize the results, and generate detailed reports. This tool is intended to streamline the process of statistical analysis by providing a user-friendly graphical interface and support for a variety of statistical measures and formats. The software will also be designed for extensibility to accommodate future statistical functions with minimal effort, ensuring long-term adaptability.</simpara>
+</section>
+<section xml:id="_tools">
+<title>Tools</title>
+<simpara>For the project, we use epics/stories to help create our issues on Github.
+We set up an Agile-like environment in Github, where we have a 'No Status' (our backlog), 'To Do', 'In Progress', and 'Done' columns.</simpara>
+<figure>
+<title>Board</title>
+<mediaobject>
+<imageobject>
+<imagedata fileref="images/board.png"/>
+</imageobject>
+<textobject><phrase>Statistical Analyzer Board</phrase></textobject>
+</mediaobject>
+</figure>
+<simpara>We also have sprints, where we can assign issues that we want to get done in a certain time frame.</simpara>
+<figure>
+<title>Sprint</title>
+<mediaobject>
+<imageobject>
+<imagedata fileref="images/sprint.png"/>
+</imageobject>
+<textobject><phrase>Statistical Analyzer Sprint</phrase></textobject>
+</mediaobject>
+</figure>
+</section>
+<section xml:id="_requirements">
+<title>Requirements</title>
+<orderedlist numeration="arabic">
+<listitem>
+<simpara>The system shall accept input data from either a comma-delimited file or an on-screen editable table.</simpara>
+</listitem>
+<listitem>
+<simpara>The system shall allow users to select specific statistical measures for analysis.</simpara>
+</listitem>
+<listitem>
+<simpara>The system shall calculate mean, median, mode, standard deviation, variance, coefficient of variance, percentiles, probability distribution, binomial distribution, least square line, Chi-Square (Χ²), correlation coefficient, sign test, rank sum test, and Spearman rank correlation coefficient.</simpara>
+</listitem>
+<listitem>
+<simpara>The system shall generate graphical displays when applicable for the statistical measure, including horizontal bar charts, vertical bar charts, pie charts, normal distribution curves, and X-Y graphs.</simpara>
+</listitem>
+<listitem>
+<simpara>The system shall support the addition of new statistical measures with minimal code revision.</simpara>
+</listitem>
+<listitem>
+<simpara>The system shall provide a graphical user interface (GUI) for user interaction.</simpara>
+</listitem>
+<listitem>
+<simpara>The system shall allow users to select subsets of rows or columns of the input data for analysis.</simpara>
+</listitem>
+<listitem>
+<simpara>The system shall support multiple statistical tests on the same dataset concurrently.</simpara>
+</listitem>
+<listitem>
+<simpara>The system shall produce output files containing statistical results in comma or tab-delimited formats compatible with Microsoft Excel.</simpara>
+</listitem>
+<listitem>
+<simpara>The system shall generate graphical output in JPEG format for any graphs produced.</simpara>
+</listitem>
+<listitem>
+<simpara>The system shall generate summary reports of all statistical analyses in text format.</simpara>
+</listitem>
+<listitem>
+<simpara>The system shall be compatible with Windows, macOS, and Linux operating systems.</simpara>
+</listitem>
+</orderedlist>
+</section>
+<section xml:id="_epics">
+<title>Epics</title>
+<informaltable frame="all" rowsep="1" colsep="1">
+<tgroup cols="3">
+<colspec colname="col_1" colwidth="33.3333*"/>
+<colspec colname="col_2" colwidth="33.3333*"/>
+<colspec colname="col_3" colwidth="33.3334*"/>
+<tbody>
+<row>
+<entry align="left" valign="top"><simpara><emphasis role="strong">Epic ID</emphasis></simpara></entry>
+<entry align="left" valign="top"><simpara><emphasis role="strong">Short Title</emphasis></simpara></entry>
+<entry align="left" valign="top"><simpara><emphasis role="strong">Description</emphasis></simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>EP-01</simpara></entry>
+<entry align="left" valign="top"><simpara>Data Input and Selection</simpara></entry>
+<entry align="left" valign="top"><simpara>As a user, I want to input and select data so that I can perform statistical analyses on relevant data.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>EP-02</simpara></entry>
+<entry align="left" valign="top"><simpara>Statistical Analysis Computation</simpara></entry>
+<entry align="left" valign="top"><simpara>As a user, I want to select and compute different statistical measures on the input data to obtain meaningful results.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>EP-03</simpara></entry>
+<entry align="left" valign="top"><simpara>Results Visualization and Output</simpara></entry>
+<entry align="left" valign="top"><simpara>As a user, I want to view the statistical results visually or in report format so that I can better understand and share the results.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>EP-04</simpara></entry>
+<entry align="left" valign="top"><simpara>User interaction and Interface</simpara></entry>
+<entry align="left" valign="top"><simpara>As a user, I want a simple and intuitive interface so that I can easily navigate and perform tasks without confusion.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>EP-05</simpara></entry>
+<entry align="left" valign="top"><simpara>Extensibility and Scalability</simpara></entry>
+<entry align="left" valign="top"><simpara>As a developer, I want the system to be easily extensible so that new statistical measures can be added with minimal code changes.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>EP-06</simpara></entry>
+<entry align="left" valign="top"><simpara>System Compatibility and Constraints</simpara></entry>
+<entry align="left" valign="top"><simpara>As a user, I want the software to run on multiple operating systems so that I can use it regardless of my platform.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>EP-07</simpara></entry>
+<entry align="left" valign="top"><simpara>Output Format Validation</simpara></entry>
+<entry align="left" valign="top"><simpara>As a user, I want the system to ensure that the output data is correctly formatted so that I can use it with external applications.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>EP-08</simpara></entry>
+<entry align="left" valign="top"><simpara>Error Handling and Data Validation</simpara></entry>
+<entry align="left" valign="top"><simpara>As a user, I want the system to validate input data and handle errors gracefully so that I can trust the results and understand any issues.</simpara></entry>
+</row>
+</tbody>
+</tgroup>
+</informaltable>
+</section>
+<section xml:id="_user_stories">
+<title>User Stories</title>
+<informaltable frame="all" rowsep="1" colsep="1">
+<tgroup cols="3">
+<colspec colname="col_1" colwidth="33.3333*"/>
+<colspec colname="col_2" colwidth="33.3333*"/>
+<colspec colname="col_3" colwidth="33.3334*"/>
+<tbody>
+<row>
+<entry align="left" valign="top"><simpara><emphasis role="strong">Story ID</emphasis></simpara></entry>
+<entry align="left" valign="top"><simpara><emphasis role="strong">Short Title</emphasis></simpara></entry>
+<entry align="left" valign="top"><simpara><emphasis role="strong">Description</emphasis></simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>US-01</simpara></entry>
+<entry align="left" valign="top"><simpara>Upload Data from File</simpara></entry>
+<entry align="left" valign="top"><simpara>As a user, I want to upload a comma-delimited or tab-delimited data file so that I can quickly load my data for analysis.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>US-02</simpara></entry>
+<entry align="left" valign="top"><simpara>Manual Data input on Screen</simpara></entry>
+<entry align="left" valign="top"><simpara>As a user, I want to manually input or edit data on-screen through an editable table so that I can handle small datasets directly.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>US-03</simpara></entry>
+<entry align="left" valign="top"><simpara>Select Subsets of Data</simpara></entry>
+<entry align="left" valign="top"><simpara>As a user, I want to select specific rows or columns from the dataset so that I can target subsets of data for analysis.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>US-04</simpara></entry>
+<entry align="left" valign="top"><simpara>Select Basic Statisical Measures</simpara></entry>
+<entry align="left" valign="top"><simpara>As a user, I want to choose statistical measures like mean, median, mode, variance, and standard deviation so that I can analyze central tendencies and variability in the data.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>US-05</simpara></entry>
+<entry align="left" valign="top"><simpara>Perform Advanced Statistical Tests</simpara></entry>
+<entry align="left" valign="top"><simpara>As a user, I want to compute complex statistical tests (e.g., Chi-Square, rank sum test, correlation coefficient) so that I can evaluate relationships and distributions in the dataset.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>US-06</simpara></entry>
+<entry align="left" valign="top"><simpara>Validate Statistical Measure Selection</simpara></entry>
+<entry align="left" valign="top"><simpara>As a user, I want the system to validate my selection of statistical measures to ensure that I am using the correct type of analysis for the data.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>US-07</simpara></entry>
+<entry align="left" valign="top"><simpara>Generate Visual Graphs</simpara></entry>
+<entry align="left" valign="top"><simpara>As a user, I want to generate graphs like bar charts, pie charts, and normal distribution curves so that I can visually interpret the results.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>US-08</simpara></entry>
+<entry align="left" valign="top"><simpara>Export Graphs as JPEG Files</simpara></entry>
+<entry align="left" valign="top"><simpara>As a user, I want to export graph outputs as JPEG files so that I can include them in presentations and reports.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>US-09</simpara></entry>
+<entry align="left" valign="top"><simpara>Generate Summary Reports</simpara></entry>
+<entry align="left" valign="top"><simpara>As a user, I want to generate summary reports of the analysis in text format so that I can document and share the results.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>US-10</simpara></entry>
+<entry align="left" valign="top"><simpara>Export Statistical Results to File</simpara></entry>
+<entry align="left" valign="top"><simpara>As a user, I want to export the statistical results to a comma or tab-delimited file so that I can edit them using Microsoft Excel, or any other accepted comma delimited platform.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>US-11</simpara></entry>
+<entry align="left" valign="top"><simpara>Intuitive Graphical User Interface</simpara></entry>
+<entry align="left" valign="top"><simpara>As a user, I want an easy-to-use graphical user interface (GUI) so that I can interact with the system without needing technical expertise.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>US-12</simpara></entry>
+<entry align="left" valign="top"><simpara>Select Multiple Statistical Measures Simultaneously</simpara></entry>
+<entry align="left" valign="top"><simpara>As a user, I want to select multiple statistical measures simultaneously so that I can perform different analyses on the same dataset without needing multiple runs.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>US-13</simpara></entry>
+<entry align="left" valign="top"><simpara>Use Design Patterns for Extensibility</simpara></entry>
+<entry align="left" valign="top"><simpara>As a developer, I want the system to use design patterns so that future statistical measures can be easily added without requiring major code changes.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>US-14</simpara></entry>
+<entry align="left" valign="top"><simpara>Modular Architecture for Scalability</simpara></entry>
+<entry align="left" valign="top"><simpara>As a developer, I want the system to be modular so that different components (data input, computation, output) can be maintained and updated independently.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>US-15</simpara></entry>
+<entry align="left" valign="top"><simpara>Cross-Platform Compatibility</simpara></entry>
+<entry align="left" valign="top"><simpara>As a user, I want the software to run on Windows, macOS, and Linux so that I can use it on any device.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>US-16</simpara></entry>
+<entry align="left" valign="top"><simpara>Handle Cross-Platform Differences</simpara></entry>
+<entry align="left" valign="top"><simpara>As a developer, I want the system to handle cross-platform differences seamlessly so that it provides a consistent experience across all supported platforms.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>US-17</simpara></entry>
+<entry align="left" valign="top"><simpara>Ensure Compatibility with outside Programs</simpara></entry>
+<entry align="left" valign="top"><simpara>As a user, I want the exported data to be compatible with Microsoft Excel or other applications so that I can perform further analysis if needed.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>US-18</simpara></entry>
+<entry align="left" valign="top"><simpara>Validate Exported Data Formats</simpara></entry>
+<entry align="left" valign="top"><simpara>As a developer, I want the system to validate data formats during export so that users do not encounter errors when opening the output files.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>US-19</simpara></entry>
+<entry align="left" valign="top"><simpara>Validate Input Data before Analysis</simpara></entry>
+<entry align="left" valign="top"><simpara>As a user, I want the system to validate my input data to ensure that only correctly formatted data is used for analysis.</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara>US-20</simpara></entry>
+<entry align="left" valign="top"><simpara>Display Meaningful Error Messages</simpara></entry>
+<entry align="left" valign="top"><simpara>As a user, I want meaningful error messages so that I can understand and correct issues with data input or configuration.</simpara></entry>
+</row>
+</tbody>
+</tgroup>
+</informaltable>
+</section>
+</article>

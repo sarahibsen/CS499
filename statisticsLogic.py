@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import tkinter 
 
+from scipy.stats import mode
 
 class statistic():
     """
@@ -17,26 +18,6 @@ class statistic():
         """
         self.data = data 
 
-    def userChoices(self):
-        """
-        takes the users input and returns the corresponding answers
-        """
-        #TODO : this is just a placement function, idk if it is functional 
-        userChoice = input("What statistic would you like to use? (mean, median, mode, variance, standard deviation, or coefficient of variation): ")
-        if userChoice == 'mean':
-            return self.mean()
-        elif userChoice == 'median':
-            return self.median()
-        elif userChoice == 'mode':
-            return self.mode()
-        elif userChoice == 'variance':
-            return self.variance()
-        elif userChoice == 'standard deviation':
-            return self.standardDeviation()
-        elif userChoice == 'coefficient of variation':
-            return self.coefficientOfVariation()
-        else:
-            return "Invalid input"
         
     def mean(self):
         """
@@ -53,7 +34,7 @@ class statistic():
         """
         Return the mode of the data set
         """
-        return np.mode(self.data)
+        return mode(self.data)[0][0]
     
     def standardDeviation(self):
         """
