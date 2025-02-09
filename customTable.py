@@ -1,8 +1,25 @@
+""" 
+    File: customTable.py
+    Date: February 9th, 2025
+    Author(s): Team 6b
+               Sarah Ibsen,
+               Jarrett Miller,
+               Natalia MIller,
+               Matthew Sims
+"""
+
 import csv
 import tkinter as tk
 from tkinter import ttk
 from tkinter.font import Font
 from tkinter import simpledialog, filedialog, messagebox
+
+# TO DO (Potential Future Improvements):
+#       - Prompt user when exiting without saving. Turn edit flag to True everytime an edit it made. It close detected with edit flag == True, prompt user.
+#       - Add Row/Column at location, rather than at the end of table.
+#       - Doubleclick header to change heading title
+#       - Add row numbers in column #0
+#       - Make a mapping system for default headings so we don't have a static list
 
 DEFAULT_HEADINGS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']
      
@@ -12,7 +29,7 @@ class CustomTable(tk.Tk):
         self.title("Statistical Analyzer")
 
         self.geometry("%dx%d" % (self.winfo_screenwidth(), self.winfo_screenheight()))
-        self.toolbar = GUIToolbar(self)
+        self.toolbar = GUIToolbar(self) # Toolbar initializes parent table
         
         self.mainloop()
 
@@ -21,10 +38,10 @@ class TkTable(ttk.Frame):
         """ Builds a Custom Table by extending the ttk.Frame Class from Tkinter. 
             Table structure uses the ttk.Treeview Class
         """
-        def __init__(self, parent, headings=DEFAULT_HEADINGS, data=None):
+        def __init__(self, parent, headings=DEFAULT_HEADINGS):
                 super().__init__(parent)
                 self.table = ttk.Treeview(self, columns=headings, show='headings', selectmode='extended')
-                self.setup_table(data, headings=DEFAULT_HEADINGS)
+                self.setup_table(data=None, headings=DEFAULT_HEADINGS)
                 
                 self.pack(fill='both', expand=True)
 
@@ -48,76 +65,116 @@ class TkTable(ttk.Frame):
                         self.table.delete(row) # Cleanup any old table if a CSV is imported
 
                 self.table["columns"] = headings
-        
-                
-                #for e, txt in enumerate(headings):   # Headings will either be defaulted to 'A', 'B', 'C', ... OR users will need to be able to supply manually or from CSV.
-                        #self.table.heading(e, text=txt)
-
                 self.add_column(headings, True)
 
                 if data is None:
-                        for e, _ in enumerate(headings):
-                                self.table.insert("", "end", text=f"Item {e}", values=(["","","","","","","","","","",""]))
+                        self.add_row(prompt=False)
                 else:
-                        for e, row in enumerate(data):
-                                self.table.insert("", "end", text=f"Item {e}", values=(row))
+                        self.add_row(prompt=False, data=data)
+
                 
                 self.table.bind("<Double-Button-1>", self.edit_cell) # Bind double-click to edit cell
-                self.menu = tk.Menu(self.table, tearoff=0)
-                self.menu.add_command(label="Add Row(s)", command=self.add_row)
-                self.menu.add_command(label="Add Column(s)", command=self.add_column)
-                self.table.bind("<Button-3>",self.popup_menu) # Bind right-click to show Add/Delete Rows & Columns
+                self.table.bind("<Button-3>",self.popup_menu)        # Bind right-click to show Add/Delete Rows & Columns
 
                 self.table.pack(side="left", fill="both", expand=True)
 
-        def row_menu(self, event):
-                """ Row menu popup for right-click.
-                    Needs to include Add Row(s) & Delete Row 
-                """
-                self.menu = tk.Menu(self.table, tearoff=0)
-                self.menu.add_command(label="Add Row(s)", command=self.add_row)
 
-        def add_row(self):
-                input = simpledialog.askinteger("Add Row(s)", "How many Rows?")
-                for i in range(input):
-                       self.table.insert("","end", values=())
+        def add_row(self, prompt=True, data=None):
+                """ """
+                if prompt == True:                                   # If user initates a row add - need to know how many rows
+                        input = simpledialog.askinteger("Add Row(s)", "How many Rows?")
+                else:                                                # This will just be on startup or when user imports a CSV
+                        input = len(DEFAULT_HEADINGS)
 
-        def column_menu(self, event):
-                """ Column menu popup for right-click.
-                    Needs to include Add Column(s) & Delete Column
-                """
-                
-                pass
+                if data == None:
+                        for _ in range(input):
+                                self.table.insert(parent="", index="end", text='', values=(['']*len(self.table['columns'])))
+                else:
+                        for row in data:
+                                self.table.insert(parent="", index="end", text='', values= tuple(row))
+
+
+        def delete_row(self):
+                """ Deletes the row(s) selected """
+                selected_row = self.table.selection()
+                if selected_row:
+                        self.table.delete(selected_row)
+
 
         def add_column(self, headings=None, startup=False):
+                """ Adds a new column at the end of table.
+                    If at table initialization, column headings will reflect the default heading list.
+                    If at CSV import, will either use headings in file or keep default heading if none supplied in file.
+                    If at user request, then user will be prompted to provide heading name
+                """
                 if startup:
                         for i, heading in enumerate(headings):
-                                self.table.heading(f'#{i+1}', text= heading)
+                                self.table.heading(f'#{i+1}', text= heading.strip())
                 else:
-                        input = simpledialog.askinteger("Add Column(s)", "How many Columns?")
-                        for i in range(input):
-                                column_index = len(self.table["columns"])
-                                self.table.heading(f'#{column_index+1}', text='')
+                        input = simpledialog.askstring("Add Column", "Enter new column header:")
+
+                        current_columns = list(self.table['columns'])
+                        current_columns = {key:self.table.heading(key) for key in current_columns}
+
+                        self.table['columns'] = list(current_columns.keys()) + [input]
+
+                        for i, key in enumerate(self.table['columns']):
+                                self.table.heading(f'#{i+1}', text=key.strip())
+
+                        for i in self.table.get_children():
+                                updated_row = self.table.item(i,'values') + ('',)
+                                self.table.item(i, values=updated_row)
+
+        def delete_column(self, event):
+                """ Deletes column at the right-click event location """
+                column_id = self.table.identify_column(event.x)
+                column_name = self.table['columns'][int(column_id[1:]) - 1]
+
+                new_columns = list(self.table['columns'])
+                new_columns.remove(column_name)
+                self.table['columns'] = tuple(new_columns)
+                for i, col in enumerate(self.table['columns']):
+                        self.table.heading(f'#{i+1}', text=col.strip())
+
+                for item in self.table.get_children():
+                        values = list(self.table.item(item, 'values'))
+                        values.pop(int(column_id[1:]) - 1)
+                        self.table.item(item, values=values)
 
 
         def popup_menu(self, event):
+                """ Custom right-click menu based on the region location within the table widget.
+                    If right-click was made on an existing row, menu option include only 'Delete Row'.
+                    If right-click was made on an existing heading, menu option includes only 'Delete Column'.
+                    If right-click was made elsewhere, menu options include both 'Add Row(s)' & 'Add Column'"""
+                self.menu = tk.Menu(self.table, tearoff=0)
                 try:
-                    self.menu.tk_popup(event.x_root, event.y_root,0)
+                        region = self.table.identify("region", event.x, event.y)
+                        if region == "heading" or region == "separator": # Check if right-click was on header or row
+                                self.menu.add_command(label="Delete Column", command=lambda: self.delete_column(event))
+                        elif region == "cell":
+                                self.menu.add_command(label="Delete Row", command=self.delete_row)
+                        else:
+                                self.menu.add_command(label="Add Row(s)", command=self.add_row)
+                                self.menu.add_command(label="Add Column", command=self.add_column)
+
+                        self.menu.tk_popup(event.x_root, event.y_root,0)
                 finally:
-                       self.menu.grab_release()
+                        self.menu.grab_release()
 
         def edit_cell(self, event):
                 """ Allows users to edit existing rows by double-clicking at the desired cell location.
-                    This could also be used to track if the user has unsaved changes:
+                    FUTURE IMPROVEMENT: This could also be used to track if the user has unsaved changes:
                         1) When a users imports CSV and makes an edit (flag) OR if a user enters data manually (flag)
                         2) Only unflag with a save method
                 """
+                
                 item = self.table.identify_row(event.y)
                 column = self.table.identify_column(event.x)
+
                 if item and column:
                         value = self.table.item(item, 'values')[int(column[1:]) - 1] # Get the value from the treeview cell
                         row_value = list(self.table.item(item, 'values'))
-                        print(row_value)
                         
                         entry = tk.Entry(self) # Create an entry widget
                         entry.insert(0, value)
@@ -167,7 +224,7 @@ class GUIToolbar(TkTable):
     def __init__(self, parent):
         super().__init__(parent)
 
-        # Image conversion: https://dafarry.github.io/tkinterbook/photoimage.htm uses based64 type
+        # Image conversion: https://dafarry.github.io/tkinterbook/photoimage.htm uses base64 type
         self.img = tk.PhotoImage(format='gif',data=
                 'R0lGODlhEAAQAOe1ACpgtyxity5kth57AyxltC5luS9lujBluiJ7DjBmuiN6'
                 +'HTFmuyV/ADNpvDhxvzWHCjt2xDx4wTuLETqMFUJ5vz98xEB8xEOPF0V+wkKA'
@@ -225,8 +282,7 @@ class GUIToolbar(TkTable):
                 +'DJJlmYYUYZMsjwxRdecMHFFk00gcUPPyiQ1159/RXYYIUdlthijfkElFBEJWAUUkox5VREAQEAOw==')
         
         import_csv_button = ttk.Button(self, text="Import CSV", image=self.img, command=self.import_csv)
-        import_csv_button.pack(fill='y', expand=False)
-        #super(TkTable, self).pack(side="right", fill="y", expand=False) # Places on ttk.Frame
+        import_csv_button.pack(fill='y', padx=5, expand=False)
 
     def import_csv(self):
         """ Inherits from the Custom TKTable to pass data from csv_reader to a new table """
@@ -234,6 +290,7 @@ class GUIToolbar(TkTable):
                 title="Select a CSV file",
                 filetypes=(("csv", "*.csv"),)
         )
+
         data = []
         with open(file_path, 'r') as file:
                 csv_reader = csv.reader(file)
@@ -241,6 +298,7 @@ class GUIToolbar(TkTable):
                         data.append(row)
 
         ask_headers = messagebox.askyesno("Headers", "Does your data have headers?")
+
         if ask_headers:
                self.setup_table(data[1:], data[0])      # Need to add the ability for users to provide their own headings
         else:
@@ -249,5 +307,3 @@ class GUIToolbar(TkTable):
     
 if __name__ == "__main__":
         CustomTable()
-
-# https://www.youtube.com/watch?v=zhheiV3eQXI
