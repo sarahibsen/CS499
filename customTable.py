@@ -26,6 +26,8 @@ class CustomTable(tk.Frame): # changed to handle the embedded in the GUI
                 for item in self.table.get_children():
                         data.append(self.table.item(item)['values'])
                 return data
+        self.table = TkTable(self)
+        self.table.pack(fill='both', expand=True)
 
 
 class TkTable(ttk.Frame):
@@ -34,11 +36,31 @@ class TkTable(ttk.Frame):
         """
         def __init__(self, parent, headings=DEFAULT_HEADINGS, data=None):
                 super().__init__(parent)
-                self.table = ttk.Treeview(self, columns=headings, show='headings', selectmode='extended')
-                self.setup_table(data, headings=DEFAULT_HEADINGS)
-                
+                self.scroll_x = ttk.Scrollbar(self, orient="horizontal")
+                self.scroll_y = ttk.Scrollbar(self, orient="vertical")
+
+
+                # configuring the tree view (table)
+                self.table = ttk.Treeview(
+                        self,
+                        columns=headings,
+                        show='headings',
+                        selectmode='extended',
+                        yscrollcommand=self.scroll_y.set,
+                        xscrollcommand=self.scroll_x.set
+                )
+
+                # adding scroll bars so that the application can handle large datasets
+                self.scroll_y.config(command=self.table.yview)
+                self.scroll_x.config(command=self.table.xview)
+             #   self.table = ttk.Treeview(self, columns=headings, show='headings', selectmode='extended')
+             #   self.setup_table(data, headings=DEFAULT_HEADINGS)
+                # packing the scrollbars and table to ensure responsiveness. will only be triggered if there is enough data to scroll
+                self.scroll_y.pack(side="right", fill="y")
+                self.scroll_x.pack(side="bottom", fill="x")
+                self.table.pack(fill = "both", expand=True)
                 #self.table.config(yscrollcommand=self.scroll.set)
-                self.pack(fill='both', expand=True)
+                self.setup_table(data, headings)
                 
         def setup_table(self, data, headings):
                 """ Sets up a blank table when the TkTable Class is initialized OR imports data from CSV.
@@ -47,7 +69,9 @@ class TkTable(ttk.Frame):
                 """
                 for row in self.table.get_children():
                         self.table.delete(row) # Cleanup any old table if a CSV is imported
-        
+                self.table["columns"] = headings
+                self.add_column(headings, True) # Add columns to table
+
                 
                 #for e, txt in enumerate(headings):   # Headings will either be defaulted to 'A', 'B', 'C', ... OR users will need to be able to supply manually or from CSV.
                         #self.table.heading(e, text=txt)
@@ -55,21 +79,24 @@ class TkTable(ttk.Frame):
                 for i, heading in enumerate(headings):
                         self.table.heading(f'#{i+1}', text=heading)
                         self.table.column(f'#{i+1}', width=150, anchor='center', stretch=True)
-
-                self.table.pack(side="left", fill='both', expand=True)
-
                 if data is None:
                         for e, _ in enumerate(headings):
-                                self.table.insert("", "end", text=f"Item {e}", values=(["","","",""]))
+                                self.table.insert("", "end", text=f"Item {e}", values=(["","","","","","","","","","",""]))
                 else:
                         for e, row in enumerate(data):
                                 self.table.insert("", "end", text=f"Item {e}", values=(row))
 
-                self.table.bind("<Double-Button-1>", self.edit_cell)
+                # refresh scroll bars
+                self.table.update_idletasks()
+
+
+                self.table.bind("<Double-Button-1>", self.edit_cell) # Bind double-click to edit cell
                 self.menu = tk.Menu(self.table, tearoff=0)
                 self.menu.add_command(label="Add Row(s)", command=self.add_row)
                 self.menu.add_command(label="Add Column(s)", command=self.add_column)
-                self.table.bind("<Button-3>", self.popup_menu)
+                self.table.bind("<Button-3>",self.popup_menu) # Bind right-click to show Add/Delete Rows & Columns
+                self.table.pack(side="left", fill='both', expand=True)
+
 
         def row_menu(self, event):
                 """ Row menu popup for right-click.

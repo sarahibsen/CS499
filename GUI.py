@@ -14,7 +14,10 @@ class App(tk.Tk):
     """
     def __init__(self):
         super().__init__()
-        self.geometry("1280x832")  # Default size
+        # set window to be responsive to the device it's running on
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+        self.geometry("1280x800")  # Default size
         self.configure(bg="#FFFFFF")
         self.title("Statistical Analyzer")
 
@@ -34,6 +37,7 @@ class App(tk.Tk):
         # Initialize pages
         self.add_page("LaunchPage", LaunchPage)
         self.add_page("MeasureSelectionPage", MeasureSelectionPage)
+        # Add CustomTable which includes the GUI toolbar
 
         # Show the initial page
         self.show_page("LaunchPage")
@@ -232,7 +236,7 @@ def display_table(self, data):
 
     # Create and display the table using CustomTable
     table = CustomTable(table_frame)
-    table.pack(fill='both', expand=True)  # Ensure it takes full space
+    table.pack(side='top', fill= True)  # Ensure it takes full space
 
     # Set up table with data
     headings = data.columns if isinstance(data, pd.DataFrame) else ["Data"]
@@ -241,6 +245,7 @@ def display_table(self, data):
     # Initialize and configure the table
     tk_table = TkTable(table, headings=headings, data=rows)
     tk_table.pack(fill='both', expand=True)  # Make the table expand in the frame
+    tk_table.table.bind("<Double-1>", tk_table.edit_cell)
 
 
             
@@ -279,62 +284,55 @@ class MeasureSelectionPage(BasePage):
         self.canvas = Canvas(self, bg="#FFFFFF", bd=0, highlightthickness=0, relief="ridge")
         self.canvas.pack(fill="both", expand=True)
 
-        # ----- Images ----- #
-        # Select data type text
-        image_image_3 = PhotoImage(file=relative_to_assets("1_image_3.png"))
-        self.canvas.create_image(258, 153, image=image_image_3)
-        self.image_image_1 = image_image_3  # Keep a reference to avoid garbage collection
-
-        # Logo placeholder text
-        image_image_2 = PhotoImage(file=relative_to_assets("1_image_2.png"))
-        self.canvas.create_image(106, 51, image=image_image_2)
-        self.image_image_2 = image_image_2  # Keep a reference to avoid garbage collection
-
-        # Select statistical measures text
-        image_image_4 = PhotoImage(file=relative_to_assets("1_image_4.png"))
-        self.canvas.create_image(258, 335, image=image_image_4)
-        self.image_image_4 = image_image_4  # Keep a reference to avoid garbage collection
-
-        # ----- Buttons ----- #
-        self.continue_button = add_button(
-            self.canvas, 83, 685, 350.619873046875, 64.11334991455078, "1_button_1.png", "1_button_hover_1.png",
-            "Button 1 clicked!", lambda: controller.show_page("MeasureSelectionPage")
-        )
-        self.continue_button.place()
-
-        # ----- Pandas Table ----- #
+        # Data Table Frame
         self.table_frame = tk.Frame(self)
-        self.table_frame.place(x=600, y=150, width=600, height=500)
+        self.table_frame.place(x=600, y=150, width=600, height=400)
         self.table = TkTable(self.table_frame)
         self.table.pack(fill='both', expand=True)
 
+        # Add Import Button
+        self.import_button = ttk.Button(self, text="Import CSV", command=self.import_csv)
+        self.import_button.place(x=83, y=150, width=200, height=40)
 
+        # Add Calculate Button
+        self.calculate_button = ttk.Button(self, text="Calculate Measures", command=self.calculate_statistics)
+        self.calculate_button.place(x=83, y=200, width=200, height=40)
 
-        # ----- Data Type Combobox ----- #
+        # ComboBox for Data Types
         self.data_type_options = ["Nominal", "Ordinal", "Discrete", "Continuous"]
         self.data_type_dropdown = ttk.Combobox(self, values=self.data_type_options, font=("Roboto", 14), state="readonly")
-        self.data_type_dropdown.place(x=83, y=183, width=351, height=57)
+        self.data_type_dropdown.place(x=83, y=300, width=351, height=57)
         self.data_type_dropdown.set("Select Data Type")
         self.data_type_dropdown.bind("<<ComboboxSelected>>", self.on_data_type_selected)
 
-        # ----- Statistical Measure Listbox (Allows Multiple Selections) ----- #
+        # Statistical Measures Listbox
         self.stat_measures_listbox = tk.Listbox(self, font=("Roboto", 14), selectmode="multiple", exportselection=False)
-        self.stat_measures_listbox.place(x=83, y=364, width=351, height=100)
+        self.stat_measures_listbox.place(x=83, y=380, width=351, height=100)
 
-        # ----- Selected Measures Label ----- #
+        # Label to show selected measures
         self.selected_stat_label = tk.Label(
             self,
             text="Selected Measures: None",
             font=("Roboto", 14),
             bg="#FFFFFF",
-            wraplength=350,  # Wrap text at 350 pixels width
-            justify="left",  # Align text to the left
-            anchor="w"  # Start text from the left side
+            wraplength=350,
+            justify="left",
+            anchor="w"
         )
-        self.selected_stat_label.place(x=83, y=480, width=351, height=164)
+        self.selected_stat_label.place(x=83, y=500, width=351, height=50)
 
-        # Bind selection event
+        # Bind listbox selection
         self.stat_measures_listbox.bind("<<ListboxSelect>>", self.on_stat_measure_selected)
+
+    def import_csv(self):
+        file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
+        if file_path:
+            try:
+                data = pd.read_csv(file_path)
+                # Show data in the table
+                self.display_table(data)
+            except Exception as e:
+                print(f"Error importing CSV: {e}")
 
     def on_data_type_selected(self, event):
         selected_data_type = self.data_type_dropdown.get()
@@ -356,6 +354,21 @@ class MeasureSelectionPage(BasePage):
         for measure in measures:
             self.stat_measures_listbox.insert(tk.END, measure)
 
+    def display_table(self, data):
+        """
+        Displays the imported CSV data in the table.
+        """
+        # Clear existing table data
+        for item in self.table.table.get_children():
+            self.table.table.delete(item)
+
+        # Update table with new data
+        headings = list(data.columns) if isinstance(data, pd.DataFrame) else ["Data"]
+        rows = data.values.tolist() if isinstance(data, pd.DataFrame) else [[x] for x in data]
+
+        # Reinitialize the table with new data
+        self.table.setup_table(data=rows, headings=headings)
+
     def on_stat_measure_selected(self, event):
         # Get selected items from the listbox
         selected_indices = self.stat_measures_listbox.curselection()
@@ -366,10 +379,51 @@ class MeasureSelectionPage(BasePage):
             self.stat_measures_listbox.selection_clear(selected_indices[0])  # Remove the first selected item
 
         # Update the label with selected measures
-        selected_stats = [self.stat_measures_listbox.get(i) for i in self.stat_measures_listbox.curselection()]
         self.selected_stat_label.config(
-            text=f"Selected Measures: {', '.join(selected_stats)}" if selected_stats else "Selected Measures: None")
+            text=f"Selected Measures: {', '.join(selected_stats)}" if selected_stats else "Selected Measures: None"
+        )
 
+    def calculate_statistics(self):
+        selected_data_type = self.data_type_dropdown.get()
+        selected_measures = [self.stat_measures_listbox.get(i) for i in self.stat_measures_listbox.curselection()]
+        
+        if selected_data_type == "Nominal":
+            logic = nominalStatistics(self.get_table_data())
+        elif selected_data_type == "Ordinal":
+            logic = ordinalStatistics(self.get_table_data())
+        elif selected_data_type == "Discrete":
+            logic = discreteStatistics(self.get_table_data())
+        elif selected_data_type == "Continuous":
+            logic = continuousStatistics(self.get_table_data())
+        else:
+            print("Please select a data type.")
+            return
+
+        # Compute statistics based on selection
+        result = []
+        for measure in selected_measures:
+            if measure == "Mean":
+                result.append(f"Mean: {logic.mean()}")
+            elif measure == "Median":
+                result.append(f"Median: {logic.median()}")
+            elif measure == "Mode":
+                result.append(f"Mode: {logic.mode()}")
+            elif measure == "Standard Deviation":
+                result.append(f"Standard Deviation: {logic.standard_deviation()}")
+            elif measure == "Variance":
+                result.append(f"Variance: {logic.variance()}")
+
+        # Display results in a pop-up
+        messagebox.showinfo("Calculated Statistics", "\n".join(result))
+
+    def get_table_data(self):
+        # Fetch table data as a list of numeric values
+        data = []
+        for item in self.table.table.get_children():
+            row_data = self.table.table.item(item)["values"]
+            data.extend(row_data)
+        # Convert to numeric and drop NaNs
+        return np.array(pd.to_numeric(row_data, errors='coerce')).flatten()
 
 # Run the application
 app = App()
