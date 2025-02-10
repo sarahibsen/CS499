@@ -175,100 +175,6 @@ class LaunchPage(BasePage):
         canvas.create_image(902.77783203125, 415.125, image=image_image_3)
         self.image_image_3 = image_image_3  # Keep a reference to avoid garbage collection
 
-    # TODO: Add functionality to this upload data button by finishing this function
-def upload_data(self):
-    """
-    Display continue button when either the enter data or upload data button is clicked.
-    """
-    file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])  
-    if file_path:
-        try:
-            # Load the CSV data using pandas
-            data = pd.read_csv(file_path)
-
-            # Separate numeric and categorical data
-            numeric_data = data.select_dtypes(include=[np.number]).values.flatten()
-            categorical_data = data.select_dtypes(exclude=[np.number]).values.flatten()
-
-            # Ask user to classify numeric data into discrete or continuous
-            user_input = simpledialog.askstring(
-                "Data Classification", 
-                "Is your numeric data discrete or continuous? (Enter 'discrete' or 'continuous')"
-            )
-
-            # Instantiate the appropriate statistics class
-            if user_input.lower() == 'discrete':
-                self.stat_logic = discreteStatistics(numeric_data)
-            elif user_input.lower() == 'continuous':
-                self.stat_logic = continuousStatistics(numeric_data)
-
-            # Optionally, handle nominal/ordinal (if present)
-            if len(categorical_data) > 0:
-                category_input = simpledialog.askstring(
-                    "Categorical Data Classification", 
-                    "Is your categorical data nominal or ordinal? (Enter 'nominal' or 'ordinal')"
-                )
-                if category_input.lower() == 'nominal':
-                    self.cat_stat_logic = nominalStatistics(categorical_data)
-                elif category_input.lower() == 'ordinal':
-                    self.cat_stat_logic = ordinalStatistics(categorical_data)
-
-            # Example usage of calculated statistics
-            print(f"Mean: {self.stat_logic.mean()}")
-            print(f"Standard Deviation: {self.stat_logic.standard_deviation()}")
-
-        except Exception as e:
-            print(f"Error loading CSV: {e}")
-
-
-def display_table(self, data):
-    """
-    Embeds the custom table within the GUI and displays the loaded data.
-    """
-    # Create a Toplevel window for the popup
-    popup = tk.Toplevel(self)
-    popup.title("Data Table")
-    popup.geometry("800x600")  # Adjust as needed
-
-    # Create a frame inside the popup to host the table
-    table_frame = tk.Frame(popup)
-    table_frame.pack(fill='both', expand=True)
-
-    # Create and display the table using CustomTable
-    table = CustomTable(table_frame)
-    table.pack(side='top', fill= True)  # Ensure it takes full space
-
-    # Set up table with data
-    headings = data.columns if isinstance(data, pd.DataFrame) else ["Data"]
-    rows = data.values.tolist() if isinstance(data, pd.DataFrame) else [[x] for x in data]
-
-    # Initialize and configure the table
-    tk_table = TkTable(table, headings=headings, data=rows)
-    tk_table.pack(fill='both', expand=True)  # Make the table expand in the frame
-    tk_table.table.bind("<Double-1>", tk_table.edit_cell)
-
-
-            
-    # TODO: Decide if this button is necessary. If yes, add functionality to this button by finishing this function
-def enter_data(self):
-    """
-    Display continue button when either the enter data or upload data button is clicked.
-    """
-    user_input = simpledialog.askstring("Enter Data", "Enter numeric calues separated by commas: ")
-    if user_input:
-        try:
-                data = np.array([float(x) for x in user_input.split(",")])
-                self.stat_logic = statistic(data)
-                print("Data entered successfully.")
-                
-                # show continue button
-                self.continue_button.place(x=70, y=584, width=300, height=60)
-        except ValueError:
-                print("Invalid data entered. Please enter numeric values separated by commas.")
-
-        # TODO: Use input validation to determine whether continue button should display after user enters data
-        #   this function can be appended to whatever function is created to add functionality to the enter data buttons
-    self.continue_button.place(x=70, y=584, width=300, height=60)
 
 
 class MeasureSelectionPage(BasePage):
@@ -287,12 +193,9 @@ class MeasureSelectionPage(BasePage):
         # Data Table Frame
         self.table_frame = tk.Frame(self)
         self.table_frame.place(x=600, y=150, width=600, height=400)
-        self.table = TkTable(self.table_frame)
-        self.table.pack(fill='both', expand=True)
+        self.table = CustomTable()
+        self.toolbar =GUIToolbar(self.table_frame)
 
-        # Add Import Button
-        self.import_button = ttk.Button(self, text="Import CSV", command=self.import_csv)
-        self.import_button.place(x=83, y=150, width=200, height=40)
 
         # Add Calculate Button
         self.calculate_button = ttk.Button(self, text="Calculate Measures", command=self.calculate_statistics)
@@ -354,20 +257,7 @@ class MeasureSelectionPage(BasePage):
         for measure in measures:
             self.stat_measures_listbox.insert(tk.END, measure)
 
-    def display_table(self, data):
-        """
-        Displays the imported CSV data in the table.
-        """
-        # Clear existing table data
-        for item in self.table.table.get_children():
-            self.table.table.delete(item)
 
-        # Update table with new data
-        headings = list(data.columns) if isinstance(data, pd.DataFrame) else ["Data"]
-        rows = data.values.tolist() if isinstance(data, pd.DataFrame) else [[x] for x in data]
-
-        # Reinitialize the table with new data
-        self.table.setup_table(data=rows, headings=headings)
 
     def on_stat_measure_selected(self, event):
         # Get selected items from the listbox
@@ -417,14 +307,8 @@ class MeasureSelectionPage(BasePage):
         messagebox.showinfo("Calculated Statistics", "\n".join(result))
 
     def get_table_data(self):
-        # Fetch table data as a list of numeric values
-        data = []
-        for item in self.table.table.get_children():
-            row_data = self.table.table.item(item)["values"]
-            data.extend(row_data)
-        # Convert to numeric and drop NaNs
-        return np.array(pd.to_numeric(row_data, errors='coerce')).flatten()
-
+        # Fetch table data from the CustomTable widget
+        return TkTable.celldType()
 # Run the application
 app = App()
 app.mainloop()
