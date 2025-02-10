@@ -108,20 +108,29 @@ class statistic():
         mean = self.mean()
         std_dev = self.standardDeviation()
         return std_dev / mean
-        
+    
     def percentiles(self):
         """
-        Return the specified percentiles for EACH COLUMN in the dataset (not row).
+        Method applies w/ ordinal, frequency, and interval
         Parameters:
-            List of percentiles (to be integrated with graphing)
-            axis = 0 is for columns, axis = 1 is for rows, unspecified is for the entire dataset.
+            Data, list of percentiles, axis (=0 for columns, =1 for rows, unspecified for entire dataset)
+        Returns:
+            Pandas dataframe/table for graphing and exporting as formatted text
         """
-        # TODO: Associate choice with H/V Bar graphs, Normal Distribution Curve, X-Y graph.
-        print("Would you like to calculate the percentiles for the columns or rows?")
-        axis = int(input("Enter '0' for columns or '1' for rows: ")) 
+        # TODO: determine if user wants to calculate one numeric column or a specified amount. Otherwise this is default
+
         psequence = list(map(int, input("Enter the percentiles you would like to calculate (e.g. 25, 50, 75): ").split(",")))
 
-        return np.percentile(self.data, psequence, axis=axis)  
+        percentiles_array = np.percentile(self.data, psequence, axis=0)
+
+        percentiles_df = pd.DataFrame(
+            percentiles_array, 
+            columns=self.data.columns
+        )
+        percentiles_df.insert(0, "Percentiles", [f"{p}th" for p in psequence])  # Insert percentile column (Percentiles:, nth, n+1th)
+        percentiles_df.index = range(len(psequence))  # Add indices (0, 1, 2...)
+
+        return percentiles_df
     
     def probabilityDistribution(self):
         """
@@ -145,32 +154,43 @@ class statistic():
     
     def leastSquareLine(self):
         """
-        Return the least square line of the data set
+        Only works for interval & frequency datasets
         Parameters: Grabs first column as x and second column as y (e.g. Expected/Actual Freq. Data). 
+        Returns the slope, intercept, and equation of the regression line.
         """
-        # TODO: Handling events with a 2D-array. X-Y graph, build graph as well (matlibplot)
-        x = self.data[:, 0]
-        y = self.data[:, 1]
+        if self.data.shape[1] < 2:
+            raise ValueError("Dataset must contain at least two numeric columns.")
+
+        x = self.data.iloc[:, 0]  # First column as x
+        y = self.data.iloc[:, 1]  # Second column as y
+
+        # Perform linear regression
         slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
-        #returns to matlibplot graphing function
-        return slope, intercept
 
-    def chiSquare(self):
+        # Equation of the regression line
+        equation = f"y = {slope:.4f}x + {intercept:.4f}"
+
+        return slope, intercept, equation
+
+    def chiSquared(self):
         """
-        Return the chi-square value of the data set
+        Performs a chi-squared test on the dataset.
+        Returns:
+            chi-squared statistics and p-values for each column.
         """
-        pass
+        chi_sq_results = stats.chisquare(self.data, axis=0, sum_check=False)
+        return chi_sq_results
+    
 
-"""
-6. Correlation coefficient
-7. Sign test
-8. Rank Sum test
-9. Spearman rank correlation coefficient
+    """
+    additional math functions needed to add: 
 
-10. Histogram
-11. Check for overlap?
-"""
+    Correlation Coefficient 
+    Rank Sum Test
+    Spearman rank correlation coefficient 
+    """
 
+    
 
 class plotCreation():
     def __init__(self, data):
@@ -193,13 +213,54 @@ class plotCreation():
         plt.tight_layout()
         plt.show()
 
-    def plot_barChart(self, title = "Bar Chart"):
+    def plot_barChart(self, title="Bar Chart"):
+        plt.figure()
+
+        width = 0.3
+        x = np.arange(len(self.data.index))  # Number of rows in the dataset
+        
+        x_labels = self.data.iloc[:, 0]  # First column after index (Percentiles: nth, n+1th)
+    
+        # Plot each column as a separate bar
+        for i, col in enumerate(self.data.columns[1:]):  # Skip 'Percentiles' column
+            plt.bar(x + i * width, self.data[col], width=width, label=col)
+
+        plt.xticks(x + width / 2, labels=x_labels)  # Use 'Percentiles' as x-tick labels
+        plt.title(title)
+        plt.xlabel("Percentiles")
+        plt.ylabel("Value")
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+
+
+    def plot_lineChart(self, title="Line Plot"):
         """
-        Creates a bar chart of the data set 
-        Parameters: 
-            title (str): the title of the bar chart 
+        Plots a line graph for the dataset using the first column as X and the second as Y.
+        If a regression line is present, it overlays it on the plot.
         """
-        pass
+        if self.data.shape[1] < 2:
+            raise ValueError("Dataset must contain at least two numeric columns for a line plot.")
+
+        x = self.data.iloc[:, 0]  # First column as x
+        y = self.data.iloc[:, 1]  # Second column as y
+
+        plt.figure()
+        plt.plot(x, y, marker='o', linestyle='-', color='b', label="Data Points")
+
+        # Try fitting a least square line
+        try:
+            slope, intercept, equation = statistic(self.data).leastSquareLine()
+            plt.plot(x, slope * x + intercept, color='r', linestyle='--', label=f"Regression Line\n{equation}")
+        except Exception as e:
+            print(f"Could not fit regression line: {e}")
+
+        plt.title(title)
+        plt.xlabel("X")
+        plt.ylabel("Y")
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
 
     #TODO: create the rest of the functions for plotting <3 
     
@@ -223,32 +284,41 @@ def extract_numeric_data(dataframe):
 '''
 
 '''
-# Example usage of the Statistic class
 if __name__ == "__main__":
-    # Path to the CSV file
-    path = r"C:\Users\sarah\Desktop\programs\CS499\Test Data\FrequencyDataTest.csv"
 
-    # Load the CSV file
+    path = r"C:\Users\matte\Desktop\CS499 - copy\Test Data\IntervalDataTest.csv"
     try:
         data = pd.read_csv(path)
     except Exception as e:
         print(f"Error reading the file: {e}")
         exit()
 
-    # Extract numeric data
-    numeric_data = extract_numeric_data(data)
-    
-    if numeric_data.size == 0:
-        print("No numeric data found in the file.")
-        exit()
 
+    print("DataFrame content:\n", data)   
+    numeric_data = data.select_dtypes(include=[np.number])
+    print("Numeric data:\n", numeric_data)
 
     # Creating an instance of the Statistic class with the numeric data
-    stats = statistic(numeric_data)
+    measure = statistic(numeric_data)
 
-    # Calculating the standard deviation
-    standard_deviation = stats.standardDeviation()
-    print("Standard Deviation:", standard_deviation)
-    print("Variance:", stats.variance())
-    print("Coefficient of Variation:", stats.coefficientOfVariation())
-'''
+    #standard_deviation = measure.standardDeviation()
+    #print("Standard Deviation:", standard_deviation)
+    #print("Variance:", measure.variance())
+    #print("Coefficient of Variation:", measure.coefficientOfVariation())
+
+    #leastSquare = measure.leastSquareLine()
+    #print("\n--- Least Square Line ---")
+    #print(leastSquare)
+
+    #chisquared = measure.chiSquared()
+    #print("\n--- Chi-Squared ---")
+    #print(chisquared)
+
+    percentiles_df = measure.percentiles()
+    print("\n--- Percentiles ---")
+    print(percentiles_df)
+
+    #plot vertical bar graph percentiles of 1st column
+    plotter = plotCreation(percentiles_df)
+    percentilesbar = plotter.plot_barChart(percentiles_df)
+    '''
