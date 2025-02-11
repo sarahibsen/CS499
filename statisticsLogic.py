@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import tkinter 
 
+from scipy.stats import mode
 
 class statistic():
     """
@@ -17,26 +18,6 @@ class statistic():
         """
         self.data = data 
 
-    def userChoices(self):
-        """
-        takes the users input and returns the corresponding answers
-        """
-        #TODO : this is just a placement function, idk if it is functional 
-        userChoice = input("What statistic would you like to use? (mean, median, mode, variance, standard deviation, or coefficient of variation): ")
-        if userChoice == 'mean':
-            return self.mean()
-        elif userChoice == 'median':
-            return self.median()
-        elif userChoice == 'mode':
-            return self.mode()
-        elif userChoice == 'variance':
-            return self.variance()
-        elif userChoice == 'standard deviation':
-            return self.standardDeviation()
-        elif userChoice == 'coefficient of variation':
-            return self.coefficientOfVariation()
-        else:
-            return "Invalid input"
         
     def mean(self):
         """
@@ -53,7 +34,7 @@ class statistic():
         """
         Return the mode of the data set
         """
-        return np.mode(self.data)
+        return mode(self.data)[0][0]
     
     def standardDeviation(self):
         """
@@ -156,53 +137,4 @@ class plotCreation():
         pass
 
     #TODO: create the rest of the functions for plotting <3 
-    
-'''
-# Function to extract numeric columns
-# shouldn't need this function when jarrett implements the loading of csv and the extraction of numerical data from the file 
-# if not, this function will be used to extract the numerical data from the file
-def extract_numeric_data(dataframe):
-    """
-    Extract only numeric columns from a DataFrame and flatten the data.
-    
-    Parameters:
-        dataframe (pd.DataFrame): Input DataFrame with mixed data types.
-        
-    Returns:
-        np.ndarray: A 1D array of numeric data.
-    """
-    numeric_data = dataframe.select_dtypes(include=[np.number])
-    return numeric_data.to_numpy().flatten()
 
-'''
-
-'''
-# Example usage of the Statistic class
-if __name__ == "__main__":
-    # Path to the CSV file
-    path = r"C:\Users\sarah\Desktop\programs\CS499\Test Data\FrequencyDataTest.csv"
-
-    # Load the CSV file
-    try:
-        data = pd.read_csv(path)
-    except Exception as e:
-        print(f"Error reading the file: {e}")
-        exit()
-
-    # Extract numeric data
-    numeric_data = extract_numeric_data(data)
-    
-    if numeric_data.size == 0:
-        print("No numeric data found in the file.")
-        exit()
-
-
-    # Creating an instance of the Statistic class with the numeric data
-    stats = statistic(numeric_data)
-
-    # Calculating the standard deviation
-    standard_deviation = stats.standardDeviation()
-    print("Standard Deviation:", standard_deviation)
-    print("Variance:", stats.variance())
-    print("Coefficient of Variation:", stats.coefficientOfVariation())
-'''
