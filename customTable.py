@@ -23,6 +23,7 @@ from tkinter import simpledialog, filedialog, messagebox
 
 DEFAULT_HEADINGS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']
      
+
 class CustomTable(tk.Frame):
       def __init__(self):
         super().__init__()
@@ -305,5 +306,6 @@ class GUIToolbar(TkTable):
                self.setup_table(data, DEFAULT_HEADINGS) # Need to change to populate based on the number of commas, this will represent A-Z default headings
 
     
+
 #if __name__ == "__main__":
  #       CustomTable()
