@@ -5,6 +5,18 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import tkinter 
 
+def validate_data(func):
+    """Decorator to validate the data before executing a method."""
+    def wrapper(self, *args, **kwargs):
+        if not isinstance(self.data, (list, np.ndarray, pd.DataFrame)):
+            raise TypeError("Data must be a list, NumPy array, or Pandas DataFrame of numbers.")
+        if isinstance(self.data, (list, np.ndarray)):
+            if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in self.data):
+                raise TypeError("All elements in the data must be numbers.")
+            if len(self.data) == 0:
+                raise ValueError("Data cannot be empty.")
+        return func(self, *args, **kwargs)
+    return wrapper
 
 class statistic():
     """
@@ -109,15 +121,16 @@ class statistic():
         std_dev = self.standardDeviation()
         return std_dev / mean
     
+    @validate_data
     def percentiles(self):
         """
         Method applies w/ ordinal, frequency, and interval
         Parameters:
-            Data, list of percentiles, axis (=0 for columns, =1 for rows, unspecified for entire dataset)
+            numpy.ndarray object, list of percentiles, axis 
+                (axis=0 for columns, =1 for rows, unspecified for entire dataset)
         Returns:
-            Pandas dataframe/table for graphing and exporting as formatted text
+            NumPy ndarray for further processing
         """
-        # TODO: determine if user wants to calculate one numeric column or a specified amount. Otherwise this is default
 
         psequence = list(map(int, input("Enter the percentiles you would like to calculate (e.g. 25, 50, 75): ").split(",")))
 
@@ -125,13 +138,14 @@ class statistic():
 
         percentiles_df = pd.DataFrame(
             percentiles_array, 
-            columns=self.data.columns
+            columns=[f"Column {i+1}" for i in range(self.data.shape[1])]
         )
-        percentiles_df.insert(0, "Percentiles", [f"{p}th" for p in psequence])  # Insert percentile column (Percentiles:, nth, n+1th)
-        percentiles_df.index = range(len(psequence))  # Add indices (0, 1, 2...)
 
-        return percentiles_df
+        percentiles_df.insert(0, "Percentiles", [f"{p}th" for p in psequence])  # Insert percentile column (Percentiles:, nth, n+1th)
+        #is dataframe neeeded for graphing or exporting formatted text? (remove ".to_numpy()")
+        return percentiles_df.to_numpy()
     
+#TODO: Needs frontend aspects for user input
     def probabilityDistribution(self):
         """
         Return the probability distribution of the data set
@@ -151,46 +165,89 @@ class statistic():
         p = float(input("Enter the probability of success: "))
         size = int(input("Enter the size of the sample: "))
         return np.random.binomial(n, p, size)
-    
+
+    @validate_data
     def leastSquareLine(self):
         """
         Only works for interval & frequency datasets
-        Parameters: Grabs first column as x and second column as y (e.g. Expected/Actual Freq. Data). 
-        Returns the slope, intercept, and equation of the regression line.
+        Parameters: 
+            Grabs two arrays (can be np.array) as x and as y columns.
+                (e.g. Expected/Actual Freq. Data). 
+        Returns:
+            the slope, intercept, and equation of the regression line.
         """
         if self.data.shape[1] < 2:
             raise ValueError("Dataset must contain at least two numeric columns.")
 
-        x = self.data.iloc[:, 0]  # First column as x
-        y = self.data.iloc[:, 1]  # Second column as y
+        x = self.data.iloc[:, 0]
+        y = self.data.iloc[:, 1]
 
-        # Perform linear regression
+        # Perform linear regression (return values))
         slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
 
-        # Equation of the regression line
+        # Equation of the regression line for graphing
         equation = f"y = {slope:.4f}x + {intercept:.4f}"
 
         return slope, intercept, equation
 
+    @validate_data
     def chiSquared(self):
         """
-        Performs a chi-squared test on the dataset.
+        Only works for frequency datasets
+        Parameters: 
+            Grabs two arrays/list from np.ndarray as x,y (expected, actual)
         Returns:
-            chi-squared statistics and p-values for each column.
+            chi-squared value.
         """
-        chi_sq_results = stats.chisquare(self.data, axis=0, sum_check=False)
+        f_exp = self.data.iloc[:, 0]
+        f_obs = self.data.iloc[:, 1]
+        chi_sq_results = stats.chisquare(f_obs, f_exp, axis=0, sum_check=False)
         return chi_sq_results
+
+    @validate_data
+    def correlationCoefficient(self):
+        """
+        Only works for interval & frequency datasets
+        Parameters: Grabs first column as x and second column as y
+        Returns the correlation coefficient.
+        """
+        return np.corrcoef(self.data.iloc[:, 0], self.data.iloc[:, 1])
+
+    @validate_data
+    def significanceTest(self):
+        # has known issues w/ parameters that have deprecated since version 1.17.10 of scipy (permutations, alternative hypothesis)
+        """
+        Only works for interval & frequency datasets
+        Parameters: Grabs first column as x and second column as y
+        Returns the p-value.
+        """
+        return stats.ttest_ind(self.data.iloc[:, 0], self.data.iloc[:, 1])
+
+    @validate_data
+    def rankSum(self):
+        # known issues (alternative hypothesis)
+        """
+        Only works for ordinal datasets
+        Parameters:
+            Grabs two arrays (x,y), alternative hypothesis, axis
+        Returns:
+            the rank sum & p-value as floats
+        """
+        return stats.ranksums(self.data.iloc[:, 0], self.data.iloc[:, 1])
+
+    @validate_data
+    def spearmanRankCorrelation(self):
+        """
+        Only works for ordinal datasets
+        Parameters:
+            Grabs two arrays from an np.ndarray object ("x" & "y" column), axis if none ravel/flatten both arrays before performing
+                #source https://www.youtube.com/watch?v=XV_W1w4Nwoc
+        Returns:
+            two floats (the spearman rank correlation & p-value).
+        """
+        return stats.spearmanr(self.data.iloc[:, 0], self.data.iloc[:, 1], axis = 0)
     
 
-    """
-    additional math functions needed to add: 
-
-    Correlation Coefficient 
-    Rank Sum Test
-    Spearman rank correlation coefficient 
-    """
-
-    
 
 class plotCreation():
     def __init__(self, data):
@@ -283,7 +340,7 @@ def extract_numeric_data(dataframe):
 
 '''
 
-'''
+
 if __name__ == "__main__":
 
     path = r"C:\Users\matte\Desktop\CS499 - copy\Test Data\IntervalDataTest.csv"
@@ -301,10 +358,10 @@ if __name__ == "__main__":
     # Creating an instance of the Statistic class with the numeric data
     measure = statistic(numeric_data)
 
-    #standard_deviation = measure.standardDeviation()
-    #print("Standard Deviation:", standard_deviation)
-    #print("Variance:", measure.variance())
-    #print("Coefficient of Variation:", measure.coefficientOfVariation())
+    standard_deviation = measure.standardDeviation()
+    print("Standard Deviation:", standard_deviation)
+    print("Variance:", measure.variance())
+    print("Coefficient of Variation:", measure.coefficientOfVariation())
 
     #leastSquare = measure.leastSquareLine()
     #print("\n--- Least Square Line ---")
@@ -314,11 +371,10 @@ if __name__ == "__main__":
     #print("\n--- Chi-Squared ---")
     #print(chisquared)
 
-    percentiles_df = measure.percentiles()
-    print("\n--- Percentiles ---")
-    print(percentiles_df)
+    #percentiles_df = measure.percentiles()
+    #print("\n--- Percentiles ---")
+    #print(percentiles_df)
 
     #plot vertical bar graph percentiles of 1st column
-    plotter = plotCreation(percentiles_df)
-    percentilesbar = plotter.plot_barChart(percentiles_df)
-    '''
+    #plotter = plotCreation(percentiles_df)
+    #percentilesbar = plotter.plot_barChart(percentiles_df)
