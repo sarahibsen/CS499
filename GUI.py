@@ -1,10 +1,10 @@
 import tkinter as tk
-from tkinter import Canvas, Button, PhotoImage, filedialog, ttk
+from tkinter import Canvas, Button, PhotoImage, filedialog, ttk, messagebox
 import pandas as pd
 import numpy as np
 from pathlib import Path
 
-from customTable import *
+from customTable import CustomTable
 from statisticsLogic import *
 from main import *
 
@@ -30,6 +30,7 @@ class App(tk.Tk):
         # Container to hold all pages
         self.container = tk.Frame(self)
         self.container.pack(fill="both", expand=True)
+        #self.container.grid(row=0,column=0,sticky='nsew')
 
         # Dictionary to store pages
         self.pages = {}
@@ -192,25 +193,24 @@ class MeasureSelectionPage(BasePage):
 
         # Data Table Frame
         self.table_frame = tk.Frame(self)
-        self.table_frame.place(x=600, y=150, width=600, height=400)
-        self.table = CustomTable()
-        self.toolbar =GUIToolbar(self.table_frame)
+        self.table_frame.place(x=450, y=20, width=480, height=350)
+        self.table = CustomTable(self.table_frame)
 
 
         # Add Calculate Button
         self.calculate_button = ttk.Button(self, text="Calculate Measures", command=self.calculate_statistics)
-        self.calculate_button.place(x=83, y=200, width=200, height=40)
+        self.calculate_button.place(x=30, y=20, width=200, height=40)
 
         # ComboBox for Data Types
         self.data_type_options = ["Nominal", "Ordinal", "Discrete", "Continuous"]
         self.data_type_dropdown = ttk.Combobox(self, values=self.data_type_options, font=("Roboto", 14), state="readonly")
-        self.data_type_dropdown.place(x=83, y=300, width=351, height=57)
+        self.data_type_dropdown.place(x=30, y=80, width=351, height=57)
         self.data_type_dropdown.set("Select Data Type")
         self.data_type_dropdown.bind("<<ComboboxSelected>>", self.on_data_type_selected)
 
         # Statistical Measures Listbox
         self.stat_measures_listbox = tk.Listbox(self, font=("Roboto", 14), selectmode="multiple", exportselection=False)
-        self.stat_measures_listbox.place(x=83, y=380, width=351, height=100)
+        self.stat_measures_listbox.place(x=30, y=160, width=351, height=100)
 
         # Label to show selected measures
         self.selected_stat_label = tk.Label(
@@ -222,7 +222,7 @@ class MeasureSelectionPage(BasePage):
             justify="left",
             anchor="w"
         )
-        self.selected_stat_label.place(x=83, y=500, width=351, height=50)
+        self.selected_stat_label.place(x=30, y=300, width=351, height=50)
 
         # Bind listbox selection
         self.stat_measures_listbox.bind("<<ListboxSelect>>", self.on_stat_measure_selected)
@@ -305,10 +305,12 @@ class MeasureSelectionPage(BasePage):
 
         # Display results in a pop-up
         messagebox.showinfo("Calculated Statistics", "\n".join(result))
+        
 
     def get_table_data(self):
         # Fetch table data from the CustomTable widget
-        return TkTable.celldType()
+        return self.table.get_table_data()
+    
 # Run the application
 app = App()
 app.mainloop()
