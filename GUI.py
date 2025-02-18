@@ -18,6 +18,7 @@ class App(tk.Tk):
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
         self.geometry("1280x832")  # Default size
+
         self.configure(bg="#FFFFFF")
         self.title("Statistical Analyzer")
 
@@ -38,6 +39,7 @@ class App(tk.Tk):
         self.add_page("LaunchPage", LaunchPage)
         self.add_page("MeasureSelectionPage", MeasureSelectionPage)
         self.add_page("DashboardPage", DashboardPage)
+
         # Add CustomTable which includes the GUI toolbar
 
         # Show the initial page
@@ -77,6 +79,7 @@ def relative_to_assets(path: str) -> Path:
     """
     assets_path = Path(__file__).parent / Path(
         r"assets"
+
     )
     return assets_path / Path(path)
 
@@ -177,10 +180,12 @@ class LaunchPage(BasePage):
         self.image_image_3 = image_image_3  # Keep a reference to avoid garbage collection
 
 
+
 class MeasureSelectionPage(BasePage):
     """
     Measure selection page of the application. Users will select what statistical measures
     they want to perform on the dataset.
+
     """
     def __init__(self, parent, controller):
         super().__init__(parent, controller)
@@ -200,16 +205,21 @@ class MeasureSelectionPage(BasePage):
         self.calculate_button = ttk.Button(self, text="Calculate Measures", command=self.calculate_statistics)
         self.calculate_button.place(x=151, y=200, width=200, height=40)
 
+
         # ComboBox for Data Types
         self.data_type_options = ["Nominal", "Ordinal", "Discrete", "Continuous"]
         self.data_type_dropdown = ttk.Combobox(self, values=self.data_type_options, font=("Roboto", 14), state="readonly")
+
         self.data_type_dropdown.place(x=151, y=300, width=351, height=57)
+
         self.data_type_dropdown.set("Select Data Type")
         self.data_type_dropdown.bind("<<ComboboxSelected>>", self.on_data_type_selected)
 
         # Statistical Measures Listbox
         self.stat_measures_listbox = tk.Listbox(self, font=("Roboto", 14), selectmode="multiple", exportselection=False)
+
         self.stat_measures_listbox.place(x=151, y=380, width=351, height=100)
+
 
         # Label to show selected measures
         self.selected_stat_label = tk.Label(
@@ -221,10 +231,13 @@ class MeasureSelectionPage(BasePage):
             justify="left",
             anchor="w"
         )
+
         self.selected_stat_label.place(x=151, y=500, width=351, height=50)
+
 
         # Bind listbox selection
         self.stat_measures_listbox.bind("<<ListboxSelect>>", self.on_stat_measure_selected)
+
 
         # ----- Toolbar ----- #
         self.canvas.create_rectangle(0, 0, 100, 832, fill="#D9D9D9", outline="")
@@ -268,6 +281,7 @@ class MeasureSelectionPage(BasePage):
 
         for measure in measures:
             self.stat_measures_listbox.insert(tk.END, measure)
+
 
     def on_stat_measure_selected(self, event):
         # Get selected items from the listbox
@@ -321,6 +335,7 @@ class MeasureSelectionPage(BasePage):
         return TkTable.celldType()
 
 
+
 class DashboardPage(BasePage):
     """
     Dashboard page of the application. Users what graphs they would like to display.
@@ -369,7 +384,6 @@ class DashboardPage(BasePage):
             "Dashboard page button clicked!"
         )
         self.dashboard_page_button.place()
-
 
 # Run the application
 app = App()
