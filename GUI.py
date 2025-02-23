@@ -20,6 +20,7 @@ class App(tk.Tk):
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
+
         self.geometry("%dx%d" % (width, height))  # Default size
 
         self.configure(bg="#FFFFFF")
@@ -206,6 +207,7 @@ class MeasureSelectionPage(BasePage):
         
         # Data Table Frame
         self.table_frame = tk.Frame(self)
+
         self.table_frame.grid(row=0, column=2, padx=10, pady=10, sticky="nsew")
         self.table_frame.grid_rowconfigure(0, weight=1)
         self.table_frame.grid_columnconfigure(2, weight=1)
@@ -228,6 +230,7 @@ class MeasureSelectionPage(BasePage):
         self.data_type_dropdown.bind("<<ComboboxSelected>>", self.on_data_type_selected)
 
         # Statistical Measures Listbox
+
         self.stat_measures_listbox = tk.Listbox(self.measurement_frame, font=("Roboto", 14), selectmode="multiple", exportselection=False)
 
         #self.stat_measures_listbox.place(x=151, y=380, width=351, height=100)
@@ -245,6 +248,7 @@ class MeasureSelectionPage(BasePage):
             anchor="w"
         )
 
+
         #self.selected_stat_label.place(x=151, y=500, width=351, height=50)
         self.selected_stat_label.grid(row=3, column=1, padx=10, pady=10, sticky='nw')
 
@@ -259,12 +263,15 @@ class MeasureSelectionPage(BasePage):
             self.canvas, 18, 50, 63, 63, "button_4.png", "button_hover_4.png",
             "Data page button clicked!"
         )
+
         #self.data_page_button.place()
         self.data_page_button.grid(row=0, column=0, padx=10, pady=10, sticky="ns")
+
         self.dashboard_page_button = add_button(
             self.canvas, 18, 163, 63, 63, "button_5.png", "button_hover_5.png",
             "Dashboard page button clicked!", lambda: controller.show_page("DashboardPage")
         )
+
         # self.dashboard_page_button.place()
         self.dashboard_page_button.grid(row=1, column=0, padx=10, pady=10, sticky="ns")
 
@@ -348,8 +355,8 @@ class MeasureSelectionPage(BasePage):
 
     def get_table_data(self):
         # Fetch table data from the CustomTable widget
-        return self.table.celldType()
 
+        return self.table.celldType()
 
 
 class DashboardPage(BasePage):
