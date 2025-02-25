@@ -82,9 +82,6 @@ class TableController:
         self.table.grid(row=0,column=0,sticky='nswe')
         self.table.enable_bindings("all", "edit_header", "edit_index", "ctrl_select")
 
-        self.data_test_button = ttk.Button(root, text="Get Data (To be Removed)", command=self.get_table_selection)
-        self.data_test_button.grid(row=0,column=1,sticky='sw')
-
     def get_table_selection(self):
         """ Creates a 2D list that matches the dimensions of the tksheet table and fills row list with None.
             Iterates over the entire table only updating the cells that are selected.
