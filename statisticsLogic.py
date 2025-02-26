@@ -5,6 +5,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import tkinter 
 
+from scipy.stats import mode
+
 def validate_data(func):
     """Decorator to validate the data before executing a method."""
     def wrapper(self, *args, **kwargs):
@@ -18,6 +20,7 @@ def validate_data(func):
         return func(self, *args, **kwargs)
     return wrapper
 
+
 class statistic():
     """
     Equations for calculating statistics on a dataset 
@@ -30,26 +33,6 @@ class statistic():
         """
         self.data = data 
 
-    def userChoices(self):
-        """
-        takes the users input and returns the corresponding answers
-        """
-        #TODO : this is just a placement function, idk if it is functional 
-        userChoice = input("What statistic would you like to use? (mean, median, mode, variance, standard deviation, or coefficient of variation): ")
-        if userChoice == 'mean':
-            return self.mean()
-        elif userChoice == 'median':
-            return self.median()
-        elif userChoice == 'mode':
-            return self.mode()
-        elif userChoice == 'variance':
-            return self.variance()
-        elif userChoice == 'standard deviation':
-            return self.standardDeviation()
-        elif userChoice == 'coefficient of variation':
-            return self.coefficientOfVariation()
-        else:
-            return "Invalid input"
         
     def mean(self):
         """
@@ -66,7 +49,7 @@ class statistic():
         """
         Return the mode of the data set
         """
-        return np.mode(self.data)
+        return mode(self.data)[0][0]
     
     def standardDeviation(self):
         """
@@ -248,7 +231,6 @@ class statistic():
         return stats.spearmanr(self.data.iloc[:, 0], self.data.iloc[:, 1], axis = 0)
     
 
-
 class plotCreation():
     def __init__(self, data):
         """
@@ -319,7 +301,7 @@ class plotCreation():
         plt.tight_layout()
         plt.show()
 
-    #TODO: create the rest of the functions for plotting <3 
+    #TODO: revision, +pie, +curve
     
 '''
 # Function to extract numeric columns
@@ -340,7 +322,7 @@ def extract_numeric_data(dataframe):
 
 '''
 
-
+'''
 if __name__ == "__main__":
 
     path = r"C:\Users\matte\Desktop\CS499 - copy\Test Data\IntervalDataTest.csv"
@@ -378,3 +360,4 @@ if __name__ == "__main__":
     #plot vertical bar graph percentiles of 1st column
     #plotter = plotCreation(percentiles_df)
     #percentilesbar = plotter.plot_barChart(percentiles_df)
+'''

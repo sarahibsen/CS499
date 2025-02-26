@@ -1,7 +1,12 @@
 import tkinter as tk
-from tkinter import Canvas, Button, PhotoImage
+from tkinter import Canvas, Button, PhotoImage, filedialog, ttk, messagebox
+import pandas as pd
+import numpy as np
 from pathlib import Path
 
+from Table import TableView
+from statisticsLogic import *
+from main import *
 
 class App(tk.Tk):
     """
@@ -9,14 +14,29 @@ class App(tk.Tk):
     """
     def __init__(self):
         super().__init__()
-        self.geometry("900x700")
+        # set window to be responsive to the device it's running on
+        width = self.winfo_screenwidth()
+        height = self.winfo_screenheight()
+
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+
+        self.geometry("%dx%d" % (width, height))  # Default size
+
         self.configure(bg="#FFFFFF")
-        self.resizable(False, False)
-        self.title("Multi-Page App")
+        self.title("Statistical Analyzer")
+
+        # Enable full screen mode
+        # self.attributes("-fullscreen", True)  # Enable full screen mode
+
+        # Bind the Escape key to exit full screen mode
+        # self.bind("<Escape>", self.toggle_fullscreen)
 
         # Container to hold all pages
         self.container = tk.Frame(self)
-        self.container.pack(fill="both", expand=True)
+        self.container.grid(row=0, column=0, sticky="nsew")
+        self.container.grid_rowconfigure(0, weight=1)
+        self.container.grid_columnconfigure(0, weight=1)
 
         # Dictionary to store pages
         self.pages = {}
@@ -24,9 +44,18 @@ class App(tk.Tk):
         # Initialize pages
         self.add_page("LaunchPage", LaunchPage)
         self.add_page("MeasureSelectionPage", MeasureSelectionPage)
+        self.add_page("DashboardPage", DashboardPage)
+
+        # Add CustomTable which includes the GUI toolbar
 
         # Show the initial page
         self.show_page("LaunchPage")
+
+    def toggle_fullscreen(self, event=None):
+        """
+        Toggle full screen mode on/off when the Escape key is pressed.
+        """
+        self.attributes("-fullscreen", not self.attributes("-fullscreen"))
 
     def add_page(self, page_name, page_class):
         """
@@ -36,9 +65,11 @@ class App(tk.Tk):
             page_name (str): Unique name for the page.
             page_class (class): Class implementing the page.
         """
+        #self.container.grid(row=0, column=0, sticky="nsew")
         page = page_class(self.container, self)
         self.pages[page_name] = page
         page.grid(row=0, column=0, sticky="nsew")
+        
 
     def show_page(self, page_name):
         """
@@ -50,14 +81,13 @@ class App(tk.Tk):
         page = self.pages[page_name]
         page.tkraise()
 
-
 def relative_to_assets(path: str) -> Path:
     """
     Get the full path to a resource file located in the assets directory.
     """
-    # TODO: Change this path
     assets_path = Path(__file__).parent / Path(
         r"assets"
+
     )
     return assets_path / Path(path)
 
@@ -128,110 +158,255 @@ class LaunchPage(BasePage):
 
         # Create a canvas
         canvas = Canvas(
-            self, bg="#FFFFFF", height=700, width=900, bd=0,
+            self, bg="#FFFFFF", height=832, width=1280, bd=0,
             highlightthickness=0, relief="ridge"
         )
         canvas.pack(fill="both", expand=True)
 
         # ----- Background ----- #
-        canvas.create_rectangle(0, 0, 900, 700, fill="#FFFFFF", outline="")
-
-        # ----- Text ----- #
-        canvas.create_text(80, 118, anchor="nw", text="TEXT", fill="#000000", font=("Roboto Light", -96))
-        canvas.create_text(110, 234, anchor="nw", text="Lorem ipsum dolor", fill="#000000", font=("Roboto Regular", -24))
-        canvas.create_text(151, 256, anchor="nw", text="sit amet", fill="#000000", font=("Roboto SemiBold", -24))
+        canvas.create_rectangle(0, 0, 1280, 832, fill="#FFFFFF", outline="")
 
         # ----- Buttons ----- #
         self.continue_button = add_button(
-            canvas, 70, 584, 300, 60, "button_3.png", "button_hover_3.png",
-            "Button 3 clicked!", lambda: controller.show_page("MeasureSelectionPage")
+            canvas, 85, 589, 383.1111145019531, 64.03428649902344, "0_button_1.png", "0_button_hover_1.png",
+            "Button 1 clicked!", lambda: controller.show_page("MeasureSelectionPage")
         )
-        self.continue_button.place_forget()  # Hide continue button initially
-
-        upload_data_button = add_button(
-            canvas, 70, 355, 300, 60, "upload_data_button.png",
-            "upload_data_button_hover.png", "Upload data button clicked!", self.upload_data
-        )
-        upload_data_button.place()
-
-        enter_data_button = add_button(
-            canvas, 70, 432, 300, 60, "enter_data_button.png",
-            "enter_data_button_hover.png", "Enter data button clicked!", self.enter_data
-        )
-        enter_data_button.place()
+        self.continue_button.place()
 
         # ----- Images ----- #
-        # TODO: This is serving as a placeholder
-        image_image_1 = PhotoImage(file=relative_to_assets("image_1.png"))
-        canvas.create_image(662, 350, image=image_image_1)
+        image_image_1 = PhotoImage(file=relative_to_assets("0_image_1.png"))
+        canvas.create_image(227, 186, image=image_image_1)
         self.image_image_1 = image_image_1  # Keep a reference to avoid garbage collection
 
-    # TODO: Add functionality to this upload data button by finishing this function
-    def upload_data(self):
-        """
-        Display continue button when either the enter data or upload data button is clicked.
-        """
-        print("upload_data called")
+        image_image_2 = PhotoImage(file=relative_to_assets("0_image_2.png"))
+        canvas.create_image(227, 343, image=image_image_2)
+        self.image_image_2 = image_image_2  # Keep a reference to avoid garbage collection
 
-        # TODO: Use input validation to determine whether continue button should display after user enters data
-        #   this function can be appended to whatever function is created to add functionality to the enter data buttons
-        self.continue_button.place(x=70, y=584, width=300, height=60)
+        # TODO: This is serving as a placeholder
+        image_image_3 = PhotoImage(file=relative_to_assets("0_image_3.png"))
+        canvas.create_image(902.77783203125, 415.125, image=image_image_3)
+        self.image_image_3 = image_image_3  # Keep a reference to avoid garbage collection
 
-    # TODO: Decide if this button is necessary. If yes, add functionality to this button by finishing this function
-    def enter_data(self):
-        """
-        Display continue button when either the enter data or upload data button is clicked.
-        """
-        print("enter_data called")
-
-        # TODO: Use input validation to determine whether continue button should display after user enters data
-        #   this function can be appended to whatever function is created to add functionality to the enter data buttons
-        self.continue_button.place(x=70, y=584, width=300, height=60)
 
 
 class MeasureSelectionPage(BasePage):
     """
     Measure selection page of the application. Users will select what statistical measures
-    they want to use as well as what graphs they would like to display.
+    they want to perform on the dataset.
+
     """
     def __init__(self, parent, controller):
         super().__init__(parent, controller)
 
         # Create a canvas
-        canvas = Canvas(
-            self, bg="#FFFFFF", height=700, width=900, bd=0,
-            highlightthickness=0, relief="ridge"
+        self.canvas = Canvas(self, bg="#FFFFFF", bd=0, highlightthickness=0, relief="ridge")
+        self.canvas.grid(row=0, column=0, sticky="nsew")
+
+        self.measurement_frame = tk.Frame(self)
+        self.measurement_frame.grid(row=0, column=1, padx=10, pady=10, sticky="nw")
+        
+        # Data Table Frame
+        self.table_frame = tk.Frame(self)
+
+        self.table_frame.grid(row=0, column=2, padx=10, pady=10, sticky="nsew")
+        self.table_frame.grid_rowconfigure(0, weight=1)
+        self.table_frame.grid_columnconfigure(2, weight=1)
+
+        self.table = TableView(self.table_frame)
+              
+
+        # Add Calculate Button
+        self.calculate_button = ttk.Button(self.measurement_frame, text="Calculate Measures", command=self.calculate_statistics)
+        self.calculate_button.grid(row=0, column=1, padx=10, pady=10, sticky='w')
+
+        # ComboBox for Data Types
+        self.data_type_options = ["Nominal", "Ordinal", "Discrete", "Continuous"]
+        self.data_type_dropdown = ttk.Combobox(self.measurement_frame, values=self.data_type_options, font=("Roboto", 14), state="readonly")
+
+        #self.data_type_dropdown.place(x=151, y=300, width=351, height=57)
+        self.data_type_dropdown.grid(row=1, column=1, padx=10, pady=10, sticky='nw')
+
+        self.data_type_dropdown.set("Select Data Type")
+        self.data_type_dropdown.bind("<<ComboboxSelected>>", self.on_data_type_selected)
+
+        # Statistical Measures Listbox
+
+        self.stat_measures_listbox = tk.Listbox(self.measurement_frame, font=("Roboto", 14), selectmode="multiple", exportselection=False)
+
+        #self.stat_measures_listbox.place(x=151, y=380, width=351, height=100)
+        self.stat_measures_listbox.grid(row=2, column=1, padx=10, pady=10, sticky='nw')
+
+
+        # Label to show selected measures
+        self.selected_stat_label = tk.Label(
+            self.measurement_frame,
+            text="Selected Measures: None",
+            font=("Roboto", 14),
+            bg="#FFFFFF",
+            wraplength=350,
+            justify="left",
+            anchor="w"
         )
-        canvas.pack(fill="both", expand=True)
+
+
+        #self.selected_stat_label.place(x=151, y=500, width=351, height=50)
+        self.selected_stat_label.grid(row=3, column=1, padx=10, pady=10, sticky='nw')
+
+
+        # Bind listbox selection
+        self.stat_measures_listbox.bind("<<ListboxSelect>>", self.on_stat_measure_selected)
+
+
+        # ----- Toolbar ----- #
+        self.canvas.create_rectangle(0, 0, 100, 832, fill="#D9D9D9", outline="")
+        self.data_page_button = add_button(
+            self.canvas, 18, 50, 63, 63, "button_4.png", "button_hover_4.png",
+            "Data page button clicked!"
+        )
+
+        #self.data_page_button.place()
+        self.data_page_button.grid(row=0, column=0, padx=10, pady=10, sticky="ns")
+
+        self.dashboard_page_button = add_button(
+            self.canvas, 18, 163, 63, 63, "button_5.png", "button_hover_5.png",
+            "Dashboard page button clicked!", lambda: controller.show_page("DashboardPage")
+        )
+
+        # self.dashboard_page_button.place()
+        self.dashboard_page_button.grid(row=1, column=0, padx=10, pady=10, sticky="ns")
+
+    def import_csv(self):
+        file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
+        if file_path:
+            try:
+                data = pd.read_csv(file_path)
+                # Show data in the table
+                self.display_table(data)
+            except Exception as e:
+                print(f"Error importing CSV: {e}")
+
+    def on_data_type_selected(self, event):
+        selected_data_type = self.data_type_dropdown.get()
+
+        # Clear existing options
+        self.stat_measures_listbox.delete(0, tk.END)
+
+        # Populate the statistical measures list based on the selected data type
+        measures = []
+        if selected_data_type == "Nominal":
+            measures = ["Mode", "Frequency"]
+        elif selected_data_type == "Ordinal":
+            measures = ["Median", "Mode", "Frequency"]
+        elif selected_data_type == "Discrete":
+            measures = ["Mean", "Median", "Mode", "Standard Deviation", "Variance"]
+        elif selected_data_type == "Continuous":
+            measures = ["Mean", "Median", "Mode", "Standard Deviation", "Variance"]
+
+        for measure in measures:
+            self.stat_measures_listbox.insert(tk.END, measure)
+
+
+    def on_stat_measure_selected(self, event):
+        # Get selected items from the listbox
+        selected_indices = self.stat_measures_listbox.curselection()
+        selected_stats = [self.stat_measures_listbox.get(i) for i in selected_indices]
+
+        # Limit selection to 3 measures
+        if len(selected_stats) > 3:
+            self.stat_measures_listbox.selection_clear(selected_indices[0])  # Remove the first selected item
+
+        # Update the label with selected measures
+        self.selected_stat_label.config(
+            text=f"Selected Measures: {', '.join(selected_stats)}" if selected_stats else "Selected Measures: None"
+        )
+
+    def calculate_statistics(self):
+        selected_data_type = self.data_type_dropdown.get()
+        selected_measures = [self.stat_measures_listbox.get(i) for i in self.stat_measures_listbox.curselection()]
+        
+        if selected_data_type == "Nominal":
+            logic = nominalStatistics(self.get_table_data())
+        elif selected_data_type == "Ordinal":
+            logic = ordinalStatistics(self.get_table_data())
+        elif selected_data_type == "Discrete":
+            logic = discreteStatistics(self.get_table_data())
+        elif selected_data_type == "Continuous":
+            logic = continuousStatistics(self.get_table_data())
+        else:
+            print("Please select a data type.")
+            return
+
+        # Compute statistics based on selection
+        result = []
+        for measure in selected_measures:
+            if measure == "Mean":
+                result.append(f"Mean: {logic.mean()}")
+            elif measure == "Median":
+                result.append(f"Median: {logic.median()}")
+            elif measure == "Mode":
+                result.append(f"Mode: {logic.mode()}")
+            elif measure == "Standard Deviation":
+                result.append(f"Standard Deviation: {logic.standard_deviation()}")
+            elif measure == "Variance":
+                result.append(f"Variance: {logic.variance()}")
+
+        # Display results in a pop-up
+        messagebox.showinfo("Calculated Statistics", "\n".join(result))
+
+    def get_table_data(self):
+        # Fetch table data from the CustomTable widget
+
+        return self.table.celldType()
+
+
+class DashboardPage(BasePage):
+    """
+    Dashboard page of the application. Users what graphs they would like to display.
+    """
+    def __init__(self, parent, controller):
+        super().__init__(parent, controller)
+
+        # Create a canvas
+        self.canvas = Canvas(self, bg="#FFFFFF", bd=0, highlightthickness=0, relief="ridge")
+        self.canvas.pack(fill="both", expand=True)
 
         # ----- Background ----- #
-        canvas.create_rectangle(0, 0, 900, 700, fill="#FFFFFF", outline="")
-
-        # ----- Text ----- #
-        canvas.create_text(27.0, 0.0, anchor="nw", text="TEXT", fill="#000000", font=("Roboto Light", 48 * -1))
+        self.canvas.create_rectangle(0, 0, 1280, 832, fill="#FFFFFF", outline="")
 
         # ----- Buttons ----- #
-        button_1 = add_button(
-            canvas, 562, 607, 300, 60, "button_1.png", "button_hover_1.png",
-            "Button 1 clicked!", self.button_1_placeholder
+        # TODO: Add functionality to buttons
+        self.add_graph_button = add_button(
+            self.canvas, 566, 33, 200, 72.0187759399414, "add_graph_button.png", "add_graph_button_hover.png",
+            "Add graph page button clicked!"
         )
-        button_1.place()
+        self.add_graph_button.place()
+        self.save_results_button = add_button(
+            self.canvas, 795, 33, 215, 72.0187759399414, "button_2.png", "button_hover_2.png",
+            "Save Results button clicked!"
+        )
+        self.save_results_button.place()
+        self.export_data_button = add_button(
+            self.canvas, 1039, 33, 215, 72.0187759399414, "export_data_button.png", "export_data_button_hover.png",
+            "Add graph page button clicked!"
+        )
+        self.export_data_button.place()
 
-        # ----- Other Elements ----- #
-        # TODO: These rectangles are placeholders for measure and graph selection
-        canvas.create_rectangle(57.0, 124.0, 419.0, 577.0, fill="#D9D9D9", outline="")
-        canvas.create_rectangle(500.0, 124.0, 862.0, 577.0, fill="#D9D9D9", outline="")
+        # ----- Dashboard Area ----- #
+        # TODO: Placeholder, add matplotlib widget
+        self.canvas.create_rectangle(129, 153, 1252, 807, fill="#D9D9D9", outline="")
 
-    def button_1_placeholder(self):
-        """
-        Display continue button when either the enter data or upload data button is clicked.
-        """
-        print("button 1 called")
-
-        # TODO: Use input validation to determine whether continue button should display after user
-        #   selects the measures and graphs
-        self.controller.show_page("LaunchPage")
-
+        # ----- Toolbar ----- #
+        self.canvas.create_rectangle(0, 0, 100, 832, fill="#D9D9D9", outline="")
+        self.data_page_button = add_button(
+            self.canvas, 18, 50, 63, 63, "button_4.png", "button_hover_4.png",
+            "Data page button clicked!", lambda: controller.show_page("MeasureSelectionPage")
+        )
+        self.data_page_button.place()
+        self.dashboard_page_button = add_button(
+            self.canvas, 18, 163, 63, 63, "button_5.png", "button_hover_5.png",
+            "Dashboard page button clicked!"
+        )
+        self.dashboard_page_button.place()
 
 # Run the application
 app = App()
