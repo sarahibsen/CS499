@@ -179,6 +179,7 @@ class statistic():
         Only works for frequency datasets
         Parameters: 
             Grabs two arrays/list from np.ndarray as x,y (expected, actual)
+            sum_check=False bypasses invalid/impossible applications of chi-squared
         Returns:
             chi-squared value.
         """
