@@ -7,6 +7,7 @@ from pathlib import Path
 from Table import TableView
 from statisticsLogic import *
 from main import *
+from main_controller import Controller
 
 class App(tk.Tk):
     """
@@ -14,6 +15,8 @@ class App(tk.Tk):
     """
     def __init__(self):
         super().__init__()
+        # initialize the controller
+        self.controller = Controller()
         # set window to be responsive to the device it's running on
         width = self.winfo_screenwidth()
         height = self.winfo_screenheight()
@@ -197,6 +200,7 @@ class MeasureSelectionPage(BasePage):
     """
     def __init__(self, parent, controller):
         super().__init__(parent, controller)
+        self.controller = controller    
 
         # Create a canvas
         self.canvas = Canvas(self, bg="#FFFFFF", bd=0, highlightthickness=0, relief="ridge")
@@ -324,34 +328,16 @@ class MeasureSelectionPage(BasePage):
         selected_data_type = self.data_type_dropdown.get()
         selected_measures = [self.stat_measures_listbox.get(i) for i in self.stat_measures_listbox.curselection()]
         
-        if selected_data_type == "Nominal":
-            logic = nominalStatistics(self.get_table_data())
-        elif selected_data_type == "Ordinal":
-            logic = ordinalStatistics(self.get_table_data())
-        elif selected_data_type == "Discrete":
-            logic = discreteStatistics(self.get_table_data())
-        elif selected_data_type == "Continuous":
-            logic = continuousStatistics(self.get_table_data())
-        else:
-            print("Please select a data type.")
+        data_frame = self.controller.load_data_from_table(self.table)
+        if not self.controller.validate_data(data_frame):
+            messagebox.showerror("Error", "No data to analyze.")
             return
+        
+        results = self.controller.perform_statistics(data_frame, selected_measures, selected_data_type)
 
-        # Compute statistics based on selection
-        result = []
-        for measure in selected_measures:
-            if measure == "Mean":
-                result.append(f"Mean: {logic.mean()}")
-            elif measure == "Median":
-                result.append(f"Median: {logic.median()}")
-            elif measure == "Mode":
-                result.append(f"Mode: {logic.mode()}")
-            elif measure == "Standard Deviation":
-                result.append(f"Standard Deviation: {logic.standard_deviation()}")
-            elif measure == "Variance":
-                result.append(f"Variance: {logic.variance()}")
-
-        # Display results in a pop-up
-        messagebox.showinfo("Calculated Statistics", "\n".join(result))
+        if results:
+            result_str = "\n".join([f"{key}: {value}" for key, value in results.items()])
+            messagebox.showinfo("Calculated Statistics", result_str)
 
     def get_table_data(self):
         # Fetch table data from the CustomTable widget

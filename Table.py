@@ -4,6 +4,8 @@ from tksheet import Sheet
 from tkinter import ttk, PhotoImage
 import tkinter as tk
 
+from main_controller import Controller
+
 class TableModel:
     def __init__(self):
          self.data = [[f"" for c in range(26)] for r in range(50)] # Default table on startup
@@ -59,6 +61,7 @@ class TableModel:
 
 class TableController:
     def __init__(self, parent):
+        self.controller = Controller()
         self.model = TableModel()
         self.parent = parent
 
@@ -121,7 +124,7 @@ class TableController:
         df.dropna(axis=1,how="all", inplace=True) # Dropna axis 1 drops all NaN columns
         print(df)
         print(self.model.detect_data_type(df)) # Dropna axis 0 drops all NaN rows, Dropna axis 1 drops all NaN columns
-
+        
 
     def import_csv(self, table):
         """ Inherits from the Custom TKTable to pass data from csv_reader to a new table """
