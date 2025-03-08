@@ -5,10 +5,9 @@ import numpy as np
 from pathlib import Path
 
 from Table import TableView
-from statisticsLogic import *
-from main import *
-from main_controller import Controller
 
+
+from main_controller import Controller # using the controller class to handle the communication between all components 
 class App(tk.Tk):
     """
     Main application class to handle multiple pages.

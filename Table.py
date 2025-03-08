@@ -4,7 +4,6 @@ from tksheet import Sheet
 from tkinter import ttk, PhotoImage
 import tkinter as tk
 
-from main_controller import Controller
 
 class TableModel:
     def __init__(self):
@@ -61,7 +60,6 @@ class TableModel:
 
 class TableController:
     def __init__(self, parent):
-        self.controller = Controller()
         self.model = TableModel()
         self.parent = parent
 
@@ -69,21 +67,23 @@ class TableController:
         return self.model.get_data()         
 
     def update_table(self, table, headers=None, data=None):
-        table.destroy() # Destroys the current table since we are overwriting it with data from CSV
+        if table is None:
+            table = self.table  # Ensure `table` references the active instance
 
-        if headers == None: # If headers are not provided, default headers will be used
-             self.table = Sheet(self.parent, show_header=True, data = list(data), width=1000, height=500)
-             self.win_width = self.table.winfo_reqwidth()
-             self.win_height = self.table.winfo_reqheight()
-             #self.table = Sheet(root, show_header=True, self.model.data = list(data))
+        if hasattr(table, 'destroy'):
+            table.destroy()
 
-        else: # Used headers and data provided
-             self.table = Sheet(self.parent, headers= list(headers), data = list(data), width=1000, height=500)
-             self.table.config(width=self.table.winfo_reqwidth(), height=self.table.winfo_reqheight())
-             self.table.update_idletasks()
-
-        self.table.grid(row=0,column=0,sticky='nswe')
+        if headers is None: # If headers are not provided, default headers will be used
+            self.table = Sheet(self.parent, show_header=True, data=list(data), width=1000, height=500)
+            self.win_width = self.table.winfo_reqwidth()
+            self.win_height = self.table.winfo_reqheight()
+        else:
+            self.table = Sheet(self.parent, headers= list(headers), data = list(data), width=1000, height=500)
+            self.table.config(width=self.table.winfo_reqwidth(), height=self.table.winfo_reqheight())
+            self.table.update_idletasks()
+        self.table.grid(row=0, column=0, sticky='nswe')
         self.table.enable_bindings("all", "edit_header", "edit_index", "ctrl_select")
+
 
     def get_table_selection(self):
         """ Creates a 2D list that matches the dimensions of the tksheet table and fills row list with None.
@@ -113,7 +113,7 @@ class TableController:
                 else:
                         self.TwoDList[col][row] = self.table.get_cell_data(r=row,c=col)
 
-        print(f"Table Selection: {self.TwoDList}")
+       # print(f"Table Selection: {self.TwoDList}")
 
         self.table_dict = {}
         for e, col in enumerate(self.TwoDList):
@@ -122,8 +122,9 @@ class TableController:
         df = pd.DataFrame(self.table_dict)
         df.dropna(axis=0,how='all', inplace=True) # Dropna axis 0 drops all NaN rows
         df.dropna(axis=1,how="all", inplace=True) # Dropna axis 1 drops all NaN columns
-        print(df)
-        print(self.model.detect_data_type(df)) # Dropna axis 0 drops all NaN rows, Dropna axis 1 drops all NaN columns
+       # print(df)
+       # print(self.model.detect_data_type(df)) # Dropna axis 0 drops all NaN rows, Dropna axis 1 drops all NaN columns
+        return df
         
 
     def import_csv(self, table):

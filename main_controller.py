@@ -101,6 +101,8 @@ class Controller:
         for measure in selected_measures:
             if measure in measure_functions and measure_functions[measure]:
                 results[measure] = measure_functions[measure]()
+            else:
+                print(f"Measure '{measure}' not supported for data type '{data_type}'")
 
         return results
 

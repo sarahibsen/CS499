@@ -130,6 +130,8 @@ class statistic():
         #is dataframe neeeded for graphing or exporting formatted text? (remove ".to_numpy()")
         return percentiles_df.to_numpy()
     
+
+    
 #TODO: Needs frontend aspects for user input
     def probabilityDistribution(self):
         """
