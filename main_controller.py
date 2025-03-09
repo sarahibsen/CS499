@@ -15,12 +15,11 @@ class Controller:
         """
         Fetches selected data from the table via TableController.
 
-        Args:
-            table_controller (TableController): The table controller instance.
 
         Returns:
             pd.DataFrame: The selected data as a DataFrame.
         """
+        table_controller = TableController(table_controller)
         return table_controller.get_table_selection()
 
     @staticmethod
@@ -89,13 +88,12 @@ class Controller:
             "Mean": logic.mean if hasattr(logic, "mean") else None,
             "Median": logic.median if hasattr(logic, "median") else None,
             "Mode": logic.mode if hasattr(logic, "mode") else None,
-            "Standard Deviation": logic.standard_deviation if hasattr(logic, "standard_deviation") else None,
+            "Standard Deviation": logic.standardDeviation if hasattr(logic, "standardDeviation") else None,
             "Variance": logic.variance if hasattr(logic, "variance") else None,
             "Range": logic.range if hasattr(logic, "range") else None,
-            "Frequency": logic.frequency if hasattr(logic, "frequency") else None,
-            "Percentiles": logic.percentiles if hasattr(logic, "percentiles") else None,
-            
-
+            "Coefficient of Variation": logic.coefficientOfVariation if hasattr(logic, "coefficientOfVariation") else None,
+            "Probability Distribution": logic.probabilityDistribution if hasattr(logic, "probabilityDistribution") else None,
+            "Significance Test": logic.significanceTest if hasattr(logic, "significanceTest") else None,
         }
 
         for measure in selected_measures:

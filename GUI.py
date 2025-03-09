@@ -15,7 +15,7 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         # initialize the controller
-        self.controller = Controller()
+        
         # set window to be responsive to the device it's running on
         width = self.winfo_screenwidth()
         height = self.winfo_screenheight()
@@ -324,6 +324,8 @@ class MeasureSelectionPage(BasePage):
         )
 
     def calculate_statistics(self):
+        self.controller = Controller()
+
         selected_data_type = self.data_type_dropdown.get()
         selected_measures = [self.stat_measures_listbox.get(i) for i in self.stat_measures_listbox.curselection()]
         
