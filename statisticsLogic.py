@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import tkinter 
 
 from scipy.stats import mode
+from main_controller import Controller
 
 def validate_data(func):
     """Decorator to validate the data before executing a method."""
@@ -32,6 +33,7 @@ class statistic():
         Initializes the Statistics class with a dataset
         """
         self.data = data 
+        self.controller = Controller()
 
         
     def mean(self):
@@ -127,6 +129,8 @@ class statistic():
         percentiles_df.insert(0, "Percentiles", [f"{p}th" for p in psequence])  # Insert percentile column (Percentiles:, nth, n+1th)
         #is dataframe neeeded for graphing or exporting formatted text? (remove ".to_numpy()")
         return percentiles_df.to_numpy()
+    
+
     
 #TODO: Needs frontend aspects for user input
     def probabilityDistribution(self):
@@ -304,61 +308,60 @@ class plotCreation():
 
     #TODO: revision, +pie, +curve
     
-'''
-# Function to extract numeric columns
-# shouldn't need this function when jarrett implements the loading of csv and the extraction of numerical data from the file 
-# if not, this function will be used to extract the numerical data from the file
-def extract_numeric_data(dataframe):
-    """
-    Extract only numeric columns from a DataFrame and flatten the data.
+
+# # Function to extract numeric columns
+# # shouldn't need this function when jarrett implements the loading of csv and the extraction of numerical data from the file 
+# # if not, this function will be used to extract the numerical data from the file
+# def extract_numeric_data(dataframe):
+#     """
+#     Extract only numeric columns from a DataFrame and flatten the data.
     
-    Parameters:
-        dataframe (pd.DataFrame): Input DataFrame with mixed data types.
+#     Parameters:
+#         dataframe (pd.DataFrame): Input DataFrame with mixed data types.
         
-    Returns:
-        np.ndarray: A 1D array of numeric data.
-    """
-    numeric_data = dataframe.select_dtypes(include=[np.number])
-    return numeric_data.to_numpy().flatten()
-
-'''
-
-'''
-if __name__ == "__main__":
-
-    path = r"C:\Users\matte\Desktop\CS499 - copy\Test Data\IntervalDataTest.csv"
-    try:
-        data = pd.read_csv(path)
-    except Exception as e:
-        print(f"Error reading the file: {e}")
-        exit()
+#     Returns:
+#         np.ndarray: A 1D array of numeric data.
+#     """
+#     numeric_data = dataframe.select_dtypes(include=[np.number])
+#     return numeric_data.to_numpy().flatten()
 
 
-    print("DataFrame content:\n", data)   
-    numeric_data = data.select_dtypes(include=[np.number])
-    print("Numeric data:\n", numeric_data)
 
-    # Creating an instance of the Statistic class with the numeric data
-    measure = statistic(numeric_data)
 
-    standard_deviation = measure.standardDeviation()
-    print("Standard Deviation:", standard_deviation)
-    print("Variance:", measure.variance())
-    print("Coefficient of Variation:", measure.coefficientOfVariation())
+# if __name__ == "__main__":
 
-    #leastSquare = measure.leastSquareLine()
-    #print("\n--- Least Square Line ---")
-    #print(leastSquare)
+#     path = r"C:\Users\matte\Desktop\CS499 - copy\Test Data\IntervalDataTest.csv"
+#     try:
+#         data = pd.read_csv(path)
+#     except Exception as e:
+#         print(f"Error reading the file: {e}")
+#         exit()
 
-    #chisquared = measure.chiSquared()
-    #print("\n--- Chi-Squared ---")
-    #print(chisquared)
 
-    #percentiles_df = measure.percentiles()
-    #print("\n--- Percentiles ---")
-    #print(percentiles_df)
+#     print("DataFrame content:\n", data)   
+#     numeric_data = data.select_dtypes(include=[np.number])
+#     print("Numeric data:\n", numeric_data)
 
-    #plot vertical bar graph percentiles of 1st column
-    #plotter = plotCreation(percentiles_df)
-    #percentilesbar = plotter.plot_barChart(percentiles_df)
-'''
+#     # Creating an instance of the Statistic class with the numeric data
+#     measure = statistic(numeric_data)
+
+#     standard_deviation = measure.standardDeviation()
+#     print("Standard Deviation:", standard_deviation)
+#     print("Variance:", measure.variance())
+#     print("Coefficient of Variation:", measure.coefficientOfVariation())
+
+#     #leastSquare = measure.leastSquareLine()
+#     #print("\n--- Least Square Line ---")
+#     #print(leastSquare)
+
+#     #chisquared = measure.chiSquared()
+#     #print("\n--- Chi-Squared ---")
+#     #print(chisquared)
+
+#     #percentiles_df = measure.percentiles()
+#     #print("\n--- Percentiles ---")
+#     #print(percentiles_df)
+
+#     #plot vertical bar graph percentiles of 1st column
+#     #plotter = plotCreation(percentiles_df)
+#     #percentilesbar = plotter.plot_barChart(percentiles_df)
