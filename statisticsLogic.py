@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import tkinter 
 
 from scipy.stats import mode
-from main_controller import Controller
+
 
 def validate_data(func):
     """Decorator to validate the data before executing a method."""
@@ -33,7 +33,7 @@ class statistic():
         Initializes the Statistics class with a dataset
         """
         self.data = data 
-        self.controller = Controller()
+       
 
         
     def mean(self):

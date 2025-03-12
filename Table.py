@@ -62,11 +62,13 @@ class TableController:
     def __init__(self, parent):
         self.model = TableModel()
         self.parent = parent
+        self.table = None
 
     def get_table_data(self):
         return self.model.get_data()         
 
     def update_table(self, table, headers=None, data=None):
+        self.table = table
         if table is None:
             table = self.table  # Ensure `table` references the active instance
 

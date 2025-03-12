@@ -15,7 +15,7 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         # initialize the controller
-        self.controller = Controller()
+        
         # set window to be responsive to the device it's running on
         width = self.winfo_screenwidth()
         height = self.winfo_screenheight()
@@ -324,14 +324,26 @@ class MeasureSelectionPage(BasePage):
         )
 
     def calculate_statistics(self):
+        if not hasattr(self.table.controller, 'get_table_selection'):
+            messagebox.showerror("Error", "Table not initialized.")
+            return
+        
+        self.controller = Controller()
+
         selected_data_type = self.data_type_dropdown.get()
         selected_measures = [self.stat_measures_listbox.get(i) for i in self.stat_measures_listbox.curselection()]
         
-        data_frame = self.controller.load_data_from_table(self.table)
-        if not self.controller.validate_data(data_frame):
+        data_frame = self.controller.load_data_from_table(self.table.controller)
+        print(f"Final Data Before Validation:\n{data_frame}")  # Final confirmation
+        
+        if data_frame.empty:
             messagebox.showerror("Error", "No data to analyze.")
             return
         
+        if not self.controller.validate_data(data_frame):
+            messagebox.showerror("Error", "Data validation failed.")
+            return
+
         results = self.controller.perform_statistics(data_frame, selected_measures, selected_data_type)
 
         if results:

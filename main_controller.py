@@ -1,7 +1,7 @@
 # Refactored Controller as a lightweight Component
 import pandas as pd
 from Table import TableController
-from statisticsLogic import *
+from statisticsLogic import statistic
 from main import DataIntegrity, nominalStatistics, ordinalStatistics, discreteStatistics, continuousStatistics
 
 class Controller:
@@ -12,33 +12,34 @@ class Controller:
 
     @staticmethod
     def load_data_from_table(table_controller):
-        """
-        Fetches selected data from the table via TableController.
+        if not hasattr(table_controller, 'get_table_selection'):
+            print("Error: Table instance is not initialized.")
+            return pd.DataFrame()
 
-        Args:
-            table_controller (TableController): The table controller instance.
+        data = table_controller.get_table_selection()
 
-        Returns:
-            pd.DataFrame: The selected data as a DataFrame.
-        """
-        return table_controller.get_table_selection()
+        # Ensure proper data types
+        for col in data.columns:
+            data[col] = pd.to_numeric(data[col], errors='ignore')
+
+        print(f"Data loaded into Controller:\n{data}")
+        return data
+
 
     @staticmethod
     def validate_data(data_frame):
-        """
-        Checks if the selected data contains only numeric values.
-
-        Args:
-            data_frame (pd.DataFrame): The data to validate.
-
-        Returns:
-            bool: True if valid, False otherwise.
-        """
         if data_frame is None or data_frame.empty:
+            print("Data validation failed: Empty DataFrame")
             return False
 
-        selected_cells = [(r, c) for r in range(data_frame.shape[0]) for c in range(data_frame.shape[1])]
-        return DataIntegrity.validate_numeric_cells(data_frame, selected_cells)
+        numeric_cols = data_frame.select_dtypes(include='number').columns
+        if numeric_cols.empty:
+            print("Data validation failed: No numeric columns found.")
+            return False
+
+        print("Data validation successful!")
+        return True
+
 
     @staticmethod
     def detect_data_type(data_frame):
@@ -81,23 +82,32 @@ class Controller:
             return None
 
         logic = statistics_classes[data_type](data_frame)
+        stat_instance = statistic(data_frame.select_dtypes(include='number').values) # statistic instance 
+
 
         # Compute requested measures
         results = {}
         #TODO : add more measures
         measure_functions = {
-            "Mean": logic.mean if hasattr(logic, "mean") else None,
-            "Median": logic.median if hasattr(logic, "median") else None,
-            "Mode": logic.mode if hasattr(logic, "mode") else None,
-            "Standard Deviation": logic.standard_deviation if hasattr(logic, "standard_deviation") else None,
-            "Variance": logic.variance if hasattr(logic, "variance") else None,
-            "Range": logic.range if hasattr(logic, "range") else None,
-            "Frequency": logic.frequency if hasattr(logic, "frequency") else None,
-            "Percentiles": logic.percentiles if hasattr(logic, "percentiles") else None,
-            
+            "Mean": stat_instance.mean,
+            "Median": stat_instance.median,
+            "Mode": stat_instance.mode,
+            "Standard Deviation": stat_instance.standardDeviation,
+            "Variance": stat_instance.variance,
+            "Coefficient of Variation": stat_instance.coefficientOfVariation,
+            "Percentile": stat_instance.percentiles,
+            "Probability Distribution": stat_instance.probabilityDistribution,
+            "Binomial Distribution": stat_instance.binomialDistribution,
+            "Least Square Line": stat_instance.leastSquareLine,
+            "Chi-Square Test": stat_instance.chiSquared, 
+            "Correlation Coefficient": stat_instance.correlationCoefficient,
+            "Significance Test": stat_instance.significanceTest,
+            "Rank Sum": stat_instance.rankSum,
+            "Spearman Coefficient": stat_instance.spearmanRankCorrelation,
 
         }
-
+        # allow for the possibility of users to input their own measures
+        
         for measure in selected_measures:
             if measure in measure_functions and measure_functions[measure]:
                 results[measure] = measure_functions[measure]()
