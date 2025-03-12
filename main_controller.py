@@ -3,6 +3,7 @@ import pandas as pd
 from Table import TableController
 from statisticsLogic import statistic
 from main import DataIntegrity, nominalStatistics, ordinalStatistics, discreteStatistics, continuousStatistics
+import datetime
 
 class Controller:
     """
@@ -17,13 +18,19 @@ class Controller:
             return pd.DataFrame()
 
         data = table_controller.get_table_selection()
+        print(f"Loaded Data:\n{data}")
 
         # Ensure proper data types
         for col in data.columns:
-            data[col] = pd.to_numeric(data[col], errors='ignore')
+            data[col] = pd.to_numeric(data[col], errors='coerce')
+            data.fillna(0, inplace=True)  # for missing data
+
+        # Filter non-zero data only
+        data = data[(data != 0).any(axis=1)]
 
         print(f"Data loaded into Controller:\n{data}")
         return data
+
 
 
     @staticmethod
@@ -82,7 +89,7 @@ class Controller:
             return None
 
         logic = statistics_classes[data_type](data_frame)
-        stat_instance = statistic(data_frame.select_dtypes(include='number').values) # statistic instance 
+        stat_instance = statistic(data_frame.select_dtypes(include='number').values.flatten()) 
 
 
         # Compute requested measures
@@ -109,26 +116,41 @@ class Controller:
         # allow for the possibility of users to input their own measures
         
         for measure in selected_measures:
-            if measure in measure_functions and measure_functions[measure]:
-                results[measure] = measure_functions[measure]()
+            if measure in measure_functions:
+                try:
+                    results[measure] = measure_functions[measure]()
+                except Exception as e:
+                    print(f"Error calculating {measure}: {e}")
             else:
                 print(f"Measure '{measure}' not supported for data type '{data_type}'")
 
         return results
 
     @staticmethod
-    def export_results(results, filename="stats_results.csv"):
+    def export_results(results, filename=None):
         """
-        Exports statistical results to a CSV file.
-
-        Args:
-            results (dict): The computed statistical results.
-            filename (str): The filename for the output CSV.
+        Enhanced export method to:
+        - Add a timestamp to the filename
+        - Provide detailed descriptions of the statistical analysis performed
+        - Include column/row selection details for better context
         """
         if not results:
             print("No results to export.")
             return
 
-        df = pd.DataFrame(list(results.items()), columns=["Measure", "Value"])
+        # detailed results with column/row details
+        detailed_results = []
+        for measure, value in results.items():
+            detailed_results.append({
+                "Measure": measure,
+                "Value": value,
+                "Details": f"Analysis performed on {len(value)} selected entries"
+            })
+
+        # Add timestamp
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        filename = filename or f"stats_results_{timestamp}.csv"
+
+        df = pd.DataFrame(detailed_results)
         df.to_csv(filename, index=False)
         print(f"Results exported to {filename}")

@@ -33,6 +33,15 @@ class statistic():
         Initializes the Statistics class with a dataset
         """
         self.data = data 
+
+    def _clean_data(self):
+        """
+        Cleans the data by removing NaN values and zeros for statistical calculations.
+        """
+        cleaned_data = [value for value in self.data if not pd.isnull(value) and value != 0]
+        if not cleaned_data:
+            return [0]  # Prevent errors if all values are zero
+        return cleaned_data
        
 
         
@@ -40,35 +49,42 @@ class statistic():
         """
         Return the mean (average) of the data set
         """
-        return np.mean(self.data)
+        cleaned_data = self._clean_data()
+        return np.mean(cleaned_data)
     
     def median(self):
         """
         Return the median of the data set
         """
-        return np.median(self.data)
+        cleaned_data = self._clean_data()
+        return np.median(cleaned_data)
     def mode(self):
         """
         Return the mode of the data set
         """
-        return mode(self.data)[0][0]
+        cleaned_data = self._clean_data()
+        mode_result = stats.mode(cleaned_data, keepdims=True)
+        return mode_result.mode[0] if mode_result.mode.size > 0 else None
     
     def standardDeviation(self):
         """
         Calculate and return the sample standard deviation of the given data set.
         Returns:
             float: The sample standard deviation of the data.
+
+        using an online calculator to confirm results : https://www.calculator.net/standard-deviation-calculator.html?numberinputs=12%2C1%2C1%2C2&ctype=s&x=Calculate
         """
+        cleaned_data = self._clean_data()
         # Validate the data
-        if not isinstance(self.data, (list, np.ndarray)):
+        if not isinstance(cleaned_data, (list, np.ndarray)):
             raise TypeError("Data must be a list or NumPy array of numbers")
         if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in self.data):
             raise TypeError("All elements in the data must be numbers")
-        if len(self.data) == 0:
-            raise ValueError("Data cannot be empty")
+        if len(cleaned_data) < 2 :
+            return 0 # Prevent errors if all values are zero
         
         # Calculate and return the standard deviation
-        return np.std(self.data, ddof=1)
+        return np.std(cleaned_data, ddof=1)
     
     def variance(self):
         """
@@ -76,16 +92,17 @@ class statistic():
         Returns:
             float: The sample variance of the data.
         """
+        cleaned_data = self._clean_data()
         # Validate the data
-        if not isinstance(self.data, (list, np.ndarray)):
+        if not isinstance(cleaned_data, (list, np.ndarray)):
             raise TypeError("Data must be a list or NumPy array of numbers")
         if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in self.data):
             raise TypeError("All elements in the data must be numbers")
-        if len(self.data) == 0:
+        if len(cleaned_data) == 0:
             raise ValueError("Data cannot be empty")
         
         # Calculate and return the variance
-        return np.var(self.data, ddof=1)
+        return np.var(cleaned_data, ddof=1)
 
     def coefficientOfVariation(self):
         """
@@ -93,12 +110,13 @@ class statistic():
         Returns:
             float: The coefficient of variation of the data.
         """
+        cleaned_data = self._clean_data()
         # Validate the data
-        if not isinstance(self.data, (list, np.ndarray)):
+        if not isinstance(cleaned_data, (list, np.ndarray)):
             raise TypeError("Data must be a list or NumPy array of numbers")
         if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in self.data):
             raise TypeError("All elements in the data must be numbers")
-        if len(self.data) == 0:
+        if len(cleaned_data) == 0:
             raise ValueError("Data cannot be empty")
         
         # Calculate and return the coefficient of variation
@@ -116,14 +134,14 @@ class statistic():
         Returns:
             NumPy ndarray for further processing
         """
-
+        cleaned_data = self._clean_data()
         psequence = list(map(int, input("Enter the percentiles you would like to calculate (e.g. 25, 50, 75): ").split(",")))
 
-        percentiles_array = np.percentile(self.data, psequence, axis=0)
+        percentiles_array = np.percentile(cleaned_data, psequence, axis=0)
 
         percentiles_df = pd.DataFrame(
             percentiles_array, 
-            columns=[f"Column {i+1}" for i in range(self.data.shape[1])]
+            columns=[f"Column {i+1}" for i in range(cleaned_data.shape[1])]
         )
 
         percentiles_df.insert(0, "Percentiles", [f"{p}th" for p in psequence])  # Insert percentile column (Percentiles:, nth, n+1th)
