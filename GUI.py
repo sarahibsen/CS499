@@ -5,6 +5,7 @@ import numpy as np
 from pathlib import Path
 
 from Table import TableView
+from tkinter import simpledialog # for input dialog in the statistic
 
 
 from main_controller import Controller # using the controller class to handle the communication between all components 
@@ -299,11 +300,12 @@ class MeasureSelectionPage(BasePage):
         if selected_data_type == "Nominal":
             measures = ["Mode", "Frequency"]
         elif selected_data_type == "Ordinal":
-            measures = ["Median", "Mode", "Frequency"]
+            measures = ["Median", "Mode", "Frequency", "Percentiles", "Rank Sum", "Spearman Coefficient"]
         elif selected_data_type == "Discrete":
-            measures = ["Mean", "Median", "Mode", "Standard Deviation", "Variance"]
+            measures = ["Mean", "Median", "Mode", "Standard Deviation", "Variance", "Percentiles", "Probability Distribution", "Binomial Distribution"]
         elif selected_data_type == "Continuous":
-            measures = ["Mean", "Median", "Mode", "Standard Deviation", "Variance"]
+            measures = ["Mean", "Median", "Mode", "Standard Deviation", "Variance", "Percentiles", "Probability Distribution", "Binomial Distribution", 
+                        "Least Square Line", "Chi-Square Test", "Correlation Coefficient", "Significance Test"]
 
         for measure in measures:
             self.stat_measures_listbox.insert(tk.END, measure)
@@ -333,6 +335,16 @@ class MeasureSelectionPage(BasePage):
         selected_data_type = self.data_type_dropdown.get()
         selected_measures = [self.stat_measures_listbox.get(i) for i in self.stat_measures_listbox.curselection()]
         
+        variance_type = None # default to none unless variance is selected
+        if "Variance" in selected_measures:
+            variance_type = simpledialog.askstring(
+                "Variance Type",
+                "Enter the type of variance (Population or Sample):",
+                initialvalue="Population"
+            )
+            if variance_type not in ["Population", "Sample"]:
+                messagebox.showerror("Error", "Invalid variance type.")
+                return
         data_frame = self.controller.load_data_from_table(self.table.controller)
         print(f"Final Data Before Validation:\n{data_frame}")  # Final confirmation
         
@@ -344,11 +356,12 @@ class MeasureSelectionPage(BasePage):
             messagebox.showerror("Error", "Data validation failed.")
             return
 
-        results = self.controller.perform_statistics(data_frame, selected_measures, selected_data_type)
+        results = self.controller.perform_statistics(data_frame, selected_measures, selected_data_type, variance_type)
 
         if results:
             result_str = "\n".join([f"{key}: {value}" for key, value in results.items()])
             messagebox.showinfo("Calculated Statistics", result_str)
+            self.controller.export_results(results)
 
     def get_table_data(self):
         # Fetch table data from the CustomTable widget

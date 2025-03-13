@@ -176,6 +176,16 @@ class discreteStatistics:
         return self.perform_statistics(self.data, ['frequency'], 'discrete')["Frequency"]
     def range(self):
         return self.perform_statistics(self.data, ['range'], 'discrete')["Range"]
+    def percentiles(self):
+        return self.perform_statistics(self.data, ['percentiles'], 'discrete')["Percentiles"]
+    def standard_deviation(self):
+        return self.perform_statistics(self.data, ['standard deviation'], 'discrete')["Standard Deviation"]
+    def variance(self):
+        return self.perform_statistics(self.data, ['variance'], 'discrete')["Variance"]
+    def probabilityDistribution(self):
+        return self.perform_statistics(self.data, ['probability distribution'], 'discrete')["Probability Distribution"]
+    def binomialDistribution(self):
+        return self.perform_statistics(self.data, ['binomial distribution'], 'discrete')["Binomial Distribution"]
     
     '''
     plots associated with this data type
@@ -185,12 +195,10 @@ class discreteStatistics:
     def bargraph(self):
         return self.perform_statistics(self.data, ['bargraph'], 'discrete')["Bar Graph"]
     
-
+#TODO : add more measures
 class continuousStatistics:
     def __init__(self, data):
         self.data = data
-
-    
     def mean(self):
         return self.perform_statistics(self.data, ['mean'], 'continuous')["Mean"]
     
@@ -209,11 +217,11 @@ class continuousStatistics:
     def range(self):
         return self.perform_statistics(self.data, ['range'], 'continuous')["Range"]
     
-    # check these two if they are calculated correctly
     def correlation(self, data2):
         return self.perform_statistics(self.data, ['correlation'], 'continuous')["Correlation"]
     def spearman_correlation(self, data2):
         return self.perform_statistics(self.data, ['spearman correlation'], 'continuous')["Spearman Correlation"]
+
     '''
     Plots associated with this data type
     '''

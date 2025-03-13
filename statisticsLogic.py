@@ -86,7 +86,7 @@ class statistic():
         # Calculate and return the standard deviation
         return np.std(cleaned_data, ddof=1)
     
-    def variance(self):
+    def variance(self, variance_type = "Population"):
         """
         Calculate and return the sample variance of the given data set.
         Returns:
@@ -100,6 +100,11 @@ class statistic():
             raise TypeError("All elements in the data must be numbers")
         if len(cleaned_data) == 0:
             raise ValueError("Data cannot be empty")
+        
+        if variance_type == "Sample":
+            return np.var(cleaned_data, ddof=1) # Sample variance
+        else:
+            return np.var(cleaned_data, ddof=0) # Population variance
         
         # Calculate and return the variance
         return np.var(cleaned_data, ddof=1)

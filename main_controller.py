@@ -4,6 +4,8 @@ from Table import TableController
 from statisticsLogic import statistic
 from main import DataIntegrity, nominalStatistics, ordinalStatistics, discreteStatistics, continuousStatistics
 import datetime
+import numpy as np
+
 
 class Controller:
     """
@@ -62,7 +64,7 @@ class Controller:
         return DataIntegrity.detect_data_type(data_frame) if data_frame is not None else None
 
     @staticmethod
-    def perform_statistics(data_frame, selected_measures, data_type):
+    def perform_statistics(data_frame, selected_measures, data_type, variance_type = None):
         """
         Performs statistical computations based on the selected data type and measures.
 
@@ -100,7 +102,7 @@ class Controller:
             "Median": stat_instance.median,
             "Mode": stat_instance.mode,
             "Standard Deviation": stat_instance.standardDeviation,
-            "Variance": stat_instance.variance,
+            "Variance": lambda: stat_instance.variance(variance_type),
             "Coefficient of Variation": stat_instance.coefficientOfVariation,
             "Percentile": stat_instance.percentiles,
             "Probability Distribution": stat_instance.probabilityDistribution,
@@ -141,10 +143,16 @@ class Controller:
         # detailed results with column/row details
         detailed_results = []
         for measure, value in results.items():
+            # Check if value is iterable (like a list) or a single value (like float/int)
+            if isinstance(value, (list, np.ndarray)):
+                detail_text = f"Analysis performed on {len(value)} selected entries"
+            else:
+                detail_text = "Single value result (not iterable)"
+            
             detailed_results.append({
                 "Measure": measure,
                 "Value": value,
-                "Details": f"Analysis performed on {len(value)} selected entries"
+                "Details": detail_text
             })
 
         # Add timestamp
