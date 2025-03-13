@@ -15,10 +15,8 @@ class TableModel:
     def detect_data_type(self, df): # Sarah's data validation check
         data_types = {}
         for column in df.columns:
-            #print(f"df column: {df[column]}")
             if pd.api.types.is_numeric_dtype(df[column]):
                 unique_values = df[column].nunique()
-                #print(unique_values)
                 if unique_values < 10:  # Threshold to differentiate discrete vs continuous
                     data_types[column] = "Discrete"
                 else:
@@ -59,44 +57,51 @@ class TableModel:
     
 
 class TableController:
-    def __init__(self, parent):
+    """
+    TableController class is used to reference the current table to provide the current table selection of an existing table
+    or import a CSV that will overwrite the current table.  
+    """
+    def __init__(self, parent, table):
         self.model = TableModel()
         self.parent = parent
-        self.table = None
+        self.table = table
 
     def get_table_data(self):
         return self.model.get_data()         
 
-    def update_table(self, table, headers=None, data=None):
-        self.table = table
-        if table is None:
-            table = self.table  # Ensure `table` references the active instance
+    def update_table(self, headers=None, data=None):
+        """
+        Destroys the current table and creates a new table from CSV file.
 
-        if hasattr(table, 'destroy'):
-            table.destroy()
+        Args:
+            table   (Sheet) : Existing table will be destroyed and replaced.
+            headers (List)  : List of headers provided by user through CSV file if available.
+            data    (List)  : List of values from CSV file if available. 
+        """
+
+        if hasattr(self.table, 'destroy'):
+            self.table.destroy()
 
         if headers is None: # If headers are not provided, default headers will be used
-            self.table = Sheet(self.parent, show_header=True, data=list(data), width=1000, height=500)
-            self.win_width = self.table.winfo_reqwidth()
-            self.win_height = self.table.winfo_reqheight()
+            self.table = Sheet(self.parent, show_header=True, data=list(data))
+
         else:
-            self.table = Sheet(self.parent, headers= list(headers), data = list(data), width=1000, height=500)
-            self.table.config(width=self.table.winfo_reqwidth(), height=self.table.winfo_reqheight())
-            self.table.update_idletasks()
+            self.table = Sheet(self.parent, headers= list(headers), data = list(data))
+
         self.table.grid(row=0, column=0, sticky='nswe')
         self.table.enable_bindings("all", "edit_header", "edit_index", "ctrl_select")
 
 
-    def get_table_selection(self):
+    def get_table_selection(self, table):
         """ Creates a 2D list that matches the dimensions of the tksheet table and fills row list with None.
             Iterates over the entire table only updating the cells that are selected.
             Table selection is then matched with its header and converted to pandas df
         """
-        self.table = self.table
+        self.table = table
+
         self.currently_selected = self.table.get_currently_selected()
         self.column_headers = self.table[:].expand().options(table=False, header=True).data # Gets all headers regardless of selection or if header is default
 
-        # if self.currently_selected:
         self.TwoDList = []
 
         # Creates a 2D list filled with None. The idea is to just place values that are selected.
@@ -115,8 +120,6 @@ class TableController:
                 else:
                         self.TwoDList[col][row] = self.table.get_cell_data(r=row,c=col)
 
-       # print(f"Table Selection: {self.TwoDList}")
-
         self.table_dict = {}
         for e, col in enumerate(self.TwoDList):
                 self.table_dict[self.column_headers[e]] = col # Adds in the headers
@@ -124,57 +127,84 @@ class TableController:
         df = pd.DataFrame(self.table_dict)
         df.dropna(axis=0,how='all', inplace=True) # Dropna axis 0 drops all NaN rows
         df.dropna(axis=1,how="all", inplace=True) # Dropna axis 1 drops all NaN columns
-       # print(df)
-       # print(self.model.detect_data_type(df)) # Dropna axis 0 drops all NaN rows, Dropna axis 1 drops all NaN columns
+
         return df
         
 
     def import_csv(self, table):
-        """ Inherits from the Custom TKTable to pass data from csv_reader to a new table """
+        """ 
+        Reads in a csv file to a new table instance. Prompts user for headers. If no headers, default headers will be kept.
+         
+        Args:
+            table (tkSheet): Table instance that will be populated with data from csv
+        """
+
         file_path = filedialog.askopenfilename(
                 title="Select a CSV file",
                 filetypes=(("csv", "*.csv"),)
         )
         
-        df = pd.read_csv(file_path)
+        if file_path:
+            df = pd.read_csv(file_path)
 
-        ask_headers = messagebox.askyesno("Headers", "Does your data have headers?")
+            ask_headers = messagebox.askyesno("Headers", "Does your data have headers?")
 
-        if ask_headers:
-            self.update_table(table, headers=df.columns.tolist(), data=df.values.tolist()) # Table will include user provided headers
-        else:
-            self.update_table(table, data=df.values.tolist())  # Table will keep default headings
+            if ask_headers:
+                self.update_table(headers=df.columns.tolist(), data=df.values.tolist()) # Table will include user provided headers
+            else:
+                self.update_table(data=df.values.tolist())  # Table will keep default headings
 
+        
+    def export_table(self):
+        """ Export table to .csv (Comma delimited) or .tsv (Tab delimited) file """
+
+        file_types = [('CSV (Comma delimited)', '.csv'), ('Tab (Tab delimited)', '.tsv')]
+        file = filedialog.asksaveasfile(
+            filetypes=file_types, 
+            defaultextension=file_types)
+
+        df = self.get_table_selection(self.table)
+
+        if file and not df.empty: # Make sure filename was entered and table has data
+            if file.name.endswith('.csv'):
+                df.to_csv(file,index=False,lineterminator='\n')
+            if file.name.endswith('.tsv'):
+                df.to_csv(file,index=False, sep='\t',lineterminator='\n')
+            
 
 class TableView(tk.Frame):
+    """
+    TableView class to be displayed on application startup. Table will be empty until user imports a CSV or inputs data manually.
+    All bindings must be enabled to allow for row/column selections and manual header changes.
+    """
     def __init__(self, parent):
         super().__init__(parent)
+
         """ Table on Startup"""
-        self.controller = TableController(parent)
-        #if headers == None and data == None: # Startup scernario (No data nor headers) 
-        self.sheet = Sheet(parent, data = self.controller.get_table_data(), width=1000, height=500)
+        self.sheet = Sheet(parent, data = [[f"" for c in range(26)] for r in range(50)])
         self.sheet.grid(row=0,column=0,sticky='nswe')
-        self.sheet.config(width=self.sheet.winfo_reqwidth(), height=self.sheet.winfo_reqheight())
-        self.sheet.update_idletasks()
-
-        self.data_test_button = ttk.Button(parent, text="Get Data (To be Removed)", command=self.controller.get_table_selection)
-        self.data_test_button.grid(row=1,column=0,sticky='sw')
-
         self.sheet.enable_bindings("all", "edit_header", "edit_index", "ctrl_select")
 
+        self.controller = TableController(parent, self.sheet)
+
         self.toolbar = GUIToolbar(parent, self.controller, self.sheet)
-        #self.toolbar.grid(row=0,column=1,sticky='ne')
 
 
 class GUIToolbar():
-    """ Inherits from pandastable ToolBar class to only show 'import csv' button """
+    """ 
+    Creates a toolbar for the table. 
+    Toolbar should include actions directly associated with table:
+        - Import CSV
+        - Export .CSV (Comma Separated Values) & .TSV (Tab Separated Values)
+    """
     def __init__(self, parent, controller, table):
-        self.parent = parent
+        self.toolbar_frame = tk.Frame(parent)
+        self.toolbar_frame.grid(row=0,column=1,sticky='ne')
         self.controller = controller
         self.table = table
 
         # Image conversion: https://dafarry.github.io/tkinterbook/photoimage.htm uses base64 type
-        self.img = PhotoImage(format='gif', data=
+        self.save_img = PhotoImage(format='gif', data=
                 'R0lGODlhGQAZAIe1ACpgtyxity5kth57AyxltC5luS9lujBluiJ7DjBmuiN6HTFmuyV'
                 +'/ADNpvDhxvzWHCjt2xDx4wTuLETqMFUJ5vz98xEB8xEOPF0V+wkKAxUKAxkiRG0mRHU'
                 +'WCxUWCxkaCxEaDxkeExkaULkmFxEqUMkmIxkqIxkuIxVGXI0uJxUuJxkyJxleYKE2LyE'
@@ -202,8 +232,39 @@ class GUIToolbar():
                 +'gyySTQOeKIIaX5YIQRLIACigbLNfecbtJRZx122nHnXUTgiUeeeeipx5578MlHn321RL'
                 +'DJJlmYYUYZMsjwxRdecMHFFk00gcUPPyiQ1159/RXYYIUdlthijfkElFBEJWAUUkox5VREAQEAOw==')
         
-        self.import_csv_button = ttk.Button(self.parent, text="Import CSV", image=self.img, command= lambda: self.controller.import_csv(self.table))
-        self.import_csv_button.grid(row=0,column=1,sticky='ne')
+        self.import_csv_button = ttk.Button(self.toolbar_frame, text="Import CSV", image=self.save_img, command= lambda: self.controller.import_csv(self.table))
+        self.import_csv_button.grid(row=0,column=0,sticky='ne')
+
+
+        self.export_img = tk.PhotoImage(format='gif',data=
+                'R0lGODlhGQAZAIcAAIjAYjFgpjFgpzFgqDFhqDJhqDJhqTJhqjJiqjJiqzJjrDNjrTNkrj'
+                +'NkrzNlsDRlsTRmsjRmszRntDVotTVotjVotzVptzVpuDVpuTVqujZqujdrujZquzZruzZ'
+                +'rvDhruzhsuzptuzlsvDtuvT5wu16JyWSMyGWMyGWNyWaNyWeOyWWNymmQymySy22Sy2iQ'
+                +'zWqTz3mYx3yayHybyW2W03CZ1nGZ2HKb2XOb2XOb2nKc23Sc2nSd3HSe3Xaf3XWe3naf3'
+                +'nef3neg3neg33ih4Hii4Hmi4Xqi4Hqi4Xqj4Xuj4Xqi4nqj4nuj4nqj43uk4nqk43uk43'
+                +'2m5n2n536o536o6MLcv4GezISjzoqn0o6r1ZWw2pq13YCq6Z+64aS+5KnC563F6q3G67P'
+                +'K7bbM7rjO77rQ7rvQ773Q7L7S8MPV78LV8sXY8sfZ9Mnc9Mzd9dDf9tHf9tHg9tHg99jl'
+                +'9tnl99vm99vn99vn+N3o+N/p+N/p+eHs+eLs+ePt+eXt+ujw+unw+unx+urw+urx++vx+'
+                +'+3y++7z++70++70/O/0/PD1/PH2/PL2/PP3/fP4/fb5/fb6/ff6/fb6/vf6/vf7/vj6/v'
+                +'j7/gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+                +'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+                +'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+                +'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+                +'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+                +'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+                +'AAAAACH5BAEAAJgALAAAAAAZABkAQAj/ADFh8kCwYIeDHBKKEDEiRIgPJEgIxHTQzZQpf'
+                +'DL6SZRIkiRHf/7cqVOHjhAhXyRI0KDhzJIll2LKnEmTBo0sCRKwxHDhQoUJEyRAgODAAQ'
+                +'MFChAYMDBAgIAABAgQjNOly6RIkUwcOkSIUKOYjPr0wWPGDJqICdlEieIECpQnTZooUWJ'
+                +'kyBAgPXro4MGDy4MHGzaMOXKEEoDDiBMjhrRixQynBOXMmXOpUiVIixYNGmQIEiRJhQrp'
+                +'QYOmhECCb6hQAcQ6RaBAjx5ZUqRoz52RRYqAoUDhYBspUkygQKGiRQsXLlicOGGiuYkdO'
+                +'7xEiJAwDZPrSZLIVUKESBAfPnjc7rhho0YNLQsWfPhQxogRw4rjA4AEAwaWAwcyZBATJg'
+                +'zN/zPJIEMMTp1WEEEHdZAQBws19FBEE01V1VVZbdXVV5eENVZZZ5FAEBxVVMHIiCYIIgg'
+                +'iiEjiGSB55GFHdmpYYAFqqrEGiGuwyUabbbjpxptvwAlHnHHIKcecc9BJRx0HarHlFlzb'
+                +'1XVXXnv19VdCazihZVxNPPGEe0Sc9ANfOeCAwxYNNFDddUxkt11334U3Xnnnpbdee+/JF'
+                +'x999uEHAghkIIEEJVYUauihhkLywgtXFFBAYIMVpqdijDnm1E49/RTUUEUdldRSTT0VVUAAOw==')
+        
+        self.export_button = ttk.Button(self.toolbar_frame, text="Export", image=self.export_img, command= lambda: self.controller.export_table())
+        self.export_button.grid(row=1,column=0,sticky='ne')
 
 
 if __name__ == "__main__":
