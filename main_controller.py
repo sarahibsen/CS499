@@ -106,7 +106,9 @@ class Controller:
             "Coefficient of Variation": stat_instance.coefficientOfVariation,
             "Percentile": stat_instance.percentiles,
             "Probability Distribution": stat_instance.probabilityDistribution,
-            "Binomial Distribution": stat_instance.binomialDistribution,
+            "Binomial Distribution": lambda: stat_instance.binomialDistribution(
+                data_frame.select_dtypes(include='number').values.flatten()  # Dynamic sample size
+            ),
             "Least Square Line": stat_instance.leastSquareLine,
             "Chi-Square Test": stat_instance.chiSquared, 
             "Correlation Coefficient": stat_instance.correlationCoefficient,

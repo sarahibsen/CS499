@@ -1,3 +1,4 @@
+import tkinter.simpledialog
 import numpy as np
 from scipy import stats
 import sys 
@@ -178,17 +179,40 @@ class statistic():
         return np.random.normal(loc, scale, size)
 
     
-    def binomialDistribution(self):
+    def binomialDistribution(self, selected_data):
         """
-        Return the binomial distribution of the data set
-        """
-        #TODO: Tests function's accuracy on output table & graph
-        n = int(input("Enter the number of trials: "))
-        p = float(input("Enter the probability of success: "))
-        size = int(input("Enter the size of the sample: "))
-        return np.random.binomial(n, p, size)
+        Return the binomial distribution of the selected data set.
+        The sample size is automatically calculated based on the number of selected data points.
 
-    @validate_data
+        The binomial distribution is not taking the values that are selected in the data set but 
+        the number of cells that are selected in the data set.
+        """
+        # Ask for number of trials
+        n = tkinter.simpledialog.askinteger("Binomial Distribution", "Enter the number of trials:")
+        if n is None or n <= 0:
+            messagebox.showerror("Error", "Number of trials must be a positive integer.")
+            return
+
+        # Ask for probability with improved validation
+        while True:
+            try:
+                p = float(tkinter.simpledialog.askstring("Binomial Distribution", "Enter the probability of success (between 0 and 1):"))
+                if 0 <= p <= 1:
+                    break
+                else:
+                    messagebox.showerror("Error", "Probability must be between 0 and 1.")
+            except ValueError:
+                messagebox.showerror("Error", "Invalid probability. Please enter a valid number.")
+
+        # Dynamically calculate sample size
+        sample_size = len(selected_data)
+        if sample_size <= 0:
+            messagebox.showerror("Error", "No data selected for the sample size.")
+            return
+
+        # Perform binomial distribution calculation
+        return np.random.binomial(n, p, sample_size)
+
     def leastSquareLine(self):
         """
         Only works for interval & frequency datasets
