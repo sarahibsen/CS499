@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import tkinter 
 
 from scipy.stats import mode
+from tkinter import simpledialog, messagebox
 
 
 def validate_data(func):
@@ -155,16 +156,27 @@ class statistic():
     
 
     
-#TODO: Needs frontend aspects for user input
     def probabilityDistribution(self):
         """
-        Return the probability distribution of the data set
+        Automatically computes Probability Distribution using the loaded data.
+        Mean and standard deviation are calculated directly from the selected data.
+        Sample size matches the dataset size.
+
+        Decided to stray away from asking for the users input on this one / this should
+        take what the user chooses on the data table
         """
-        #TODO: Tests function's accuracy on output table & graph (needs more example cases)
-        loc = float(input("Enter the mean: "))
-        scale = float(input("Enter the standard deviation: "))
-        size = int(input("Enter the size of the sample: "))
+        cleaned_data = self._clean_data()
+
+        # Compute parameters automatically
+        loc = np.mean(cleaned_data)      # Mean
+        scale = np.std(cleaned_data)     # Standard Deviation
+        size = len(cleaned_data)         # Sample Size (size of dataset)
+
+        if size <= 0:
+            raise ValueError("Sample size must be greater than zero.")
+
         return np.random.normal(loc, scale, size)
+
     
     def binomialDistribution(self):
         """

@@ -151,6 +151,10 @@ class ordinalStatistics:
         return self.perform_statistics(self.data, ['frequency'], 'ordinal')["Frequency"]
     def percentiles(self):
         return self.perform_statistics(self.data, ['percentiles'], 'ordinal')["Percentiles"]
+    def spearmanCorrelation(self, data2):
+        return self.perform_statistics(self.data, ['spearman correlation'], 'ordinal')["Spearman Correlation"]
+    def rankSum(self):
+        return self.perform_statistics(self.data, ['rank sum'], 'ordinal')["Rank Sum"]
     
     '''
     Plots associated with this data type
@@ -194,8 +198,7 @@ class discreteStatistics:
         return self.perform_statistics(self.data, ['piechart'], 'discrete')["Pie Chart"]
     def bargraph(self):
         return self.perform_statistics(self.data, ['bargraph'], 'discrete')["Bar Graph"]
-    
-#TODO : add more measures
+
 class continuousStatistics:
     def __init__(self, data):
         self.data = data
@@ -213,14 +216,21 @@ class continuousStatistics:
 
     def percentiles(self):
         return self.perform_statistics(self.data, ['percentiles'], 'continuous')["Percentiles"]
-    
-    def range(self):
-        return self.perform_statistics(self.data, ['range'], 'continuous')["Range"]
-    
+    def variance(self):
+        return self.perform_statistics(self.data, ['variance'], 'continuous')["Variance"]
+    def probabilityDistribution(self):
+        return self.perform_statistics(self.data, ['probability distribution'], 'continuous')["Probability Distribution"]
+    def binomialDistribution(self):
+        return self.perform_statistics(self.data, ['binomial distribution'], 'continuous')["Binomial Distribution"]
+    def leastSquareLine(self):
+        return self.perform_statistics(self.data, ['least square line'], 'continuous')["Least Square Line"]
+    def chiSquare(self):
+        return self.perform_statistics(self.data, ['chi square'], 'continuous')["Chi Square"]
+    def significanceTest(self):
+        return self.perform_statistics(self.data, ['significance test'], 'continuous')["Significance Test"]
     def correlation(self, data2):
         return self.perform_statistics(self.data, ['correlation'], 'continuous')["Correlation"]
-    def spearman_correlation(self, data2):
-        return self.perform_statistics(self.data, ['spearman correlation'], 'continuous')["Spearman Correlation"]
+
 
     '''
     Plots associated with this data type
