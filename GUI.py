@@ -17,7 +17,6 @@ class App(tk.Tk):
         super().__init__()
         # initialize the controller
         
-        
         # set window to be responsive to the device it's running on
         width = self.winfo_screenwidth()
         height = self.winfo_screenheight()
@@ -26,10 +25,15 @@ class App(tk.Tk):
         self.grid_columnconfigure(0, weight=1)
 
         self.geometry("%dx%d" % (width, height))  # Default size
-        self.state("zoomed")
 
         self.configure(bg="#FFFFFF")
         self.title("Statistical Analyzer")
+
+        # Enable full screen mode
+        # self.attributes("-fullscreen", True)  # Enable full screen mode
+
+        # Bind the Escape key to exit full screen mode
+        # self.bind("<Escape>", self.toggle_fullscreen)
 
         # Container to hold all pages
         self.container = tk.Frame(self)
@@ -196,10 +200,7 @@ class MeasureSelectionPage(BasePage):
     """
     def __init__(self, parent, controller):
         super().__init__(parent, controller)
-        self.controller = controller
-
-        self.grid_rowconfigure(0, weight=1)
-        self.grid_columnconfigure(2, weight=1)    
+        self.controller = controller    
 
         # Create a canvas
         self.canvas = Canvas(self, bg="#FFFFFF", bd=0, highlightthickness=0, relief="ridge")
@@ -213,10 +214,9 @@ class MeasureSelectionPage(BasePage):
 
         self.table_frame.grid(row=0, column=2, padx=10, pady=10, sticky="nsew")
         self.table_frame.grid_rowconfigure(0, weight=1)
-        self.table_frame.grid_columnconfigure(0, weight=1)
+        self.table_frame.grid_columnconfigure(2, weight=1)
 
         self.table = TableView(self.table_frame)
-        self.table.grid(row=0, column=0, sticky='nsew')
               
 
         # Add Calculate Button
@@ -332,7 +332,6 @@ class MeasureSelectionPage(BasePage):
         
         self.controller = Controller()
 
-
         selected_data_type = self.data_type_dropdown.get()
         selected_measures = [self.stat_measures_listbox.get(i) for i in self.stat_measures_listbox.curselection()]
         
@@ -362,7 +361,7 @@ class MeasureSelectionPage(BasePage):
         if results:
             result_str = "\n".join([f"{key}: {value}" for key, value in results.items()])
             messagebox.showinfo("Calculated Statistics", result_str)
-            self.controller.export_results(results)
+           # self.controller.export_results(results)
 
     def get_table_data(self):
         # Fetch table data from the CustomTable widget
