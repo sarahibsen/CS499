@@ -1,4 +1,8 @@
-
+import numpy as np
+import unittest 
+import pandas as pd
+import sys 
+import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from statisticsLogic import statistic
 
@@ -14,12 +18,23 @@ class TestStatisticsFunctions(unittest.TestCase):
         self.data_for_chi_square = pd.DataFrame({
             'Expected': [50, 60, 70],
             'Observed': [45, 65, 75]
-        })
-
+        }) # going to use this for least square line as well 
+        self.data = np.array([50,60,70,45,65,75])
+    
         self.stat_instance_valid = statistic(self.valid_data)
         self.stat_instance_empty = statistic(self.empty_data)
         self.stat_instance_mixed = statistic(self.mixed_data)
         self.stat_instance_chi_square = statistic(self.data_for_chi_square)
+
+        
+    def _clean_data(self):
+         """
+         Cleans the data by removing NaN values and zeros for statistical calculations.
+         """
+         cleaned_data = [value for value in self.data if not pd.isnull(value) and value != 0]
+         if not cleaned_data:
+             return [0]  # Prevent errors if all values are zero
+         return cleaned_data
 
 
     # ---------- Mean ----------
@@ -84,6 +99,21 @@ class TestStatisticsFunctions(unittest.TestCase):
         with unittest.mock.patch('builtins.input', side_effect=['0', '1', '100']):
             t_stat, p_value = self.stat_instance_valid.significanceTest()
             self.assertAlmostEqual(t_stat, 0.0, places=5)  # Sample data mean differences = 0
+
+
+# --------------------------- more complicated statistics ----------------------------
+    def test_leastSquareLine(self):
+            """
+            the line whose total square error is the smallest possible // 
+            """
+            mid = len(self.data_for_chi_square) // 2
+            x = self.data_for_chi_square[:mid]
+            y = self.data_for_chi_square[mid:]
+            slope, intercept = statistic.leastSquareLine(self.data)
+            self.assertAlmostEqual(slope, 1.5, places = 7)
+            self.assertAlmostEqual(intercept, 28.33, places = 7)
+          
+          
 
 if __name__ == "__main__":
     unittest.main()

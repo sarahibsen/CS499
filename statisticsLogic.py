@@ -24,6 +24,7 @@ def validate_data(func):
     return wrapper
 
 
+
 class statistic():
     """
     Equations for calculating statistics on a dataset 
@@ -37,13 +38,13 @@ class statistic():
         self.data = data 
 
     def _clean_data(self):
-        """
-        Cleans the data by removing NaN values and zeros for statistical calculations.
-        """
-        cleaned_data = [value for value in self.data if not pd.isnull(value) and value != 0]
-        if not cleaned_data:
-            return [0]  # Prevent errors if all values are zero
-        return cleaned_data
+         """
+         Cleans the data by removing NaN values and zeros for statistical calculations.
+         """
+         cleaned_data = [value for value in self.data if not pd.isnull(value) and value != 0]
+         if not cleaned_data:
+             return [0]  # Prevent errors if all values are zero
+         return cleaned_data
        
 
         
@@ -213,6 +214,9 @@ class statistic():
         # Perform binomial distribution calculation
         return np.random.binomial(n, p, sample_size)
 
+# ----------------------------------------------------------------------------------#
+# separating these statistical functions because these are the ones that I have to really hone on
+# they are all very specific and need to be tuned for the GUI 
     def leastSquareLine(self):
         """
         Only works for interval & frequency datasets
@@ -222,19 +226,36 @@ class statistic():
         Returns:
             the slope, intercept, and equation of the regression line.
         """
-        if self.data.shape[1] < 2:
-            raise ValueError("Dataset must contain at least two numeric columns.")
+        cleaned_data = self._clean_data()
+        # the user should be able to choose their own columns--however, they must be the same length 
+        # the user will only be able to grab 2 array's / columns 
+        print(f"data : {cleaned_data}")
+        mid = len(cleaned_data) // 2 
+        x = cleaned_data[:mid]# this should be the first column grabbed 
+        # somehow divide the array by two, one half will be assigned to x, the other half will be assigned to y
+        # if it is uneven // user did not choose the same length columns 
+        y = cleaned_data[mid:]# this will be the second column grabbed 
+      #  print(f" x values: {x}")
+      #  print(y)
+        # add a check to make sure that mid will be divided properly <3 
+        if len(x) != len(y):
+            messagebox.showerror("Error", "Both columns must have the same length.")
+            raise ValueError("Both columns must have the same length")
+        
+        
+        # find the mean of the x and y columns 
+        x_mean = np.mean(x)
+        y_mean = np.mean(y)
 
-        x = self.data.iloc[:, 0]
-        y = self.data.iloc[:, 1]
+        numerator = np.sum((x - x_mean) * (y - y_mean))
+        denominator = np.sum((x - x_mean)** 2)
 
-        # Perform linear regression (return values))
-        slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
-
-        # Equation of the regression line for graphing
-        equation = f"y = {slope:.4f}x + {intercept:.4f}"
-
-        return slope, intercept, equation
+        if denominator == 0:
+            raise ZeroDivisionError("Cannot divide by zero!")
+        slope = numerator / denominator
+        intercept = y_mean - slope * x_mean
+        
+        return slope, intercept
 
     @validate_data
     def chiSquared(self):
