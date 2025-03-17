@@ -26,7 +26,7 @@ class TestStatisticsFunctions(unittest.TestCase):
         self.stat_instance_mixed = statistic(self.mixed_data)
         self.stat_instance_chi_square = statistic(self.data_for_chi_square)
 
-        
+
     def _clean_data(self):
          """
          Cleans the data by removing NaN values and zeros for statistical calculations.
@@ -105,6 +105,7 @@ class TestStatisticsFunctions(unittest.TestCase):
     def test_leastSquareLine(self):
             """
             the line whose total square error is the smallest possible // 
+            https://www.mathsisfun.com/data/least-squares-calculator.html
             """
             mid = len(self.data_for_chi_square) // 2
             x = self.data_for_chi_square[:mid]

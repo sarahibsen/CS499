@@ -6,20 +6,33 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import tkinter 
 
-from scipy.stats import mode
+from scipy.stats import mode, norm
 from tkinter import simpledialog, messagebox
 
-
 def validate_data(func):
-    """Decorator to validate the data before executing a method."""
+    """Decorator to validate the data before executing a method.
+    Changed to make it so where if the user does have characters or strings in their chosen data -- we will just take the
+    numerical values not the strings ! : ) 
+    """
     def wrapper(self, *args, **kwargs):
         if not isinstance(self.data, (list, np.ndarray, pd.DataFrame)):
             raise TypeError("Data must be a list, NumPy array, or Pandas DataFrame of numbers.")
+
+        # Handle different data types
         if isinstance(self.data, (list, np.ndarray)):
-            if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in self.data):
-                raise TypeError("All elements in the data must be numbers.")
+            # Filter out non-numeric values
+            self.data = [x for x in self.data if isinstance(x, (int, float, np.integer, np.floating))]
+
             if len(self.data) == 0:
-                raise ValueError("Data cannot be empty.")
+                raise ValueError("Data cannot be empty or contain only non-numeric values.")
+
+        elif isinstance(self.data, pd.DataFrame):
+            # Select only numeric columns
+            self.data = self.data.select_dtypes(include=[np.number]).to_numpy().flatten()
+            
+            if len(self.data) == 0:
+                raise ValueError("Data cannot be empty or contain only non-numeric values.")
+                
         return func(self, *args, **kwargs)
     return wrapper
 
@@ -166,18 +179,43 @@ class statistic():
 
         Decided to stray away from asking for the users input on this one / this should
         take what the user chooses on the data table
+
+        The values will be needed when we implement plotting. The CDF and PDF will be mostly beneficial 
+        for the plot function 
         """
         cleaned_data = self._clean_data()
 
-        # Compute parameters automatically
-        loc = np.mean(cleaned_data)      # Mean
-        scale = np.std(cleaned_data)     # Standard Deviation
-        size = len(cleaned_data)         # Sample Size (size of dataset)
+        # Ask for distribution choice
+        distribution_choice = simpledialog.askstring("Distribution", "Choose one: Normal, CDF, PDF")
 
-        if size <= 0:
-            raise ValueError("Sample size must be greater than zero.")
+        if not distribution_choice:
+            messagebox.showerror("Error", "Distribution choice is required.")
+            return None
 
-        return np.random.normal(loc, scale, size)
+        distribution_choice = distribution_choice.lower()
+        x = np.linspace(min(cleaned_data), max(cleaned_data), 100)
+
+        if distribution_choice == 'normal':
+            mean = np.mean(cleaned_data)
+            std_dev = np.std(cleaned_data)
+            normal_values = norm.pdf(x, mean, std_dev)
+            return {"Distribution": "Normal", "Mean": mean, "Standard Deviation": std_dev} #"Values": normal_values.tolist()
+
+        elif distribution_choice == 'pdf':
+            mean = np.mean(cleaned_data)
+            std_dev = np.std(cleaned_data)
+            pdf_values = norm.pdf(x, mean, std_dev)
+            return {"Distribution": "PDF", "Mean": mean, "Standard Deviation": std_dev} #"Values": normal_values.tolist()
+
+        elif distribution_choice == 'cdf':
+            mean = np.mean(cleaned_data)
+            std_dev = np.std(cleaned_data)
+            cdf_values = norm.cdf(x, mean, std_dev)
+            return {"Distribution": "CDF", "Mean": mean, "Standard Deviation": std_dev} #"Values": normal_values.tolist()
+
+        else:
+            messagebox.showerror("Error", "Invalid distribution choice. Please select Normal, PDF, or CDF.")
+            return None
 
     
     def binomialDistribution(self, selected_data):
@@ -271,7 +309,7 @@ class statistic():
         f_obs = self.data.iloc[:, 1]
         chi_sq_results = stats.chisquare(f_obs, f_exp, axis=0, sum_check=False)
         return chi_sq_results
-
+    
     @validate_data
     def correlationCoefficient(self):
         """
@@ -279,7 +317,12 @@ class statistic():
         Parameters: Grabs first column as x and second column as y
         Returns the correlation coefficient.
         """
-        return np.corrcoef(self.data.iloc[:, 0], self.data.iloc[:, 1])
+        cleaned_data = self._clean_data()
+        mid = len(cleaned_data) // 2
+        x = cleaned_data[:mid]
+        y = cleaned_data[mid:]
+        correlation = np.corrcoef(x,y)
+        return correlation
 
     @validate_data
     def significanceTest(self):
@@ -289,7 +332,13 @@ class statistic():
         Parameters: Grabs first column as x and second column as y
         Returns the p-value.
         """
-        return stats.ttest_ind(self.data.iloc[:, 0], self.data.iloc[:, 1])
+        cleaned_data = self._clean_data()
+        mid = len(cleaned_data) // 2
+        x = cleaned_data[:mid]
+        y = cleaned_data[mid:]
+        sigTest = stats.ttest_ind(x, y)
+        return sigTest
+        
 
     @validate_data
     def rankSum(self):
@@ -301,7 +350,12 @@ class statistic():
         Returns:
             the rank sum & p-value as floats
         """
-        return stats.ranksums(self.data.iloc[:, 0], self.data.iloc[:, 1])
+        cleaned_data = self._clean_data()
+        mid = len(cleaned_data) // 2
+        x = cleaned_data[:mid]
+        y = cleaned_data[mid:]
+        rank = stats.ranksums(x, y)
+        return rank
 
     @validate_data
     def spearmanRankCorrelation(self):
@@ -313,7 +367,12 @@ class statistic():
         Returns:
             two floats (the spearman rank correlation & p-value).
         """
-        return stats.spearmanr(self.data.iloc[:, 0], self.data.iloc[:, 1], axis = 0)
+        cleaned_data = self._clean_data()
+        mid = len(cleaned_data) // 2
+        x = cleaned_data[:mid]
+        y = cleaned_data[mid:]
+        spearman = stats.spearmar(x, y, axis = 0)
+        return spearman
     
 
 class plotCreation():
