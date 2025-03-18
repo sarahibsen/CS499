@@ -1,8 +1,11 @@
 # Refactored Controller as a lightweight Component
 import pandas as pd
 from Table import TableController
-from statisticsLogic import *
+from statisticsLogic import statistic
 from main import DataIntegrity, nominalStatistics, ordinalStatistics, discreteStatistics, continuousStatistics
+import datetime
+import numpy as np
+
 
 class Controller:
     """
@@ -12,32 +15,40 @@ class Controller:
 
     @staticmethod
     def load_data_from_table(table_controller):
-        """
-        Fetches selected data from the table via TableController.
+        if not hasattr(table_controller, 'get_table_selection'):
+            print("Error: Table instance is not initialized.")
+            return pd.DataFrame()
+
+        data = table_controller.get_table_selection()
+        print(f"Loaded Data:\n{data}")
+
+        # Ensure proper data types
+        for col in data.columns:
+            data[col] = pd.to_numeric(data[col], errors='coerce')
+            data.fillna(0, inplace=True)  # for missing data
+
+        # Filter non-zero data only
+        data = data[(data != 0).any(axis=1)]
+
+        print(f"Data loaded into Controller:\n{data}")
+        return data
 
 
-        Returns:
-            pd.DataFrame: The selected data as a DataFrame.
-        """
-        table_controller = TableController(table_controller)
-        return table_controller.get_table_selection()
 
     @staticmethod
     def validate_data(data_frame):
-        """
-        Checks if the selected data contains only numeric values.
-
-        Args:
-            data_frame (pd.DataFrame): The data to validate.
-
-        Returns:
-            bool: True if valid, False otherwise.
-        """
         if data_frame is None or data_frame.empty:
+            print("Data validation failed: Empty DataFrame")
             return False
 
-        selected_cells = [(r, c) for r in range(data_frame.shape[0]) for c in range(data_frame.shape[1])]
-        return DataIntegrity.validate_numeric_cells(data_frame, selected_cells)
+        numeric_cols = data_frame.select_dtypes(include='number').columns
+        if numeric_cols.empty:
+            print("Data validation failed: No numeric columns found.")
+            return False
+
+        print("Data validation successful!")
+        return True
+
 
     @staticmethod
     def detect_data_type(data_frame):
@@ -53,7 +64,7 @@ class Controller:
         return DataIntegrity.detect_data_type(data_frame) if data_frame is not None else None
 
     @staticmethod
-    def perform_statistics(data_frame, selected_measures, data_type):
+    def perform_statistics(data_frame, selected_measures, data_type, variance_type = None):
         """
         Performs statistical computations based on the selected data type and measures.
 
@@ -80,43 +91,76 @@ class Controller:
             return None
 
         logic = statistics_classes[data_type](data_frame)
+        stat_instance = statistic(data_frame.select_dtypes(include='number').values.flatten()) 
+
 
         # Compute requested measures
         results = {}
         #TODO : add more measures
         measure_functions = {
-            "Mean": logic.mean if hasattr(logic, "mean") else None,
-            "Median": logic.median if hasattr(logic, "median") else None,
-            "Mode": logic.mode if hasattr(logic, "mode") else None,
-            "Standard Deviation": logic.standardDeviation if hasattr(logic, "standardDeviation") else None,
-            "Variance": logic.variance if hasattr(logic, "variance") else None,
-            "Range": logic.range if hasattr(logic, "range") else None,
-            "Coefficient of Variation": logic.coefficientOfVariation if hasattr(logic, "coefficientOfVariation") else None,
-            "Probability Distribution": logic.probabilityDistribution if hasattr(logic, "probabilityDistribution") else None,
-            "Significance Test": logic.significanceTest if hasattr(logic, "significanceTest") else None,
-        }
+            "Mean": stat_instance.mean,
+            "Median": stat_instance.median,
+            "Mode": stat_instance.mode,
+            "Standard Deviation": stat_instance.standardDeviation,
+            "Variance": lambda: stat_instance.variance(variance_type),
+            "Coefficient of Variation": stat_instance.coefficientOfVariation,
+            "Percentile": stat_instance.percentiles,
+            "Probability Distribution": stat_instance.probabilityDistribution,
+            "Binomial Distribution": lambda: stat_instance.binomialDistribution(
+                data_frame.select_dtypes(include='number').values.flatten()  # Dynamic sample size
+            ),
+            "Least Square Line": stat_instance.leastSquareLine,
+            "Chi-Square Test": stat_instance.chiSquared, 
+            "Correlation Coefficient": stat_instance.correlationCoefficient,
+            "Significance Test": stat_instance.significanceTest,
+            "Rank Sum": stat_instance.rankSum,
+            "Spearman Coefficient": stat_instance.spearmanRankCorrelation,
 
+        }
+        # allow for the possibility of users to input their own measures
+        
         for measure in selected_measures:
-            if measure in measure_functions and measure_functions[measure]:
-                results[measure] = measure_functions[measure]()
+            if measure in measure_functions:
+                try:
+                    results[measure] = measure_functions[measure]()
+                except Exception as e:
+                    print(f"Error calculating {measure}: {e}")
             else:
                 print(f"Measure '{measure}' not supported for data type '{data_type}'")
 
         return results
 
     @staticmethod
-    def export_results(results, filename="stats_results.csv"):
+    def export_results(results, filename=None):
         """
-        Exports statistical results to a CSV file.
-
-        Args:
-            results (dict): The computed statistical results.
-            filename (str): The filename for the output CSV.
+        Enhanced export method to:
+        - Add a timestamp to the filename
+        - Provide detailed descriptions of the statistical analysis performed
+        - Include column/row selection details for better context
         """
         if not results:
             print("No results to export.")
             return
 
-        df = pd.DataFrame(list(results.items()), columns=["Measure", "Value"])
+        # detailed results with column/row details
+        detailed_results = []
+        for measure, value in results.items():
+            # Check if value is iterable (like a list) or a single value (like float/int)
+            if isinstance(value, (list, np.ndarray)):
+                detail_text = f"Analysis performed on {len(value)} selected entries"
+            else:
+                detail_text = "Single value result (not iterable)"
+            
+            detailed_results.append({
+                "Measure": measure,
+                "Value": value,
+                "Details": detail_text
+            })
+
+        # Add timestamp
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        filename = filename or f"stats_results_{timestamp}.csv"
+
+        df = pd.DataFrame(detailed_results)
         df.to_csv(filename, index=False)
         print(f"Results exported to {filename}")

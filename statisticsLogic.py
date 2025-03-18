@@ -1,3 +1,4 @@
+import tkinter.simpledialog
 import numpy as np
 from scipy import stats
 import sys 
@@ -5,21 +6,36 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import tkinter 
 
-from scipy.stats import mode
-
+from scipy.stats import mode, norm
+from tkinter import simpledialog, messagebox
 
 def validate_data(func):
-    """Decorator to validate the data before executing a method."""
+    """Decorator to validate the data before executing a method.
+    Changed to make it so where if the user does have characters or strings in their chosen data -- we will just take the
+    numerical values not the strings ! : ) 
+    """
     def wrapper(self, *args, **kwargs):
         if not isinstance(self.data, (list, np.ndarray, pd.DataFrame)):
             raise TypeError("Data must be a list, NumPy array, or Pandas DataFrame of numbers.")
+
+        # Handle different data types
         if isinstance(self.data, (list, np.ndarray)):
-            if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in self.data):
-                raise TypeError("All elements in the data must be numbers.")
+            # Filter out non-numeric values
+            self.data = [x for x in self.data if isinstance(x, (int, float, np.integer, np.floating))]
+
             if len(self.data) == 0:
-                raise ValueError("Data cannot be empty.")
+                raise ValueError("Data cannot be empty or contain only non-numeric values.")
+
+        elif isinstance(self.data, pd.DataFrame):
+            # Select only numeric columns
+            self.data = self.data.select_dtypes(include=[np.number]).to_numpy().flatten()
+            
+            if len(self.data) == 0:
+                raise ValueError("Data cannot be empty or contain only non-numeric values.")
+                
         return func(self, *args, **kwargs)
     return wrapper
+
 
 
 class statistic():
@@ -33,59 +49,81 @@ class statistic():
         Initializes the Statistics class with a dataset
         """
         self.data = data 
-        
+
+    def _clean_data(self):
+         """
+         Cleans the data by removing NaN values and zeros for statistical calculations.
+         """
+         cleaned_data = [value for value in self.data if not pd.isnull(value) and value != 0]
+         if not cleaned_data:
+             return [0]  # Prevent errors if all values are zero
+         return cleaned_data
+       
 
         
     def mean(self):
         """
         Return the mean (average) of the data set
         """
-        return np.mean(self.data)
+        cleaned_data = self._clean_data()
+        return np.mean(cleaned_data)
     
     def median(self):
         """
         Return the median of the data set
         """
-        return np.median(self.data)
+        cleaned_data = self._clean_data()
+        return np.median(cleaned_data)
     def mode(self):
         """
         Return the mode of the data set
         """
-        return mode(self.data)[0][0]
+        cleaned_data = self._clean_data()
+        mode_result = stats.mode(cleaned_data, keepdims=True)
+        return mode_result.mode[0] if mode_result.mode.size > 0 else None
     
     def standardDeviation(self):
         """
         Calculate and return the sample standard deviation of the given data set.
         Returns:
             float: The sample standard deviation of the data.
+
+        using an online calculator to confirm results : https://www.calculator.net/standard-deviation-calculator.html?numberinputs=12%2C1%2C1%2C2&ctype=s&x=Calculate
         """
+        cleaned_data = self._clean_data()
         # Validate the data
-        if not isinstance(self.data, (list, np.ndarray)):
+        if not isinstance(cleaned_data, (list, np.ndarray)):
             raise TypeError("Data must be a list or NumPy array of numbers")
         if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in self.data):
             raise TypeError("All elements in the data must be numbers")
-        if len(self.data) == 0:
-            raise ValueError("Data cannot be empty")
+        if len(cleaned_data) < 2 :
+            return 0 # Prevent errors if all values are zero
         
         # Calculate and return the standard deviation
-        return np.std(self.data, ddof=1)
+        return np.std(cleaned_data, ddof=1)
     
-    def variance(self):
+    def variance(self, variance_type = "Population"):
         """
         Calculate and return the sample variance of the given data set.
         Returns:
             float: The sample variance of the data.
         """
+        cleaned_data = self._clean_data()
         # Validate the data
-        if not isinstance(self.data, (list, np.ndarray)):
+        if not isinstance(cleaned_data, (list, np.ndarray)):
             raise TypeError("Data must be a list or NumPy array of numbers")
         if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in self.data):
             raise TypeError("All elements in the data must be numbers")
-        if len(self.data) == 0:
+        if len(cleaned_data) == 0:
             raise ValueError("Data cannot be empty")
         
+        if variance_type == "Sample":
+            return np.var(cleaned_data, ddof=1) # Sample variance
+        else:
+            return np.var(cleaned_data, ddof=0) # Population variance
+        
         # Calculate and return the variance
-        return np.var(self.data, ddof=1)
+        return np.var(cleaned_data, ddof=1)
 
     def coefficientOfVariation(self):
         """
@@ -93,12 +131,13 @@ class statistic():
         Returns:
             float: The coefficient of variation of the data.
         """
+        cleaned_data = self._clean_data()
         # Validate the data
-        if not isinstance(self.data, (list, np.ndarray)):
+        if not isinstance(cleaned_data, (list, np.ndarray)):
             raise TypeError("Data must be a list or NumPy array of numbers")
         if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in self.data):
             raise TypeError("All elements in the data must be numbers")
-        if len(self.data) == 0:
+        if len(cleaned_data) == 0:
             raise ValueError("Data cannot be empty")
         
         # Calculate and return the coefficient of variation
@@ -116,14 +155,14 @@ class statistic():
         Returns:
             NumPy ndarray for further processing
         """
-
+        cleaned_data = self._clean_data()
         psequence = list(map(int, input("Enter the percentiles you would like to calculate (e.g. 25, 50, 75): ").split(",")))
 
-        percentiles_array = np.percentile(self.data, psequence, axis=0)
+        percentiles_array = np.percentile(cleaned_data, psequence, axis=0)
 
         percentiles_df = pd.DataFrame(
             percentiles_array, 
-            columns=[f"Column {i+1}" for i in range(self.data.shape[1])]
+            columns=[f"Column {i+1}" for i in range(cleaned_data.shape[1])]
         )
 
         percentiles_df.insert(0, "Percentiles", [f"{p}th" for p in psequence])  # Insert percentile column (Percentiles:, nth, n+1th)
@@ -132,28 +171,90 @@ class statistic():
     
 
     
-#TODO: Needs frontend aspects for user input
     def probabilityDistribution(self):
         """
-        Return the probability distribution of the data set
-        """
-        #TODO: Tests function's accuracy on output table & graph (needs more example cases)
-        loc = float(input("Enter the mean: "))
-        scale = float(input("Enter the standard deviation: "))
-        size = int(input("Enter the size of the sample: "))
-        return np.random.normal(loc, scale, size)
-    
-    def binomialDistribution(self):
-        """
-        Return the binomial distribution of the data set
-        """
-        #TODO: Tests function's accuracy on output table & graph
-        n = int(input("Enter the number of trials: "))
-        p = float(input("Enter the probability of success: "))
-        size = int(input("Enter the size of the sample: "))
-        return np.random.binomial(n, p, size)
+        Automatically computes Probability Distribution using the loaded data.
+        Mean and standard deviation are calculated directly from the selected data.
+        Sample size matches the dataset size.
 
-    @validate_data
+        Decided to stray away from asking for the users input on this one / this should
+        take what the user chooses on the data table
+
+        The values will be needed when we implement plotting. The CDF and PDF will be mostly beneficial 
+        for the plot function 
+        """
+        cleaned_data = self._clean_data()
+
+        # Ask for distribution choice
+        distribution_choice = simpledialog.askstring("Distribution", "Choose one: Normal, CDF, PDF")
+
+        if not distribution_choice:
+            messagebox.showerror("Error", "Distribution choice is required.")
+            return None
+
+        distribution_choice = distribution_choice.lower()
+        x = np.linspace(min(cleaned_data), max(cleaned_data), 100)
+
+        if distribution_choice == 'normal':
+            mean = np.mean(cleaned_data)
+            std_dev = np.std(cleaned_data)
+            normal_values = norm.pdf(x, mean, std_dev)
+            return {"Distribution": "Normal", "Mean": mean, "Standard Deviation": std_dev} #"Values": normal_values.tolist()
+
+        elif distribution_choice == 'pdf':
+            mean = np.mean(cleaned_data)
+            std_dev = np.std(cleaned_data)
+            pdf_values = norm.pdf(x, mean, std_dev)
+            return {"Distribution": "PDF", "Mean": mean, "Standard Deviation": std_dev} #"Values": normal_values.tolist()
+
+        elif distribution_choice == 'cdf':
+            mean = np.mean(cleaned_data)
+            std_dev = np.std(cleaned_data)
+            cdf_values = norm.cdf(x, mean, std_dev)
+            return {"Distribution": "CDF", "Mean": mean, "Standard Deviation": std_dev} #"Values": normal_values.tolist()
+
+        else:
+            messagebox.showerror("Error", "Invalid distribution choice. Please select Normal, PDF, or CDF.")
+            return None
+
+    
+    def binomialDistribution(self, selected_data):
+        """
+        Return the binomial distribution of the selected data set.
+        The sample size is automatically calculated based on the number of selected data points.
+
+        The binomial distribution is not taking the values that are selected in the data set but 
+        the number of cells that are selected in the data set.
+        """
+        # Ask for number of trials
+        n = tkinter.simpledialog.askinteger("Binomial Distribution", "Enter the number of trials:")
+        if n is None or n <= 0:
+            messagebox.showerror("Error", "Number of trials must be a positive integer.")
+            return
+
+        # Ask for probability with improved validation
+        while True:
+            try:
+                p = float(tkinter.simpledialog.askstring("Binomial Distribution", "Enter the probability of success (between 0 and 1):"))
+                if 0 <= p <= 1:
+                    break
+                else:
+                    messagebox.showerror("Error", "Probability must be between 0 and 1.")
+            except ValueError:
+                messagebox.showerror("Error", "Invalid probability. Please enter a valid number.")
+
+        # Dynamically calculate sample size
+        sample_size = len(selected_data)
+        if sample_size <= 0:
+            messagebox.showerror("Error", "No data selected for the sample size.")
+            return
+
+        # Perform binomial distribution calculation
+        return np.random.binomial(n, p, sample_size)
+
+# ----------------------------------------------------------------------------------#
+# separating these statistical functions because these are the ones that I have to really hone on
+# they are all very specific and need to be tuned for the GUI 
     def leastSquareLine(self):
         """
         Only works for interval & frequency datasets
@@ -163,19 +264,36 @@ class statistic():
         Returns:
             the slope, intercept, and equation of the regression line.
         """
-        if self.data.shape[1] < 2:
-            raise ValueError("Dataset must contain at least two numeric columns.")
+        cleaned_data = self._clean_data()
+        # the user should be able to choose their own columns--however, they must be the same length 
+        # the user will only be able to grab 2 array's / columns 
+        print(f"data : {cleaned_data}")
+        mid = len(cleaned_data) // 2 
+        x = cleaned_data[:mid]# this should be the first column grabbed 
+        # somehow divide the array by two, one half will be assigned to x, the other half will be assigned to y
+        # if it is uneven // user did not choose the same length columns 
+        y = cleaned_data[mid:]# this will be the second column grabbed 
+      #  print(f" x values: {x}")
+      #  print(y)
+        # add a check to make sure that mid will be divided properly <3 
+        if len(x) != len(y):
+            messagebox.showerror("Error", "Both columns must have the same length.")
+            raise ValueError("Both columns must have the same length")
+        
+        
+        # find the mean of the x and y columns 
+        x_mean = np.mean(x)
+        y_mean = np.mean(y)
 
-        x = self.data.iloc[:, 0]
-        y = self.data.iloc[:, 1]
+        numerator = np.sum((x - x_mean) * (y - y_mean))
+        denominator = np.sum((x - x_mean)** 2)
 
-        # Perform linear regression (return values))
-        slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
-
-        # Equation of the regression line for graphing
-        equation = f"y = {slope:.4f}x + {intercept:.4f}"
-
-        return slope, intercept, equation
+        if denominator == 0:
+            raise ZeroDivisionError("Cannot divide by zero!")
+        slope = numerator / denominator
+        intercept = y_mean - slope * x_mean
+        
+        return slope, intercept
 
     @validate_data
     def chiSquared(self):
@@ -191,7 +309,7 @@ class statistic():
         f_obs = self.data.iloc[:, 1]
         chi_sq_results = stats.chisquare(f_obs, f_exp, axis=0, sum_check=False)
         return chi_sq_results
-
+    
     @validate_data
     def correlationCoefficient(self):
         """
@@ -199,7 +317,12 @@ class statistic():
         Parameters: Grabs first column as x and second column as y
         Returns the correlation coefficient.
         """
-        return np.corrcoef(self.data.iloc[:, 0], self.data.iloc[:, 1])
+        cleaned_data = self._clean_data()
+        mid = len(cleaned_data) // 2
+        x = cleaned_data[:mid]
+        y = cleaned_data[mid:]
+        correlation = np.corrcoef(x,y)
+        return correlation
 
     @validate_data
     def significanceTest(self):
@@ -209,7 +332,13 @@ class statistic():
         Parameters: Grabs first column as x and second column as y
         Returns the p-value.
         """
-        return stats.ttest_ind(self.data.iloc[:, 0], self.data.iloc[:, 1])
+        cleaned_data = self._clean_data()
+        mid = len(cleaned_data) // 2
+        x = cleaned_data[:mid]
+        y = cleaned_data[mid:]
+        sigTest = stats.ttest_ind(x, y)
+        return sigTest
+        
 
     @validate_data
     def rankSum(self):
@@ -221,7 +350,12 @@ class statistic():
         Returns:
             the rank sum & p-value as floats
         """
-        return stats.ranksums(self.data.iloc[:, 0], self.data.iloc[:, 1])
+        cleaned_data = self._clean_data()
+        mid = len(cleaned_data) // 2
+        x = cleaned_data[:mid]
+        y = cleaned_data[mid:]
+        rank = stats.ranksums(x, y)
+        return rank
 
     @validate_data
     def spearmanRankCorrelation(self):
@@ -233,7 +367,12 @@ class statistic():
         Returns:
             two floats (the spearman rank correlation & p-value).
         """
-        return stats.spearmanr(self.data.iloc[:, 0], self.data.iloc[:, 1], axis = 0)
+        cleaned_data = self._clean_data()
+        mid = len(cleaned_data) // 2
+        x = cleaned_data[:mid]
+        y = cleaned_data[mid:]
+        spearman = stats.spearmar(x, y, axis = 0)
+        return spearman
     
 
 class plotCreation():

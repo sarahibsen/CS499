@@ -92,12 +92,12 @@ class TableController:
         self.table.enable_bindings("all", "edit_header", "edit_index", "ctrl_select")
 
 
-    def get_table_selection(self, table):
+    def get_table_selection(self):
         """ Creates a 2D list that matches the dimensions of the tksheet table and fills row list with None.
             Iterates over the entire table only updating the cells that are selected.
             Table selection is then matched with its header and converted to pandas df
         """
-        self.table = table
+        #self.table = table
 
         self.currently_selected = self.table.get_currently_selected()
         self.column_headers = self.table[:].expand().options(table=False, header=True).data # Gets all headers regardless of selection or if header is default
