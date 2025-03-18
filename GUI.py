@@ -25,6 +25,7 @@ class App(tk.Tk):
         self.grid_columnconfigure(0, weight=1)
 
         self.geometry("%dx%d" % (width, height))  # Default size
+        self.state("zoomed")
 
         self.configure(bg="#FFFFFF")
         self.title("Statistical Analyzer")
@@ -202,6 +203,9 @@ class MeasureSelectionPage(BasePage):
         super().__init__(parent, controller)
         self.controller = controller    
 
+        self.grid_rowconfigure(0, weight = 1)
+        self.grid_columnconfigure(2, weight = 2)
+
         # Create a canvas
         self.canvas = Canvas(self, bg="#FFFFFF", bd=0, highlightthickness=0, relief="ridge")
         self.canvas.grid(row=0, column=0, sticky="nsew")
@@ -214,15 +218,18 @@ class MeasureSelectionPage(BasePage):
 
         self.table_frame.grid(row=0, column=2, padx=10, pady=10, sticky="nsew")
         self.table_frame.grid_rowconfigure(0, weight=1)
-        self.table_frame.grid_columnconfigure(2, weight=1)
+        self.table_frame.grid_columnconfigure(0, weight=1)
 
         self.table = TableView(self.table_frame)
+        self.table.grid(row=0, column=0, sticky='nsew')
               
 
         # Add Calculate Button
         self.calculate_button = ttk.Button(self.measurement_frame, text="Calculate Measures", command=self.calculate_statistics)
         self.calculate_button.grid(row=0, column=1, padx=10, pady=10, sticky='w')
 
+
+## TODO: change this to grab data types from main.py
         # ComboBox for Data Types
         self.data_type_options = ["Nominal", "Ordinal", "Discrete", "Continuous"]
         self.data_type_dropdown = ttk.Combobox(self.measurement_frame, values=self.data_type_options, font=("Roboto", 14), state="readonly")
