@@ -131,12 +131,10 @@ class TableController:
         return df
         
 
-    def import_csv(self, table):
+    def import_csv(self):
         """ 
-        Reads in a csv file to a new table instance. Prompts user for headers. If no headers, default headers will be kept.
-         
-        Args:
-            table (tkSheet): Table instance that will be populated with data from csv
+        Reads in a csv file to a new table instance. Prompts user for headers. 
+        If no headers, default headers will be kept.
         """
 
         file_path = filedialog.askopenfilename(
@@ -163,7 +161,8 @@ class TableController:
             filetypes=file_types, 
             defaultextension=file_types)
 
-        df = self.get_table_selection(self.table)
+        #df = self.get_table_selection(self.table)
+        df = self.get_table_selection()
 
         if file and not df.empty: # Make sure filename was entered and table has data
             if file.name.endswith('.csv'):
@@ -232,7 +231,7 @@ class GUIToolbar():
                 +'gyySTQOeKIIaX5YIQRLIACigbLNfecbtJRZx122nHnXUTgiUeeeeipx5578MlHn321RL'
                 +'DJJlmYYUYZMsjwxRdecMHFFk00gcUPPyiQ1159/RXYYIUdlthijfkElFBEJWAUUkox5VREAQEAOw==')
         
-        self.import_csv_button = ttk.Button(self.toolbar_frame, text="Import CSV", image=self.save_img, command= lambda: self.controller.import_csv(self.table))
+        self.import_csv_button = ttk.Button(self.toolbar_frame, text="Import CSV", image=self.save_img, command= lambda: self.controller.import_csv())
         self.import_csv_button.grid(row=0,column=0,sticky='ne')
 
 
