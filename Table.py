@@ -156,7 +156,7 @@ class TableController:
     def export_table(self):
         """ Export table to .csv (Comma delimited) or .tsv (Tab delimited) file """
 
-        file_types = [('CSV (Comma delimited)', '.csv'), ('Tab (Tab delimited)', '.tsv')]
+        file_types = [('CSV (Comma delimited)', '.csv'), ('Tab (Tab delimited)', '.tsv'), ('Txt (text)', '.txt')]
         file = filedialog.asksaveasfile(
             filetypes=file_types, 
             defaultextension=file_types)
@@ -169,6 +169,15 @@ class TableController:
                 df.to_csv(file,index=False,lineterminator='\n')
             if file.name.endswith('.tsv'):
                 df.to_csv(file,index=False, sep='\t',lineterminator='\n')
+            if file.name.endswith('.txt'):
+                # have the option to export the csv to a text file / or have it formatted as such ?? -- we will see how it turns out lol
+                df.to_csv(file, sep= '\t', index = False)
+        else:
+            print("Error Extracting Data") # maybe wrap all of this in a try-catch in order to catch exception errors? 
+                
+
+       
+
             
 
 class TableView(tk.Frame):
