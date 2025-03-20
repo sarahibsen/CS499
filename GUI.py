@@ -1,90 +1,17 @@
 import tkinter as tk
-from tkinter import Canvas, Button, PhotoImage, filedialog, ttk, messagebox
+from tkinter import Canvas, Button, PhotoImage, filedialog, ttk, messagebox, Label
+from tkinter.ttk import Button, Style
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
 import pandas as pd
 import numpy as np
 from pathlib import Path
-
 from Table import TableView
-from tkinter import simpledialog # for input dialog in the statistic
-
-
+from statisticsLogic import *
+from main import *
 from main_controller import Controller # using the controller class to handle the communication between all components 
-class App(tk.Tk):
-    """
-    Main application class to handle multiple pages.
-    """
-    def __init__(self):
-        super().__init__()
-        # initialize the controller
-        
-        # set window to be responsive to the device it's running on
-        width = self.winfo_screenwidth()
-        height = self.winfo_screenheight()
 
-        self.grid_rowconfigure(0, weight=1)
-        self.grid_columnconfigure(0, weight=1)
-
-        self.geometry("%dx%d" % (width, height))  # Default size
-        self.state("zoomed")
-
-        self.configure(bg="#FFFFFF")
-        self.title("Statistical Analyzer")
-
-        # Enable full screen mode
-        # self.attributes("-fullscreen", True)  # Enable full screen mode
-
-        # Bind the Escape key to exit full screen mode
-        # self.bind("<Escape>", self.toggle_fullscreen)
-
-        # Container to hold all pages
-        self.container = tk.Frame(self)
-        self.container.grid(row=0, column=0, sticky="nsew")
-        self.container.grid_rowconfigure(0, weight=1)
-        self.container.grid_columnconfigure(0, weight=1)
-
-        # Dictionary to store pages
-        self.pages = {}
-
-        # Initialize pages
-        self.add_page("LaunchPage", LaunchPage)
-        self.add_page("MeasureSelectionPage", MeasureSelectionPage)
-        self.add_page("DashboardPage", DashboardPage)
-
-        # Add CustomTable which includes the GUI toolbar
-
-        # Show the initial page
-        self.show_page("LaunchPage")
-
-    def toggle_fullscreen(self, event=None):
-        """
-        Toggle full screen mode on/off when the Escape key is pressed.
-        """
-        self.attributes("-fullscreen", not self.attributes("-fullscreen"))
-
-    def add_page(self, page_name, page_class):
-        """
-        Add a new page to the application.
-
-        Args:
-            page_name (str): Unique name for the page.
-            page_class (class): Class implementing the page.
-        """
-        #self.container.grid(row=0, column=0, sticky="nsew")
-        page = page_class(self.container, self)
-        self.pages[page_name] = page
-        page.grid(row=0, column=0, sticky="nsew")
-        
-
-    def show_page(self, page_name):
-        """
-        Display the specified page.
-
-        Args:
-            page_name (str): Name of the page to display.
-        """
-        page = self.pages[page_name]
-        page.tkraise()
-
+# ----- Supplementary Functions ----- #
 def relative_to_assets(path: str) -> Path:
     """
     Get the full path to a resource file located in the assets directory.
@@ -95,20 +22,9 @@ def relative_to_assets(path: str) -> Path:
     )
     return assets_path / Path(path)
 
-
-class BasePage(tk.Frame):
-    """
-    Base class for all pages.
-    """
-    def __init__(self, parent, controller):
-        super().__init__(parent)
-        self.controller = controller
-
-
 def add_button(canvas, x, y, w, h, normal_image, hover_image, message, callback=None):
     """
-    Add a button with hover effects to the canvas.
-
+    Add a button with hover effects to the canvas using ttk.Button.
     Args:
         canvas (Canvas): The canvas to add the button to.
         x (float): X-coordinate for button placement.
@@ -123,24 +39,21 @@ def add_button(canvas, x, y, w, h, normal_image, hover_image, message, callback=
     normal_image_file = PhotoImage(file=relative_to_assets(normal_image))
     hover_image_file = PhotoImage(file=relative_to_assets(hover_image))
 
-    # Command to handle button click and callback execution
     def button_command():
         print(message)
-        if callback:  # Check if callback is not None
+        if callback:
             callback()
 
-    button = Button(
+    button = ttk.Button(
         canvas,
         image=normal_image_file,
-        borderwidth=0,
-        highlightthickness=0,
         command=button_command,  # Use the defined command
-        relief="flat"
+        style="TButton"  # Use TButton style to manage button appearance
     )
+
     button.place(x=x, y=y, width=w, height=h)
     button.image = normal_image_file  # Keep reference to avoid garbage collection
 
-    # Define hover behavior
     def on_hover(event):
         button.config(image=hover_image_file)
 
@@ -153,44 +66,101 @@ def add_button(canvas, x, y, w, h, normal_image, hover_image, message, callback=
     return button
 
 
+# ----- GUI Page Classes ----- #
+class App(tk.Tk):
+    """
+    Main application class to handle multiple pages.
+    """
+
+    def __init__(self):
+        super().__init__()
+
+        # Configure window
+        self.configure(bg="white")
+        self.title("STATS")
+
+        # Bind Escape key to close the application
+        self.bind("<Escape>", lambda event: self.quit())
+
+        # Create a container to hold pages
+        self.container = tk.Frame(self, bg="white")
+        self.container.grid(row=0, column=0, sticky="nsew")
+
+        # Allow container to expand
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+        self.container.grid_rowconfigure(0, weight=1)
+        self.container.grid_columnconfigure(0, weight=1)
+
+        # Dictionary to store pages
+        self.pages = {}
+
+        # Initialize pages
+        for page_name, page_class in [
+            ("LaunchPage", LaunchPage),
+            ("MeasureSelectionPage", MeasureSelectionPage),
+            ("DashboardPage", DashboardPage)
+        ]:
+            self.add_page(page_name, page_class)
+
+        # Show the initial page
+        self.show_page("LaunchPage")
+
+    def add_page(self, page_name, page_class):
+        """Add a new page to the application."""
+        page = page_class(self.container, self)
+        self.pages[page_name] = page
+        page.grid(row=0, column=0, sticky="nsew")
+
+    def show_page(self, page_name):
+        """Display the specified page."""
+        page = self.pages.get(page_name)
+        if page:
+            page.tkraise()
+
+
+class BasePage(tk.Frame):
+    """Base class for all pages."""
+
+    def __init__(self, parent, controller):
+        super().__init__(parent, bg="white")
+        self.controller = controller
+
+
 class LaunchPage(BasePage):
-    """
-    Start page of the application.
-    """
+    """Start page of the application."""
+
     def __init__(self, parent, controller):
         super().__init__(parent, controller)
 
-        # Create a canvas
-        canvas = Canvas(
-            self, bg="#FFFFFF", height=832, width=1280, bd=0,
-            highlightthickness=0, relief="ridge"
+        # Configure row weights
+        for i in range(7):
+            self.rowconfigure(i, weight=1)
+
+        # Configure column weights
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=1)
+
+        # Button style
+        style = Style()
+        style.configure(
+            "TButton", font=("Arial", 20), background="white", height=50,
+            width=20, pady=20, ipadx=20, ipady=10, relief="groove",
         )
-        canvas.pack(fill="both", expand=True)
 
-        # ----- Background ----- #
-        canvas.create_rectangle(0, 0, 1280, 832, fill="#FFFFFF", outline="")
+        # ----- Image Area (Placeholder for now) ----- #
+        self.canvas = Canvas(self, bg="lightblue", bd=0, highlightthickness=0, relief="ridge")
+        self.canvas.grid(column=1, rowspan=7, sticky="nsew", padx=20, pady=20)
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=2)
 
-        # ----- Buttons ----- #
-        self.continue_button = add_button(
-            canvas, 85, 589, 383.1111145019531, 64.03428649902344, "0_button_1.png", "0_button_hover_1.png",
-            "Button 1 clicked!", lambda: controller.show_page("MeasureSelectionPage")
-        )
-        self.continue_button.place()
-
-        # ----- Images ----- #
-        image_image_1 = PhotoImage(file=relative_to_assets("0_image_1.png"))
-        canvas.create_image(227, 186, image=image_image_1)
-        self.image_image_1 = image_image_1  # Keep a reference to avoid garbage collection
-
-        image_image_2 = PhotoImage(file=relative_to_assets("0_image_2.png"))
-        canvas.create_image(227, 343, image=image_image_2)
-        self.image_image_2 = image_image_2  # Keep a reference to avoid garbage collection
-
-        # TODO: This is serving as a placeholder
-        image_image_3 = PhotoImage(file=relative_to_assets("0_image_3.png"))
-        canvas.create_image(902.77783203125, 415.125, image=image_image_3)
-        self.image_image_3 = image_image_3  # Keep a reference to avoid garbage collection
-
+        # ----- Text Area ----- #
+        tk.Label(self, text="STATS", bg="white", font=("Arial", 40)).grid(column=0, row=1, sticky="nsew")
+        tk.Label(self, text="Lorem ipsum dolor \n sit amet", bg="white", font=("Arial", 25)).grid(column=0, row=2,
+                                                                                                  sticky="nsew")
+        # Continue Button
+        Button(self, text="Start", style="TButton",
+               command=lambda: controller.show_page("MeasureSelectionPage")).grid(column=0, row=5)
 
 
 class MeasureSelectionPage(BasePage):
@@ -213,7 +183,7 @@ class MeasureSelectionPage(BasePage):
         self.measurement_frame = tk.Frame(self)
         self.measurement_frame.grid(row=0, column=1, padx=10, pady=10, sticky="nw")
         
-        # Data Table Frame
+        # ----- Data Table ----- #
         self.table_frame = tk.Frame(self)
 
         self.table_frame.grid(row=0, column=2, padx=10, pady=10, sticky="nsew")
@@ -222,17 +192,19 @@ class MeasureSelectionPage(BasePage):
 
         self.table = TableView(self.table_frame)
         self.table.grid(row=0, column=0, sticky='nsew')
-              
 
+        # ----- Measure Selection Area ----- #
         # Add Calculate Button
-        self.calculate_button = ttk.Button(self.measurement_frame, text="Calculate Measures", command=self.calculate_statistics)
+        self.calculate_button = ttk.Button(self.measurement_frame, text="Calculate Measures",
+                                           command=self.calculate_statistics)
         self.calculate_button.grid(row=0, column=1, padx=10, pady=10, sticky='w')
 
 
 ## TODO: change this to grab data types from main.py
         # ComboBox for Data Types
         self.data_type_options = ["Nominal", "Ordinal", "Discrete", "Continuous"]
-        self.data_type_dropdown = ttk.Combobox(self.measurement_frame, values=self.data_type_options, font=("Roboto", 14), state="readonly")
+        self.data_type_dropdown = ttk.Combobox(self.measurement_frame, values=self.data_type_options,
+                                               font=("Roboto", 14), state="readonly")
 
         #self.data_type_dropdown.place(x=151, y=300, width=351, height=57)
         self.data_type_dropdown.grid(row=1, column=1, padx=10, pady=10, sticky='nw')
@@ -241,12 +213,11 @@ class MeasureSelectionPage(BasePage):
         self.data_type_dropdown.bind("<<ComboboxSelected>>", self.on_data_type_selected)
 
         # Statistical Measures Listbox
-
-        self.stat_measures_listbox = tk.Listbox(self.measurement_frame, font=("Roboto", 14), selectmode="multiple", exportselection=False)
+        self.stat_measures_listbox = tk.Listbox(self.measurement_frame, font=("Roboto", 14), selectmode="multiple",
+                                                exportselection=False)
 
         #self.stat_measures_listbox.place(x=151, y=380, width=351, height=100)
         self.stat_measures_listbox.grid(row=2, column=1, padx=10, pady=10, sticky='nw')
-
 
         # Label to show selected measures
         self.selected_stat_label = tk.Label(
@@ -259,32 +230,49 @@ class MeasureSelectionPage(BasePage):
             anchor="w"
         )
 
-
         #self.selected_stat_label.place(x=151, y=500, width=351, height=50)
         self.selected_stat_label.grid(row=3, column=1, padx=10, pady=10, sticky='nw')
-
 
         # Bind listbox selection
         self.stat_measures_listbox.bind("<<ListboxSelect>>", self.on_stat_measure_selected)
 
-
         # ----- Toolbar ----- #
-        self.canvas.create_rectangle(0, 0, 100, 832, fill="#D9D9D9", outline="")
+        self.toolbarBackground = self.canvas.create_rectangle(0, 0, 100, self.winfo_height(), fill="#D9D9D9",
+                                                              outline="")
+        self.canvas.bind("<Configure>", self.resize_rectangle)  # Bind the resize event
+
         self.data_page_button = add_button(
             self.canvas, 18, 50, 63, 63, "button_4.png", "button_hover_4.png",
             "Data page button clicked!"
         )
-
-        #self.data_page_button.place()
         self.data_page_button.grid(row=0, column=0, padx=10, pady=10, sticky="ns")
 
         self.dashboard_page_button = add_button(
             self.canvas, 18, 163, 63, 63, "button_5.png", "button_hover_5.png",
             "Dashboard page button clicked!", lambda: controller.show_page("DashboardPage")
         )
-
-        # self.dashboard_page_button.place()
         self.dashboard_page_button.grid(row=1, column=0, padx=10, pady=10, sticky="ns")
+
+    def resize_rectangle(self, event):
+        """Resize the rectangle dynamically when the window changes size."""
+        self.canvas.coords(self.toolbarBackground, 0, 0, 100, event.height)  # Adjust height dynamically
+
+    def resize_elements(self, event):
+        """
+        Adjust measurement frame dynamically to fill the remaining canvas area.
+        """
+        canvas_width = self.canvas.winfo_width()
+        canvas_height = self.canvas.winfo_height()
+
+        # Ensure canvas has a valid width before setting
+        if canvas_width > 100:
+            new_width = canvas_width - 100
+        else:
+            new_width = 0  # Prevent negative width
+
+        # Update the window inside the canvas
+        self.canvas.coords(self.measurement_window, 100, 0)  # Ensure it starts at (100,0)
+        self.canvas.itemconfig(self.measurement_window, width=new_width, height=canvas_height)
 
     def import_csv(self):
         file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
@@ -378,52 +366,87 @@ class MeasureSelectionPage(BasePage):
 
 class DashboardPage(BasePage):
     """
-    Dashboard page of the application. Users what graphs they would like to display.
+    Dashboard page of the application. Users can select what graphs they would like to display.
     """
+
     def __init__(self, parent, controller):
         super().__init__(parent, controller)
 
+        # Configure rows and columns
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=1)
+
         # Create a canvas
         self.canvas = Canvas(self, bg="#FFFFFF", bd=0, highlightthickness=0, relief="ridge")
-        self.canvas.pack(fill="both", expand=True)
-
-        # ----- Background ----- #
-        self.canvas.create_rectangle(0, 0, 1280, 832, fill="#FFFFFF", outline="")
-
-        # ----- Buttons ----- #
-        # TODO: Add functionality to buttons
-        self.add_graph_button = add_button(
-            self.canvas, 566, 33, 200, 72.0187759399414, "add_graph_button.png", "add_graph_button_hover.png",
-            "Add graph page button clicked!"
-        )
-        self.add_graph_button.place()
-        self.save_results_button = add_button(
-            self.canvas, 795, 33, 215, 72.0187759399414, "button_2.png", "button_hover_2.png",
-            "Save Results button clicked!"
-        )
-        self.save_results_button.place()
-        self.export_data_button = add_button(
-            self.canvas, 1039, 33, 215, 72.0187759399414, "export_data_button.png", "export_data_button_hover.png",
-            "Add graph page button clicked!"
-        )
-        self.export_data_button.place()
-
-        # ----- Dashboard Area ----- #
-        # TODO: Placeholder, add matplotlib widget
-        self.canvas.create_rectangle(129, 153, 1252, 807, fill="#D9D9D9", outline="")
+        self.canvas.grid(row=0, column=0, sticky="nsew")
 
         # ----- Toolbar ----- #
-        self.canvas.create_rectangle(0, 0, 100, 832, fill="#D9D9D9", outline="")
+        self.toolbarBackground = self.canvas.create_rectangle(0, 0, 100, self.winfo_height(), fill="#D9D9D9", outline="")
+        self.canvas.bind("<Configure>", self.resize_rectangle)  # Bind the resize event
+
         self.data_page_button = add_button(
             self.canvas, 18, 50, 63, 63, "button_4.png", "button_hover_4.png",
             "Data page button clicked!", lambda: controller.show_page("MeasureSelectionPage")
         )
-        self.data_page_button.place()
+        self.data_page_button.grid(row=0, column=0, padx=10, pady=10, sticky="ns")
+
         self.dashboard_page_button = add_button(
             self.canvas, 18, 163, 63, 63, "button_5.png", "button_hover_5.png",
-            "Dashboard page button clicked!"
+            "Dashboard page button clicked!", lambda: controller.show_page("DashboardPage")
         )
-        self.dashboard_page_button.place()
+        self.dashboard_page_button.grid(row=1, column=0, padx=10, pady=10, sticky="ns")
+
+        # ----- Dashboard Area ----- #
+        self.dashboard_frame = tk.Frame(self, bg="#FFFFFF")
+        self.dashboard_frame.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
+        self.dashboard_frame.grid_rowconfigure(0, weight=1)
+        self.dashboard_frame.grid_columnconfigure(0, weight=1)
+
+        # Create a figure for the graph
+        self.figure = Figure(figsize=(8, 6), dpi=100)
+        self.ax = self.figure.add_subplot(111)
+
+        # Add some example data to plot
+        x = [1, 2, 3, 4, 5]
+        y = [1, 4, 9, 16, 25]
+        self.ax.plot(x, y, label="Example Line Plot")
+
+        # Set plot labels and title
+        self.ax.set_title("Example Graph")
+        self.ax.set_xlabel("X Axis")
+        self.ax.set_ylabel("Y Axis")
+        self.ax.legend()
+
+        # Create a canvas widget to embed the matplotlib plot
+        self.canvas_widget = FigureCanvasTkAgg(self.figure, master=self.dashboard_frame)
+        self.canvas_widget.draw()
+
+        # Place the matplotlib canvas in the dashboard area
+        self.canvas_widget.get_tk_widget().grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+
+        # ----- Buttons ----- #
+        self.add_graph_button = Button(
+            self.dashboard_frame, text="Add Graph", style="TButton",
+            command=lambda: print("Add Graph button clicked!")
+        )
+        self.add_graph_button.grid(row=1, column=0, padx=10, pady=10, sticky="w")
+
+        self.save_results_button = Button(
+            self.dashboard_frame, text="Save Results", style="TButton",
+            command=lambda: print("Save Results button clicked!")
+        )
+        self.save_results_button.grid(row=1, column=0, padx=10, pady=10, sticky="e")
+
+        self.export_data_button = Button(
+            self.dashboard_frame, text="Export Data", style="TButton",
+            command=lambda: print("Export Data button clicked!")
+        )
+        self.export_data_button.grid(row=1, column=0, padx=10, pady=10, sticky="e")
+
+    def resize_rectangle(self, event):
+        """Resize the rectangle dynamically when the window changes size."""
+        self.canvas.coords(self.toolbarBackground, 0, 0, 100, event.height)  # Adjust height dynamically
+
 
 # Run the application
 app = App()
