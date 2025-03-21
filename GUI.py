@@ -9,7 +9,8 @@ from pathlib import Path
 from Table import TableView
 from statisticsLogic import *
 from main import *
-from main_controller import Controller # using the controller class to handle the communication between all components 
+from main_controller import Controller  # using the controller class to handle the communication between all components
+
 
 # ----- Supplementary Functions ----- #
 def relative_to_assets(path: str) -> Path:
@@ -21,6 +22,7 @@ def relative_to_assets(path: str) -> Path:
 
     )
     return assets_path / Path(path)
+
 
 def add_button(canvas, x, y, w, h, normal_image, hover_image, message, callback=None):
     """
@@ -169,12 +171,13 @@ class MeasureSelectionPage(BasePage):
     they want to perform on the dataset.
 
     """
+
     def __init__(self, parent, controller):
         super().__init__(parent, controller)
-        self.controller = controller    
+        self.controller = controller
 
-        self.grid_rowconfigure(0, weight = 1)
-        self.grid_columnconfigure(2, weight = 2)
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(2, weight=2)
 
         # Create a canvas
         self.canvas = Canvas(self, bg="#FFFFFF", bd=0, highlightthickness=0, relief="ridge")
@@ -182,7 +185,7 @@ class MeasureSelectionPage(BasePage):
 
         self.measurement_frame = tk.Frame(self)
         self.measurement_frame.grid(row=0, column=1, padx=10, pady=10, sticky="nw")
-        
+
         # ----- Data Table ----- #
         self.table_frame = tk.Frame(self)
 
@@ -199,14 +202,13 @@ class MeasureSelectionPage(BasePage):
                                            command=self.calculate_statistics)
         self.calculate_button.grid(row=0, column=1, padx=10, pady=10, sticky='w')
 
-
-## TODO: change this to grab data types from main.py
+        ## TODO: change this to grab data types from main.py
         # ComboBox for Data Types
         self.data_type_options = ["Nominal", "Ordinal", "Discrete", "Continuous"]
         self.data_type_dropdown = ttk.Combobox(self.measurement_frame, values=self.data_type_options,
                                                font=("Roboto", 14), state="readonly")
 
-        #self.data_type_dropdown.place(x=151, y=300, width=351, height=57)
+        # self.data_type_dropdown.place(x=151, y=300, width=351, height=57)
         self.data_type_dropdown.grid(row=1, column=1, padx=10, pady=10, sticky='nw')
 
         self.data_type_dropdown.set("Select Data Type")
@@ -216,7 +218,7 @@ class MeasureSelectionPage(BasePage):
         self.stat_measures_listbox = tk.Listbox(self.measurement_frame, font=("Roboto", 14), selectmode="multiple",
                                                 exportselection=False)
 
-        #self.stat_measures_listbox.place(x=151, y=380, width=351, height=100)
+        # self.stat_measures_listbox.place(x=151, y=380, width=351, height=100)
         self.stat_measures_listbox.grid(row=2, column=1, padx=10, pady=10, sticky='nw')
 
         # Label to show selected measures
@@ -230,7 +232,7 @@ class MeasureSelectionPage(BasePage):
             anchor="w"
         )
 
-        #self.selected_stat_label.place(x=151, y=500, width=351, height=50)
+        # self.selected_stat_label.place(x=151, y=500, width=351, height=50)
         self.selected_stat_label.grid(row=3, column=1, padx=10, pady=10, sticky='nw')
 
         # Bind listbox selection
@@ -297,14 +299,15 @@ class MeasureSelectionPage(BasePage):
         elif selected_data_type == "Ordinal":
             measures = ["Median", "Mode", "Frequency", "Percentiles", "Rank Sum", "Spearman Coefficient"]
         elif selected_data_type == "Discrete":
-            measures = ["Mean", "Median", "Mode", "Standard Deviation", "Variance", "Percentiles", "Probability Distribution", "Binomial Distribution"]
+            measures = ["Mean", "Median", "Mode", "Standard Deviation", "Variance", "Percentiles",
+                        "Probability Distribution", "Binomial Distribution"]
         elif selected_data_type == "Continuous":
-            measures = ["Mean", "Median", "Mode", "Standard Deviation", "Variance", "Percentiles", "Probability Distribution", "Binomial Distribution", 
+            measures = ["Mean", "Median", "Mode", "Standard Deviation", "Variance", "Percentiles",
+                        "Probability Distribution", "Binomial Distribution",
                         "Least Square Line", "Chi-Square Test", "Correlation Coefficient", "Significance Test"]
 
         for measure in measures:
             self.stat_measures_listbox.insert(tk.END, measure)
-
 
     def on_stat_measure_selected(self, event):
         # Get selected items from the listbox
@@ -324,13 +327,13 @@ class MeasureSelectionPage(BasePage):
         if not hasattr(self.table.controller, 'get_table_selection'):
             messagebox.showerror("Error", "Table not initialized.")
             return
-        
+
         self.controller = Controller()
 
         selected_data_type = self.data_type_dropdown.get()
         selected_measures = [self.stat_measures_listbox.get(i) for i in self.stat_measures_listbox.curselection()]
-        
-        variance_type = None # default to none unless variance is selected
+
+        variance_type = None  # default to none unless variance is selected
         if "Variance" in selected_measures:
             variance_type = simpledialog.askstring(
                 "Variance Type",
@@ -342,11 +345,11 @@ class MeasureSelectionPage(BasePage):
                 return
         data_frame = self.controller.load_data_from_table(self.table.controller)
         print(f"Final Data Before Validation:\n{data_frame}")  # Final confirmation
-        
+
         if data_frame.empty:
             messagebox.showerror("Error", "No data to analyze.")
             return
-        
+
         if not self.controller.validate_data(data_frame):
             messagebox.showerror("Error", "Data validation failed.")
             return
@@ -356,7 +359,7 @@ class MeasureSelectionPage(BasePage):
         if results:
             result_str = "\n".join([f"{key}: {value}" for key, value in results.items()])
             messagebox.showinfo("Calculated Statistics", result_str)
-           # self.controller.export_results(results)
+        # self.controller.export_results(results)
 
     def get_table_data(self):
         # Fetch table data from the CustomTable widget
@@ -371,6 +374,7 @@ class DashboardPage(BasePage):
 
     def __init__(self, parent, controller):
         super().__init__(parent, controller)
+        self.controller = controller  # Ensure the controller is accessible
 
         # Configure rows and columns
         self.grid_rowconfigure(0, weight=1)
@@ -381,7 +385,8 @@ class DashboardPage(BasePage):
         self.canvas.grid(row=0, column=0, sticky="nsew")
 
         # ----- Toolbar ----- #
-        self.toolbarBackground = self.canvas.create_rectangle(0, 0, 100, self.winfo_height(), fill="#D9D9D9", outline="")
+        self.toolbarBackground = self.canvas.create_rectangle(0, 0, 100, self.winfo_height(), fill="#D9D9D9",
+                                                              outline="")
         self.canvas.bind("<Configure>", self.resize_rectangle)  # Bind the resize event
 
         self.data_page_button = add_button(
@@ -402,32 +407,18 @@ class DashboardPage(BasePage):
         self.dashboard_frame.grid_rowconfigure(0, weight=1)
         self.dashboard_frame.grid_columnconfigure(0, weight=1)
 
-        # Create a figure for the graph
+        # Create a figure and canvas for graphing
         self.figure = Figure(figsize=(8, 6), dpi=100)
         self.ax = self.figure.add_subplot(111)
 
-        # Add some example data to plot
-        x = [1, 2, 3, 4, 5]
-        y = [1, 4, 9, 16, 25]
-        self.ax.plot(x, y, label="Example Line Plot")
-
-        # Set plot labels and title
-        self.ax.set_title("Example Graph")
-        self.ax.set_xlabel("X Axis")
-        self.ax.set_ylabel("Y Axis")
-        self.ax.legend()
-
-        # Create a canvas widget to embed the matplotlib plot
         self.canvas_widget = FigureCanvasTkAgg(self.figure, master=self.dashboard_frame)
         self.canvas_widget.draw()
-
-        # Place the matplotlib canvas in the dashboard area
         self.canvas_widget.get_tk_widget().grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
 
         # ----- Buttons ----- #
         self.add_graph_button = Button(
             self.dashboard_frame, text="Add Graph", style="TButton",
-            command=lambda: print("Add Graph button clicked!")
+            command=lambda: self.plot_graph()
         )
         self.add_graph_button.grid(row=1, column=0, padx=10, pady=10, sticky="w")
 
@@ -442,6 +433,33 @@ class DashboardPage(BasePage):
             command=lambda: print("Export Data button clicked!")
         )
         self.export_data_button.grid(row=1, column=0, padx=10, pady=10, sticky="e")
+
+    def plot_graph(self, data=None):
+        """Handles the logic for updating and displaying graphs."""
+        self.ax.clear()  # Clear previous graph
+
+        if data is None:
+            # Default example data
+            x = [1, 2, 3, 4, 5]
+            y = [1, 4, 9, 16, 25]
+            self.ax.plot(x, y, label="Example Line Plot")
+        else:
+            measures = list(data.keys())
+            values = list(data.values())
+
+            self.ax.bar(measures, values, color="skyblue")
+            self.ax.set_title("Statistical Measures")
+            self.ax.set_xlabel("Measure")
+            self.ax.set_ylabel("Value")
+            self.ax.set_xticklabels(measures, rotation=45, ha="right")
+
+        self.ax.legend()
+        self.canvas_widget.draw()  # Refresh the canvas
+
+    def update_graph(self):
+        """Fetch results from Controller and update the graph."""
+        results = self.controller.get_statistics_results() if hasattr(self.controller, 'get_statistics_results') else {}
+        self.plot_graph(results)  # Pass data to plot function
 
     def resize_rectangle(self, event):
         """Resize the rectangle dynamically when the window changes size."""
