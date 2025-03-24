@@ -28,7 +28,7 @@ def validate_data(func):
 
         elif isinstance(self.data, pd.DataFrame):
             # Select only numeric columns
-            self.data = self.data.select_dtypes(include=[np.number]).to_numpy().flatten()
+            self.data = self.data.select_dtypes(include=[np.number]).to_numpy()
             
             if len(self.data) == 0:
                 raise ValueError("Data cannot be empty or contain only non-numeric values.")
@@ -298,17 +298,56 @@ class statistic():
     @validate_data
     def chiSquared(self):
         """
-        Only works for frequency datasets
-        Parameters: 
-            Grabs two arrays/list from np.ndarray as x,y (expected, actual)
-            sum_check=False bypasses invalid/impossible applications of chi-squared
-        Returns:
-            chi-squared value.
+        Performs Chi-Square Test using two valid columns of data.
         """
-        f_exp = self.data.iloc[:, 0]
-        f_obs = self.data.iloc[:, 1]
-        chi_sq_results = stats.chisquare(f_obs, f_exp, axis=0, sum_check=False)
-        return chi_sq_results
+        print(f"Incoming Data to Chi-Squared:\n{self.data}")  # Debugging point
+        
+        
+        if isinstance(self.data, pd.DataFrame):
+            if self.data.shape[1] >= 2:
+                f_exp = pd.to_numeric(self.data.iloc[:, 0], errors='coerce').dropna().astype(int).values
+                f_obs = pd.to_numeric(self.data.iloc[:, 1], errors='coerce').dropna().astype(int).values
+            else:
+                messagebox.showerror("Error", "Chi-square test requires two valid columns of data.")
+                return None
+
+        elif isinstance(self.data, np.ndarray) and self.data.shape[1] >= 2:
+            
+            f_exp = self.data[:, 0].astype(int)
+            f_obs = self.data[:, 1].astype(int)
+            
+        else:
+            messagebox.showerror("Error", "Chi-square test requires two valid columns of data.")
+            return None
+
+        print(f"Expected Frequencies: {f_exp}")
+        print(f"Observed Frequencies: {f_obs}")
+
+        # Ensure both columns have the same length
+        if len(f_exp) != len(f_obs):
+            messagebox.showerror("Error", "Chi-square test requires equal-length data in both columns.")
+            return None
+
+        # Ensure no negative values (chi-square requires non-negative integers)
+        if np.any(f_exp < 0) or np.any(f_obs < 0):
+            messagebox.showerror("Error", "Chi-square test cannot contain negative values.")
+            return None
+
+        # Perform chi-square test
+        try:
+            chi_sq_stat, p_value = stats.chisquare(f_obs, f_exp)
+
+            result_str = f"Chi-Square Statistic: {chi_sq_stat:.4f}, P-value: {p_value:.4e}"
+            print(result_str)
+            return result_str
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Chi-square calculation error: {e}")
+            return None
+
+
+
+
     
     @validate_data
     def correlationCoefficient(self):

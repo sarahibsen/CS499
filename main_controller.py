@@ -91,7 +91,7 @@ class Controller:
             return None
 
         logic = statistics_classes[data_type](data_frame)
-        stat_instance = statistic(data_frame.select_dtypes(include='number').values.flatten()) 
+        stat_instance = statistic(data_frame)
 
 
         # Compute requested measures
