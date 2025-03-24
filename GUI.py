@@ -375,7 +375,7 @@ class DashboardPage(BasePage):
     def __init__(self, parent, controller):
         super().__init__(parent, controller)
         self.controller = controller  # Ensure the controller is accessible
-        self.main_control = main_controller.Controller()  # Instantiate the class
+        self.main_control = Controller()  # Instantiate the class
 
         # Configure rows and columns
         self.grid_rowconfigure(0, weight=1)
@@ -431,7 +431,7 @@ class DashboardPage(BasePage):
 
         self.export_data_button = Button(
             self.dashboard_frame, text="Save Results", style="TButton",
-            command=lambda: self.print_table() #print("Save Results button clicked!")
+            command=lambda: self.print_selected_columns() #print("Save Results button clicked!")
         )
         self.export_data_button.grid(row=1, column=0, padx=10, pady=10, sticky="se")
 
