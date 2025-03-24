@@ -120,6 +120,10 @@ class App(tk.Tk):
         if page:
             page.tkraise()
 
+    def get_page(self, page_name):
+        """Retrieves the stored instance of a page."""
+        return self.pages.get(page_name)
+
 
 class BasePage(tk.Frame):
     """Base class for all pages."""
