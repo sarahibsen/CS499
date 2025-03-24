@@ -375,6 +375,7 @@ class DashboardPage(BasePage):
     def __init__(self, parent, controller):
         super().__init__(parent, controller)
         self.controller = controller  # Ensure the controller is accessible
+        self.main_control = main_controller.Controller()  # Instantiate the class
 
         # Configure rows and columns
         self.grid_rowconfigure(0, weight=1)
@@ -420,19 +421,19 @@ class DashboardPage(BasePage):
             self.dashboard_frame, text="Add Graph", style="TButton",
             command=lambda: self.plot_graph()
         )
-        self.add_graph_button.grid(row=1, column=0, padx=10, pady=10, sticky="w")
+        self.add_graph_button.grid(row=1, column=0, padx=10, pady=10, sticky="sw")
 
-        self.save_results_button = Button(
-            self.dashboard_frame, text="Save Results", style="TButton",
-            command=lambda: print("Save Results button clicked!")
+        self.add_graph_button = Button(
+            self.dashboard_frame, text="Reload Graph", style="TButton",
+            command=lambda: self.plot_graph()
         )
-        self.save_results_button.grid(row=1, column=0, padx=10, pady=10, sticky="e")
+        self.add_graph_button.grid(row=1, column=0, padx=10, pady=10, sticky="s")
 
         self.export_data_button = Button(
-            self.dashboard_frame, text="Export Data", style="TButton",
-            command=lambda: print("Export Data button clicked!")
+            self.dashboard_frame, text="Save Results", style="TButton",
+            command=lambda: self.print_table() #print("Save Results button clicked!")
         )
-        self.export_data_button.grid(row=1, column=0, padx=10, pady=10, sticky="e")
+        self.export_data_button.grid(row=1, column=0, padx=10, pady=10, sticky="se")
 
     def plot_graph(self, data=None):
         """Handles the logic for updating and displaying graphs."""
@@ -464,6 +465,241 @@ class DashboardPage(BasePage):
     def resize_rectangle(self, event):
         """Resize the rectangle dynamically when the window changes size."""
         self.canvas.coords(self.toolbarBackground, 0, 0, 100, event.height)  # Adjust height dynamically
+
+    def print_selected_columns(self):
+        # Get the MeasureSelectionPage instance from the controller
+        measure_page = self.controller.get_page("MeasureSelectionPage")
+
+        if not measure_page or not hasattr(measure_page, 'table'):
+            print("Error: Unable to access MeasureSelectionPage or table.")
+            return
+
+        if not hasattr(measure_page.table, 'controller'):
+            print("Error: Table controller is not available.")
+            return
+
+        # Call load_data_from_table with the correct table controller
+        data_frame = self.main_control.load_data_from_table(measure_page.table.controller)
+
+        if data_frame.empty:
+            print("The loaded data is empty.")
+        else:
+            print("Loaded DataFrame:\n", data_frame)
+
+class DummyPage(BasePage):
+    """
+    Measure selection page of the application. Users will select what statistical measures
+    they want to perform on the dataset, as well as select rows and columns for pivot table.
+    """
+
+    def __init__(self, parent, controller):
+        super().__init__(parent, controller)
+        self.controller = controller
+        self.dashboard_page = DashboardPage(parent, controller)
+
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(2, weight=2)
+
+        # Create a canvas
+        self.canvas = Canvas(self, bg="#FFFFFF", bd=0, highlightthickness=0, relief="ridge")
+        self.canvas.grid(row=0, column=0, sticky="nsew")
+
+        self.measurement_frame = tk.Frame(self)
+        self.measurement_frame.grid(row=0, column=1, padx=10, pady=10, sticky="nw")
+
+
+        # ----------------------------------------------- Data Table ----------------------------------------------- #
+        self.table_frame = tk.Frame(self)
+
+        self.table_frame.grid(row=0, column=2, padx=10, pady=10, sticky="nsew")
+        self.table_frame.grid_rowconfigure(0, weight=1)
+        self.table_frame.grid_columnconfigure(0, weight=1)
+
+        self.table = TableView(self.table_frame)
+        self.table.grid(row=0, column=0, sticky='nsew')
+
+        # ----------------------------------------- Measure Selection Area ----------------------------------------- #
+        # Add Calculate Button
+        self.calculate_button = ttk.Button(self.measurement_frame, text="Calculate Measures",
+                                           command=self.calculate_statistics)
+        self.calculate_button.grid(row=0, column=1, padx=10, pady=10, sticky='w')
+
+        # ComboBox for Data Types
+        self.data_type_options = ["Nominal", "Ordinal", "Discrete", "Continuous"]
+        self.data_type_dropdown = ttk.Combobox(self.measurement_frame, values=self.data_type_options,
+                                               font=("Roboto", 14), state="readonly")
+        self.data_type_dropdown.grid(row=1, column=1, padx=10, pady=10, sticky='nw')
+        self.data_type_dropdown.set("Select Data Type")
+        self.data_type_dropdown.bind("<<ComboboxSelected>>", self.on_data_type_selected)
+
+        # Statistical Measures Listbox
+        self.stat_measures_listbox = tk.Listbox(self.measurement_frame, font=("Roboto", 14), selectmode="multiple",
+                                                exportselection=False)
+        self.stat_measures_listbox.grid(row=2, column=1, padx=10, pady=10, sticky='nw')
+
+        # --------------------------------------- Pivot Table Selection Area --------------------------------------- #
+        # ComboBox for Rows (Select Columns for Pivot Table)
+        self.row_select_label = tk.Label(self.measurement_frame, text="Select Rows:", font=("Roboto", 14))
+        self.row_select_label.grid(row=3, column=0, padx=10, pady=5, sticky="nw")
+
+        self.row_select_dropdown = ttk.Combobox(self.measurement_frame, font=("Roboto", 14), state="readonly")
+        self.row_select_dropdown.grid(row=3, column=1, padx=10, pady=5, sticky="nw")
+
+        # ComboBox for Columns (Select Columns for Pivot Table)
+        self.col_select_label = tk.Label(self.measurement_frame, text="Select Columns:", font=("Roboto", 14))
+        self.col_select_label.grid(row=4, column=0, padx=10, pady=5, sticky="nw")
+
+        self.col_select_dropdown = ttk.Combobox(self.measurement_frame, font=("Roboto", 14), state="readonly")
+        self.col_select_dropdown.grid(row=4, column=1, padx=10, pady=5, sticky="nw")
+
+        # Label to show selected measures
+        self.selected_stat_label = tk.Label(self.measurement_frame,
+                                            text="Selected Measures: None", font=("Roboto", 14), bg="#FFFFFF",
+                                            wraplength=350, justify="left", anchor="w")
+        self.selected_stat_label.grid(row=5, column=1, padx=10, pady=10, sticky='nw')
+
+
+        # ------------------------------------------------ Toolbar ------------------------------------------------- #
+        self.toolbarBackground = self.canvas.create_rectangle(0, 0, 100, self.winfo_height(), fill="#D9D9D9",
+                                                              outline="")
+        self.canvas.bind("<Configure>", self.resize_rectangle)  # Bind the resize event
+
+        self.data_page_button = add_button(
+            self.canvas, 18, 50, 63, 63, "button_4.png", "button_hover_4.png",
+            "Data page button clicked!"
+        )
+        self.data_page_button.grid(row=0, column=0, padx=10, pady=10, sticky="ns")
+
+        self.dashboard_page_button = add_button(
+            self.canvas, 18, 163, 63, 63, "button_5.png", "button_hover_5.png",
+            "Dashboard page button clicked!", lambda: controller.show_page("DashboardPage")
+        )
+        self.dashboard_page_button.grid(row=1, column=0, padx=10, pady=10, sticky="ns")
+
+    def resize_rectangle(self, event):
+        """Resize the rectangle dynamically when the window changes size."""
+        self.canvas.coords(self.toolbarBackground, 0, 0, 100, event.height)  # Adjust height dynamically
+
+    def resize_elements(self, event):
+        """
+        Adjust measurement frame dynamically to fill the remaining canvas area.
+        """
+        canvas_width = self.canvas.winfo_width()
+        canvas_height = self.canvas.winfo_height()
+
+        # Ensure canvas has a valid width before setting
+        if canvas_width > 100:
+            new_width = canvas_width - 100
+        else:
+            new_width = 0  # Prevent negative width
+
+        # Update the window inside the canvas
+        self.canvas.coords(self.measurement_window, 100, 0)  # Ensure it starts at (100,0)
+        self.canvas.itemconfig(self.measurement_window, width=new_width, height=canvas_height)
+
+    def import_csv(self):
+        """Import a CSV file and populate the table and dropdowns."""
+        file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
+        if file_path:
+            try:
+                # Load data from the CSV file into a pandas DataFrame
+                data = pd.read_csv(file_path)
+
+                # Show data in the table
+                self.display_table(data)
+
+                # Update the row and column dropdowns with the column names from the table data
+                self.update_pivot_dropdowns()
+            except Exception as e:
+                print(f"Error importing CSV: {e}")
+
+    def update_pivot_dropdowns(self):
+        """Update row and column dropdowns with column names from the table selection."""
+        # Get the data frame from the table selection
+        df = self.table.controller.get_table_selection()
+
+        if not df.empty:
+            columns = df.columns.tolist()  # Get the columns of the DataFrame
+            self.row_select_dropdown["values"] = columns
+            self.col_select_dropdown["values"] = columns
+
+    def on_data_type_selected(self, event):
+        selected_data_type = self.data_type_dropdown.get()
+
+        # Clear existing options
+        self.stat_measures_listbox.delete(0, tk.END)
+        self.row_select_dropdown.set("")
+        self.col_select_dropdown.set("")
+
+        # Populate the statistical measures list based on the selected data type
+        measures = []
+        if selected_data_type == "Nominal":
+            measures = ["Mode", "Frequency"]
+        elif selected_data_type == "Ordinal":
+            measures = ["Median", "Mode", "Frequency", "Percentiles", "Rank Sum", "Spearman Coefficient"]
+        elif selected_data_type == "Discrete":
+            measures = ["Mean", "Median", "Mode", "Standard Deviation", "Variance", "Percentiles",
+                        "Probability Distribution", "Binomial Distribution"]
+        elif selected_data_type == "Continuous":
+            measures = ["Mean", "Median", "Mode", "Standard Deviation", "Variance", "Percentiles",
+                        "Probability Distribution", "Binomial Distribution",
+                        "Least Square Line", "Chi-Square Test", "Correlation Coefficient", "Significance Test"]
+
+        for measure in measures:
+            self.stat_measures_listbox.insert(tk.END, measure)
+
+    def on_stat_measure_selected(self, event):
+        # Get selected items from the listbox
+        selected_indices = self.stat_measures_listbox.curselection()
+        selected_stats = [self.stat_measures_listbox.get(i) for i in selected_indices]
+
+        # Limit selection to 3 measures
+        if len(selected_stats) > 3:
+            self.stat_measures_listbox.selection_clear(selected_indices[0])  # Remove the first selected item
+
+        # Update the label with selected measures
+        self.selected_stat_label.config(
+            text=f"Selected Measures: {', '.join(selected_stats)}" if selected_stats else "Selected Measures: None"
+        )
+
+    def calculate_statistics(self):
+        if not hasattr(self.table.controller, 'get_table_selection'):
+            messagebox.showerror("Error", "Table not initialized.")
+            return
+
+        self.controller = Controller()
+
+        selected_data_type = self.data_type_dropdown.get()
+        selected_measures = [self.stat_measures_listbox.get(i) for i in self.stat_measures_listbox.curselection()]
+
+        variance_type = None  # default to none unless variance is selected
+        if "Variance" in selected_measures:
+            variance_type = simpledialog.askstring(
+                "Variance Type",
+                "Enter the type of variance (Population or Sample):",
+                initialvalue="Population"
+            )
+            if variance_type not in ["Population", "Sample"]:
+                messagebox.showerror("Error", "Invalid variance type.")
+                return
+        data_frame = self.controller.load_data_from_table(self.table.controller)
+        print(f"Final Data Before Validation:\n{data_frame}")  # Final confirmation
+
+        if data_frame.empty:
+            messagebox.showerror("Error", "No data to analyze.")
+            return
+
+        if not self.controller.validate_data(data_frame):
+            messagebox.showerror("Error", "Data validation failed.")
+            return
+
+        results = self.controller.perform_statistics(data_frame, selected_measures, selected_data_type, variance_type)
+
+        if results:
+            result_str = "\n".join([f"{key}: {value}" for key, value in results.items()])
+            messagebox.showinfo("Calculated Statistics", result_str)
+        # self.controller.export_results(results)
+
 
 
 # Run the application
