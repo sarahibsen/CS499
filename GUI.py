@@ -183,12 +183,12 @@ class LaunchPage(BasePage):
         self.image_image_1 = image_image_1  # Keep a reference to avoid garbage collection
 
         image_image_2 = PhotoImage(file=relative_to_assets("0_image_2.png"))
-        canvas.create_image(227, 343, image=image_image_2)
+        canvas.create_image(250, 343, image=image_image_2)
         self.image_image_2 = image_image_2  # Keep a reference to avoid garbage collection
 
         # TODO: This is serving as a placeholder
         image_image_3 = PhotoImage(file=relative_to_assets("0_image_3.png"))
-        canvas.create_image(902.77783203125, 415.125, image=image_image_3)
+        canvas.create_image(1000, 415.125, image=image_image_3)
         self.image_image_3 = image_image_3  # Keep a reference to avoid garbage collection
 
 
@@ -321,8 +321,8 @@ class MeasureSelectionPage(BasePage):
         #     measures = ["Mean", "Median", "Mode", "Standard Deviation", "Variance", "Percentiles", "Probability Distribution", "Binomial Distribution", 
         #                 "Least Square Line", "Chi-Square Test", "Correlation Coefficient", "Significance Test"]
 
-        for measure in measures:
-            self.stat_measures_listbox.insert(tk.END, measure)
+        # for measure in measures:
+        #     self.stat_measures_listbox.insert(tk.END, measure)
 
 
     def on_stat_measure_selected(self, event):

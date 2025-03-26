@@ -140,8 +140,8 @@ class ordinalStatistics:
     
     # def proportion(self):
     #     return self.perform_statistics(self.data, ['proportion'], 'ordinal')["Proportion"]
-    def frequency(self):
-        return self.perform_statistics(self.data, ['frequency'], 'ordinal')["Frequency"]
+    # def frequency(self):
+    #     return self.perform_statistics(self.data, ['frequency'], 'ordinal')["Frequency"]
     def percentiles(self):
         return self.perform_statistics(self.data, ['percentiles'], 'ordinal')["Percentiles"]
     def spearmanCorrelation(self, data2):
@@ -162,8 +162,8 @@ class discreteStatistics:
         return self.perform_statistics(self.data, ['median'], 'discrete')["Median"]
     def mode(self):
         return self.perform_statistics(self.data, ['mode'], 'discrete')["Mode"]
-    def frequency(self):
-        return self.perform_statistics(self.data, ['frequency'], 'discrete')["Frequency"]
+    # def frequency(self):
+    #     return self.perform_statistics(self.data, ['frequency'], 'discrete')["Frequency"]
     # def range(self):
     #     return self.perform_statistics(self.data, ['range'], 'discrete')["Range"]
     def percentiles(self):

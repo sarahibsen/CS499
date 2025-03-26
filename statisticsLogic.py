@@ -154,7 +154,7 @@ class statistic():
         if len(cleaned_data) == 0:
             raise ValueError("Data cannot be empty")
         
-        # Calculate and return the coefficient of variation
+        # Calculate and return the coefficent of variation
         mean = self.mean()
         std_dev = self.standardDeviation()
         return std_dev / mean
