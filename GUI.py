@@ -231,7 +231,8 @@ class MeasureSelectionPage(BasePage):
 
 ## TODO: change this to grab data types from main.py
         # ComboBox for Data Types
-        self.data_type_options = ["Nominal", "Ordinal", "Discrete", "Continuous"]
+        #self.data_type_options = ["Nominal", "Ordinal", "Discrete", "Continuous"]
+        self.data_type_options = list(Controller.get_data_type_classes().keys())
         self.data_type_dropdown = ttk.Combobox(self.measurement_frame, values=self.data_type_options, font=("Roboto", 14), state="readonly")
 
         #self.data_type_dropdown.place(x=151, y=300, width=351, height=57)
@@ -303,16 +304,22 @@ class MeasureSelectionPage(BasePage):
         self.stat_measures_listbox.delete(0, tk.END)
 
         # Populate the statistical measures list based on the selected data type
-        measures = []
-        if selected_data_type == "Nominal":
-            measures = ["Mode", "Frequency"]
-        elif selected_data_type == "Ordinal":
-            measures = ["Median", "Mode", "Frequency", "Percentiles", "Rank Sum", "Spearman Coefficient"]
-        elif selected_data_type == "Discrete":
-            measures = ["Mean", "Median", "Mode", "Standard Deviation", "Variance", "Percentiles", "Probability Distribution", "Binomial Distribution"]
-        elif selected_data_type == "Continuous":
-            measures = ["Mean", "Median", "Mode", "Standard Deviation", "Variance", "Percentiles", "Probability Distribution", "Binomial Distribution", 
-                        "Least Square Line", "Chi-Square Test", "Correlation Coefficient", "Significance Test"]
+        self.measure_name_map = Controller.measures_for_data_type(selected_data_type)
+
+        for display_name in self.measure_name_map.keys():
+            self.stat_measures_listbox.insert(tk.END, display_name)
+        # make the names appear better
+       
+        # measures = []
+        # if selected_data_type == "Nominal":
+        #     measures = ["Mode", "Frequency"]
+        # elif selected_data_type == "Ordinal":
+        #     measures = ["Median", "Mode", "Frequency", "Percentiles", "Rank Sum", "Spearman Coefficient"]
+        # elif selected_data_type == "Discrete":
+        #     measures = ["Mean", "Median", "Mode", "Standard Deviation", "Variance", "Percentiles", "Probability Distribution", "Binomial Distribution"]
+        # elif selected_data_type == "Continuous":
+        #     measures = ["Mean", "Median", "Mode", "Standard Deviation", "Variance", "Percentiles", "Probability Distribution", "Binomial Distribution", 
+        #                 "Least Square Line", "Chi-Square Test", "Correlation Coefficient", "Significance Test"]
 
         for measure in measures:
             self.stat_measures_listbox.insert(tk.END, measure)
