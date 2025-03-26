@@ -490,6 +490,22 @@ class DashboardPage(BasePage):
         else:
             print("Loaded DataFrame:\n", data_frame)
 
+    def grab_plots(self):
+        "calling to the main controller to get and print the list out of the plots associated"
+        "with the data types"
+
+        selected_data_type = self.data_type_dropdown.get()
+        # we want to clear the existing options
+        self.stat_measures_listbox.delete(0, tk.END)
+
+        # now we populate the plots list associated with the data type the user chose 
+        self.measure_name_map = Controller.plots_for_data_type(selected_data_type)
+
+        for display_name in self.measure_name_map.keys():
+            self.stat_measures_listbox.insert(tk.END, display_name)
+            
+
+
 class DummyPage(BasePage):
     """
     Measure selection page of the application. Users will select what statistical measures

@@ -164,3 +164,11 @@ class Controller:
         df = pd.DataFrame(detailed_results)
         df.to_csv(filename, index=False)
         print(f"Results exported to {filename}")
+
+    @staticmethod
+    def plots_for_data_type():
+        """
+        implement this after the merge // lot of the logic is already associated 
+        with the fix that I have 
+        """
+        pass
