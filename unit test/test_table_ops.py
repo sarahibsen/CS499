@@ -8,7 +8,10 @@ from tkinter import Tk
 class TestTableSelection(unittest.TestCase):
     def setUp(self):
         self.root = Tk()
-        self.table_controller = TableController(self.root)
+        self.table_frame = tk.Frame(self.root)
+        self.table = TableView(self.table_frame)
+        self.table_controller = TableController(self.root, self.table)
+
 
         # Sample Data
         self.sample_data = pd.DataFrame({
@@ -22,7 +25,7 @@ class TestTableSelection(unittest.TestCase):
         table_frame = tk.Frame(self.root)
         table = TableView(table_frame)
         table_instance = table.sheet
-        self.table_controller.update_table(table_instance, headers=self.sample_data.columns.tolist(), data=self.sample_data.values.tolist())
+        self.table_controller.update_table(headers=self.sample_data.columns.tolist(), data=self.sample_data.values.tolist())
         
         selected_data = self.table_controller.get_table_selection()
         
