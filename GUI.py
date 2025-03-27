@@ -1,17 +1,17 @@
 import tkinter as tk
 from tkinter import Canvas, Button, PhotoImage, filedialog, ttk, messagebox, Label
 from tkinter.ttk import Button, Style
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from matplotlib.figure import Figure
 import pandas as pd
 import numpy as np
 from pathlib import Path
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+from PIL import Image, ImageTk
+
 from Table import TableView
-from statisticsLogic import *
-from main import *
-from main_controller import Controller  # using the controller class to handle the communication between all components
 
 
+from main_controller import Controller # using the controller class to handle the communication between all components 
 # ----- Supplementary Functions ----- #
 def relative_to_assets(path: str) -> Path:
     """
@@ -68,7 +68,6 @@ def add_button(canvas, x, y, w, h, normal_image, hover_image, message, callback=
     return button
 
 
-# ----- GUI Page Classes ----- #
 class App(tk.Tk):
     """
     Main application class to handle multiple pages.
@@ -155,14 +154,20 @@ class LaunchPage(BasePage):
         )
 
         # ----- Image Area (Placeholder for now) ----- #
-        self.canvas = Canvas(self, bg="lightblue", bd=0, highlightthickness=0, relief="ridge")
-        self.canvas.grid(column=1, rowspan=7, sticky="nsew", padx=20, pady=20)
+        image = Image.open("assets/features.png")
+        photo = ImageTk.PhotoImage(image)
+        self.image_label = Label(self, image = photo, bg="#A9D6ED", bd = 0, highlightthickness = 0)
+        self.image_label.image = photo # keep a reference
+        self.image_label.grid(column = 1, rowspan = 7, sticky = "nsew", padx = 20, pady = 20)
+
+        # self.canvas = Canvas(self, bg="lightblue", bd=0, highlightthickness=0, relief="ridge")
+        # self.canvas.grid(column=1, rowspan=7, sticky="nsew", padx=20, pady=20)
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=2)
 
         # ----- Text Area ----- #
-        tk.Label(self, text="STATS", bg="white", font=("Arial", 40)).grid(column=0, row=1, sticky="nsew")
-        tk.Label(self, text="Lorem ipsum dolor \n sit amet", bg="white", font=("Arial", 25)).grid(column=0, row=2,
+        tk.Label(self, text="STAT", bg="white", font=("Arial", 40)).grid(column=0, row=1, sticky="nsew")
+        tk.Label(self, text="Statistical Tracking and \n Analysis Toolkit", bg="white", font=("Arial", 25)).grid(column=0, row=2,
                                                                                                   sticky="nsew")
         # Continue Button
         Button(self, text="Start", style="TButton",
@@ -175,7 +180,6 @@ class MeasureSelectionPage(BasePage):
     they want to perform on the dataset.
 
     """
-
     def __init__(self, parent, controller):
         super().__init__(parent, controller)
         self.controller = controller
@@ -297,21 +301,11 @@ class MeasureSelectionPage(BasePage):
         self.stat_measures_listbox.delete(0, tk.END)
 
         # Populate the statistical measures list based on the selected data type
-        measures = []
-        if selected_data_type == "Nominal":
-            measures = ["Mode", "Frequency"]
-        elif selected_data_type == "Ordinal":
-            measures = ["Median", "Mode", "Frequency", "Percentiles", "Rank Sum", "Spearman Coefficient"]
-        elif selected_data_type == "Discrete":
-            measures = ["Mean", "Median", "Mode", "Standard Deviation", "Variance", "Percentiles",
-                        "Probability Distribution", "Binomial Distribution"]
-        elif selected_data_type == "Continuous":
-            measures = ["Mean", "Median", "Mode", "Standard Deviation", "Variance", "Percentiles",
-                        "Probability Distribution", "Binomial Distribution",
-                        "Least Square Line", "Chi-Square Test", "Correlation Coefficient", "Significance Test"]
+        self.measure_name_map = Controller.measures_for_data_type(selected_data_type)
 
-        for measure in measures:
-            self.stat_measures_listbox.insert(tk.END, measure)
+        for display_name in self.measure_name_map.keys():
+            self.stat_measures_listbox.insert(tk.END, display_name)
+
 
     def on_stat_measure_selected(self, event):
         # Get selected items from the listbox
@@ -331,39 +325,28 @@ class MeasureSelectionPage(BasePage):
         if not hasattr(self.table.controller, 'get_table_selection'):
             messagebox.showerror("Error", "Table not initialized.")
             return
-
+        
         self.controller = Controller()
 
         selected_data_type = self.data_type_dropdown.get()
         selected_measures = [self.stat_measures_listbox.get(i) for i in self.stat_measures_listbox.curselection()]
-
-        variance_type = None  # default to none unless variance is selected
-        if "Variance" in selected_measures:
-            variance_type = simpledialog.askstring(
-                "Variance Type",
-                "Enter the type of variance (Population or Sample):",
-                initialvalue="Population"
-            )
-            if variance_type not in ["Population", "Sample"]:
-                messagebox.showerror("Error", "Invalid variance type.")
-                return
+        
         data_frame = self.controller.load_data_from_table(self.table.controller)
         print(f"Final Data Before Validation:\n{data_frame}")  # Final confirmation
-
+        
         if data_frame.empty:
             messagebox.showerror("Error", "No data to analyze.")
             return
-
+        
         if not self.controller.validate_data(data_frame):
             messagebox.showerror("Error", "Data validation failed.")
             return
 
-        results = self.controller.perform_statistics(data_frame, selected_measures, selected_data_type, variance_type)
+        results = self.controller.perform_statistics(data_frame, selected_measures, selected_data_type)
 
         if results:
             result_str = "\n".join([f"{key}: {value}" for key, value in results.items()])
             messagebox.showinfo("Calculated Statistics", result_str)
-        # self.controller.export_results(results)
 
     def get_table_data(self):
         # Fetch table data from the CustomTable widget

@@ -1,6 +1,7 @@
 import tkinter.simpledialog
 import numpy as np
 from scipy import stats
+from statistics import mode
 import sys 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -28,7 +29,7 @@ def validate_data(func):
 
         elif isinstance(self.data, pd.DataFrame):
             # Select only numeric columns
-            self.data = self.data.select_dtypes(include=[np.number]).to_numpy().flatten()
+            self.data = self.data.select_dtypes(include=[np.number]).to_numpy()
             
             if len(self.data) == 0:
                 raise ValueError("Data cannot be empty or contain only non-numeric values.")
@@ -51,13 +52,25 @@ class statistic():
         self.data = data 
 
     def _clean_data(self):
-         """
-         Cleans the data by removing NaN values and zeros for statistical calculations.
-         """
-         cleaned_data = [value for value in self.data if not pd.isnull(value) and value != 0]
-         if not cleaned_data:
-             return [0]  # Prevent errors if all values are zero
-         return cleaned_data
+        if isinstance(self.data, pd.DataFrame):
+            cleaned_data = self.data.select_dtypes(include=[np.number]).to_numpy()
+        elif isinstance(self.data, (list, np.ndarray)):
+            cleaned_data = np.array(self.data)
+        else:
+            return []
+
+        # For 1D array
+        if cleaned_data.ndim == 1:
+            cleaned_data = [x for x in cleaned_data if not pd.isnull(x) and x != 0]
+        # For 2D array
+        elif cleaned_data.ndim == 2:
+            # Remove rows where all values are null or 0
+            mask = ~(np.isnan(cleaned_data).all(axis=1) | (cleaned_data == 0).all(axis=1))
+            cleaned_data = cleaned_data[mask]
+
+        return cleaned_data if len(cleaned_data) > 0 else np.array([[0]])
+
+
        
 
         
@@ -79,8 +92,7 @@ class statistic():
         Return the mode of the data set
         """
         cleaned_data = self._clean_data()
-        mode_result = stats.mode(cleaned_data, keepdims=True)
-        return mode_result.mode[0] if mode_result.mode.size > 0 else None
+        return mode(cleaned_data)
     
     def standardDeviation(self):
         """
@@ -94,7 +106,7 @@ class statistic():
         # Validate the data
         if not isinstance(cleaned_data, (list, np.ndarray)):
             raise TypeError("Data must be a list or NumPy array of numbers")
-        if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in self.data):
+        if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in cleaned_data.flatten()): #flatten the data to check for all values // multi column support will still be there
             raise TypeError("All elements in the data must be numbers")
         if len(cleaned_data) < 2 :
             return 0 # Prevent errors if all values are zero
@@ -108,11 +120,13 @@ class statistic():
         Returns:
             float: The sample variance of the data.
         """
+
+        # TODO: a.any or a.all to check if all values are the same 
         cleaned_data = self._clean_data()
         # Validate the data
         if not isinstance(cleaned_data, (list, np.ndarray)):
             raise TypeError("Data must be a list or NumPy array of numbers")
-        if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in self.data):
+        if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in cleaned_data.flatten()):
             raise TypeError("All elements in the data must be numbers")
         if len(cleaned_data) == 0:
             raise ValueError("Data cannot be empty")
@@ -135,12 +149,12 @@ class statistic():
         # Validate the data
         if not isinstance(cleaned_data, (list, np.ndarray)):
             raise TypeError("Data must be a list or NumPy array of numbers")
-        if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in self.data):
+        if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in cleaned_data.flatten()):
             raise TypeError("All elements in the data must be numbers")
         if len(cleaned_data) == 0:
             raise ValueError("Data cannot be empty")
         
-        # Calculate and return the coefficient of variation
+        # Calculate and return the coefficent of variation
         mean = self.mean()
         std_dev = self.standardDeviation()
         return std_dev / mean
@@ -193,7 +207,10 @@ class statistic():
             return None
 
         distribution_choice = distribution_choice.lower()
-        x = np.linspace(min(cleaned_data), max(cleaned_data), 100)
+        #x = np.linspace(min(cleaned_data), max(cleaned_data), 100)
+        # flatten the data -- because there is a 2D array being passed, there is no min or max values 
+        flat = cleaned_data.flatten()
+        x = np.linspace(np.min(flat), np.max(flat), 100)
 
         if distribution_choice == 'normal':
             mean = np.mean(cleaned_data)
@@ -298,17 +315,56 @@ class statistic():
     @validate_data
     def chiSquared(self):
         """
-        Only works for frequency datasets
-        Parameters: 
-            Grabs two arrays/list from np.ndarray as x,y (expected, actual)
-            sum_check=False bypasses invalid/impossible applications of chi-squared
-        Returns:
-            chi-squared value.
+        Performs Chi-Square Test using two valid columns of data.
         """
-        f_exp = self.data.iloc[:, 0]
-        f_obs = self.data.iloc[:, 1]
-        chi_sq_results = stats.chisquare(f_obs, f_exp, axis=0, sum_check=False)
-        return chi_sq_results
+        print(f"Incoming Data to Chi-Squared:\n{self.data}")  # Debugging point
+        
+        
+        if isinstance(self.data, pd.DataFrame):
+            if self.data.shape[1] >= 2:
+                f_exp = pd.to_numeric(self.data.iloc[:, 0], errors='coerce').dropna().astype(int).values
+                f_obs = pd.to_numeric(self.data.iloc[:, 1], errors='coerce').dropna().astype(int).values
+            else:
+                messagebox.showerror("Error", "Chi-square test requires two valid columns of data.")
+                return None
+
+        elif isinstance(self.data, np.ndarray) and self.data.shape[1] >= 2:
+            
+            f_exp = self.data[:, 0].astype(int)
+            f_obs = self.data[:, 1].astype(int)
+            
+        else:
+            messagebox.showerror("Error", "Chi-square test requires two valid columns of data.")
+            return None
+
+        print(f"Expected Frequencies: {f_exp}")
+        print(f"Observed Frequencies: {f_obs}")
+
+        # Ensure both columns have the same length
+        if len(f_exp) != len(f_obs):
+            messagebox.showerror("Error", "Chi-square test requires equal-length data in both columns.")
+            return None
+
+        # Ensure no negative values (chi-square requires non-negative integers)
+        if np.any(f_exp < 0) or np.any(f_obs < 0):
+            messagebox.showerror("Error", "Chi-square test cannot contain negative values.")
+            return None
+
+        # Perform chi-square test
+        try:
+            chi_sq_stat, p_value = stats.chisquare(f_obs, f_exp)
+
+            result_str = f"Chi-Square Statistic: {chi_sq_stat:.4f}, P-value: {p_value:.4e}"
+            print(result_str)
+            return result_str
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Chi-square calculation error: {e}")
+            return None
+
+
+
+
     
     @validate_data
     def correlationCoefficient(self):

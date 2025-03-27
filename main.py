@@ -127,16 +127,9 @@ class nominalStatistics:
     def mode(self):
         return self.perform_statistics(self.data, ['mode'], 'nominal')["Mode"]
     
-    def frequency(self):
-        return self.perform_statistics(self.data, ['frequency'], 'nominal')["Frequency"]
-    '''
-    Plots associated with this data type
-    '''
-    def piechart(self):
-        return self.perform_statistics(self.data, ['piechart'], 'nominal')["Pie Chart"]
-    def bargraph(self):
-        return self.perform_statistics(self.data, ['bargraph'], 'nominal')["Bar Graph"]
-    
+    # def frequency(self):
+    #     return self.perform_statistics(self.data, ['frequency'], 'nominal')["Frequency"]
+
 
 class ordinalStatistics:
     '''
@@ -145,10 +138,10 @@ class ordinalStatistics:
     def __init__(self, data):
         self.data = data
     
-    def proportion(self):
-        return self.perform_statistics(self.data, ['proportion'], 'ordinal')["Proportion"]
-    def frequency(self):
-        return self.perform_statistics(self.data, ['frequency'], 'ordinal')["Frequency"]
+    # def proportion(self):
+    #     return self.perform_statistics(self.data, ['proportion'], 'ordinal')["Proportion"]
+    # def frequency(self):
+    #     return self.perform_statistics(self.data, ['frequency'], 'ordinal')["Frequency"]
     def percentiles(self):
         return self.perform_statistics(self.data, ['percentiles'], 'ordinal')["Percentiles"]
     def spearmanCorrelation(self, data2):
@@ -156,13 +149,6 @@ class ordinalStatistics:
     def rankSum(self):
         return self.perform_statistics(self.data, ['rank sum'], 'ordinal')["Rank Sum"]
     
-    '''
-    Plots associated with this data type
-    '''
-    def piechart(self):
-        return self.perform_statistics(self.data, ['piechart'], 'ordinal')["Pie Chart"]
-    def bargraph(self):
-        return self.perform_statistics(self.data, ['bargraph'], 'ordinal')["Bar Graph"]
 
 
 class discreteStatistics:
@@ -176,10 +162,10 @@ class discreteStatistics:
         return self.perform_statistics(self.data, ['median'], 'discrete')["Median"]
     def mode(self):
         return self.perform_statistics(self.data, ['mode'], 'discrete')["Mode"]
-    def frequency(self):
-        return self.perform_statistics(self.data, ['frequency'], 'discrete')["Frequency"]
-    def range(self):
-        return self.perform_statistics(self.data, ['range'], 'discrete')["Range"]
+    # def frequency(self):
+    #     return self.perform_statistics(self.data, ['frequency'], 'discrete')["Frequency"]
+    # def range(self):
+    #     return self.perform_statistics(self.data, ['range'], 'discrete')["Range"]
     def percentiles(self):
         return self.perform_statistics(self.data, ['percentiles'], 'discrete')["Percentiles"]
     def standard_deviation(self):
@@ -191,13 +177,6 @@ class discreteStatistics:
     def binomialDistribution(self):
         return self.perform_statistics(self.data, ['binomial distribution'], 'discrete')["Binomial Distribution"]
     
-    '''
-    plots associated with this data type
-    '''
-    def piechart(self):
-        return self.perform_statistics(self.data, ['piechart'], 'discrete')["Pie Chart"]
-    def bargraph(self):
-        return self.perform_statistics(self.data, ['bargraph'], 'discrete')["Bar Graph"]
 
 class continuousStatistics:
     def __init__(self, data):
@@ -232,10 +211,41 @@ class continuousStatistics:
         return self.perform_statistics(self.data, ['correlation'], 'continuous')["Correlation"]
 
 
-    '''
-    Plots associated with this data type
-    '''
+
+
+"""
+Need to split the plots from the statistics 
+
+"""
+class continuousPlot:
+    def __init__(self, data):
+        self.data = data
     def histogram(self):
         return self.perform_statistics(self.data, ['histogram'], 'continuous')["Histogram"]
     def boxplot(self):
         return self.perform_statistics(self.data, ['boxplot'], 'continuous')["Box Plot"]
+
+
+class nominalPlot:
+    def __init__(self, data):
+        self.data = data
+    def piechart(self):
+        return self.perform_statistics(self.data, ['piechart'], 'nominal')["Pie Chart"]
+    def bargraph(self):
+        return self.perform_statistics(self.data, ['bargraph'], 'nominal')["Bar Graph"]
+
+class ordinalPlot:
+    def __init__(self, data):
+        self.data = data
+    def piechart(self):
+        return self.perform_statistics(self.data, ['piechart'], 'ordinal')["Pie Chart"]
+    def bargraph(self):
+        return self.perform_statistics(self.data, ['bargraph'], 'ordinal')["Bar Graph"]
+    
+class discretePlot:
+    def __init__(self, data):
+        self.data = data
+    def piechart(self):
+        return self.perform_statistics(self.data, ['piechart'], 'discrete')["Pie Chart"]
+    def bargraph(self):
+        return self.perform_statistics(self.data, ['bargraph'], 'discrete')["Bar Graph"]

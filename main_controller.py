@@ -2,10 +2,13 @@
 import pandas as pd
 from Table import TableController
 from statisticsLogic import statistic
-from main import DataIntegrity, nominalStatistics, ordinalStatistics, discreteStatistics, continuousStatistics
+from main import DataIntegrity, nominalStatistics, ordinalStatistics, discreteStatistics, continuousStatistics, nominalPlot, continuousPlot, ordinalPlot, discretePlot
 import datetime
 import numpy as np
 
+
+# adding warning diflection from pandas 
+pd.set_option('future.no_silent_downcasting', True)
 
 class Controller:
     """
@@ -25,7 +28,8 @@ class Controller:
         # Ensure proper data types
         for col in data.columns:
             data[col] = pd.to_numeric(data[col], errors='coerce')
-            data.fillna(0, inplace=True)  # for missing data
+            #data.fillna(0, inplace=True)  # for missing data
+            data = data.fillna(0).infer_objects(copy=False)
 
         # Filter non-zero data only
         data = data[(data != 0).any(axis=1)]
@@ -91,7 +95,7 @@ class Controller:
             return None
 
         logic = statistics_classes[data_type](data_frame)
-        stat_instance = statistic(data_frame.select_dtypes(include='number').values.flatten()) 
+        stat_instance = statistic(data_frame)
 
 
         # Compute requested measures
@@ -104,17 +108,18 @@ class Controller:
             "Standard Deviation": stat_instance.standardDeviation,
             "Variance": lambda: stat_instance.variance(variance_type),
             "Coefficient of Variation": stat_instance.coefficientOfVariation,
-            "Percentile": stat_instance.percentiles,
+            "Percentiles": stat_instance.percentiles,
             "Probability Distribution": stat_instance.probabilityDistribution,
             "Binomial Distribution": lambda: stat_instance.binomialDistribution(
                 data_frame.select_dtypes(include='number').values.flatten()  # Dynamic sample size
             ),
             "Least Square Line": stat_instance.leastSquareLine,
-            "Chi-Square Test": stat_instance.chiSquared, 
-            "Correlation Coefficient": stat_instance.correlationCoefficient,
+            "Chi Square": stat_instance.chiSquared, 
+            "Correlation": stat_instance.correlationCoefficient,
             "Significance Test": stat_instance.significanceTest,
             "Rank Sum": stat_instance.rankSum,
-            "Spearman Coefficient": stat_instance.spearmanRankCorrelation,
+            "Spearman Correlation": stat_instance.spearmanRankCorrelation,
+            #"Frequency": stat_instance.frequency,
 
         }
         # allow for the possibility of users to input their own measures
@@ -166,9 +171,80 @@ class Controller:
         print(f"Results exported to {filename}")
 
     @staticmethod
-    def plots_for_data_type():
+    def get_data_type_classes():
         """
-        implement this after the merge // lot of the logic is already associated 
-        with the fix that I have 
+        Instead of statically defining the data types in the GUI drop down, we can
+        dynamically generate the data types based on the available classes.
         """
-        pass
+        return {
+            "Nominal": nominalStatistics,
+            "Ordinal": ordinalStatistics,
+            "Discrete": discreteStatistics,
+            "Continuous": continuousStatistics,
+        }
+    @staticmethod
+    def measures_for_data_type(data_type):
+        """
+        """
+        classes = {
+            "Nominal": nominalStatistics,
+            "Ordinal": ordinalStatistics,
+            "Discrete": discreteStatistics,
+            "Continuous": continuousStatistics
+        }
+
+        if data_type not in classes:
+            return {}
+        class_obj = classes[data_type]
+
+        raw_methods = [
+            func for func in dir(class_obj)
+            if not func.startswith("_") and callable(getattr(class_obj, func))
+        ]
+
+        
+        display_map = {}
+        for method in raw_methods:
+            # Convert camelCase or snake_case to display-friendly version
+            display_name = (
+                ''.join([' ' + c if c.isupper() else c for c in method])
+                .replace('_', ' ')
+                .title()
+                .strip()
+            )
+            display_map[display_name] = method
+
+        return display_map
+    
+    def plots_for_data_type(data_type):
+        """
+        loading in the graphs for the data type in the GUI
+        """
+        classes = {
+            "Nominal": nominalPlot,
+            "Ordinal": ordinalPlot,
+            "Discrete": discretePlot,
+            "Continuous": continuousPlot
+        }
+        if data_type not in classes:
+            return {}
+        class_obj = classes[data_type]
+
+        raw_methods = [
+            func for func in dir(class_obj)
+            if not func.startswith("_") and callable(getattr(class_obj, func))
+        ]
+        display_map = {}
+        for method in raw_methods:
+            # Convert camelCase or snake_case to display-friendly version
+            display_name = (
+                ''.join([' ' + c if c.isupper() else c for c in method])
+                .replace('_', ' ')
+                .title()
+                .strip()
+            )
+            display_map[display_name] = method
+
+        return display_map
+
+
