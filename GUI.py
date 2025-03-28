@@ -454,6 +454,7 @@ class DashboardPage(BasePage):
         self.canvas.coords(self.toolbarBackground, 0, 0, 100, event.height)  # Adjust height dynamically
 
     def print_selected_columns(self):
+        """Obtain the name of the column the user chose for statistical analysis"""
         # Get the MeasureSelectionPage instance from the controller
         measure_page = self.controller.get_page("MeasureSelectionPage")
 
@@ -472,6 +473,75 @@ class DashboardPage(BasePage):
             print("The loaded data is empty.")
         else:
             print("Loaded DataFrame:\n", data_frame)
+
+    def print_table(self):
+        """Print the complete table data (uploaded or manually entered)"""
+        try:
+            # Get the MeasureSelectionPage instance
+            measure_page = self.controller.get_page("MeasureSelectionPage")
+
+            if not measure_page or not hasattr(measure_page, 'table'):
+                print("Error: Unable to access table.")
+                return
+
+            # Get the sheet widget from the TableView
+            sheet = measure_page.table.sheet
+
+            # Get all data from the sheet
+            table_data = []
+            for r in range(sheet.total_rows()):
+                row_data = []
+                for c in range(sheet.total_columns()):
+                    cell_value = sheet.get_cell_data(r, c)
+                    row_data.append(cell_value if cell_value is not None else "")  # Replace None with empty string
+                table_data.append(row_data)
+
+            # Get headers - need to call the headers() method
+            headers = sheet.headers() if hasattr(sheet, 'headers') else [f"Column {i + 1}" for i in
+                                                                         range(sheet.total_columns())]
+
+            # Create DataFrame for nice printing
+            df = pd.DataFrame(table_data)
+
+            # Only set columns if we have the right number of headers
+            if len(headers) == df.shape[1]:
+                df.columns = headers
+
+            # Clean empty rows/columns
+            df = df.replace("", pd.NA).dropna(how='all').dropna(axis=1, how='all')
+
+            print("Complete Table Data:")
+            print(df.to_string())
+
+        except Exception as e:
+            print(f"Error printing table: {e}")
+
+    def print_column_headers(self):
+        """Print all column headers from the table"""
+        try:
+            # Get the MeasureSelectionPage instance
+            measure_page = self.controller.get_page("MeasureSelectionPage")
+
+            if not measure_page or not hasattr(measure_page, 'table'):
+                print("Error: Unable to access table.")
+                return
+
+            # Get the sheet widget from the TableView
+            sheet = measure_page.table.sheet
+
+            # Get headers - need to call the headers() method
+            headers = sheet.headers() if hasattr(sheet, 'headers') else [f"Column {i + 1}" for i in
+                                                                         range(sheet.total_columns())]
+
+            print("\nTable Column Headers:")
+            for i, header in enumerate(headers, 1):
+                print(f"{i}. {header}")
+
+            return headers  # Optional: return the headers if you need them
+
+        except Exception as e:
+            print(f"Error printing column headers: {e}")
+            return []
 
     def grab_plots(self):
         "calling to the main controller to get and print the list out of the plots associated"
