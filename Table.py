@@ -67,7 +67,34 @@ class TableController:
         self.table = table
 
     def get_table_data(self):
-        return self.model.get_data()         
+        return self.model.get_data()
+
+    def get_entire_table(self):
+        """ Retrieves the entire table data from the tksheet widget and converts it into a pandas DataFrame. """
+
+        # Get the full table data including headers
+        table_data = self.table.get_sheet_data(
+            get_displayed=False,
+            get_header=True,  # Retrieve column headers
+            get_index=False,  # Ignore row indices
+            get_index_displayed=True,
+            get_header_displayed=True
+        )
+
+        # Extract headers from the first row
+        column_headers = table_data[0] if table_data else []
+
+        # Extract data (excluding the first row which contains headers)
+        data_rows = table_data[1:] if len(table_data) > 1 else []
+
+        # Convert to pandas DataFrame
+        df = pd.DataFrame(data_rows, columns=column_headers)
+
+        # Drop fully empty rows and columns
+        df.dropna(axis=0, how='all', inplace=True)
+        df.dropna(axis=1, how='all', inplace=True)
+
+        return df
 
     def update_table(self, headers=None, data=None):
         """
@@ -90,7 +117,6 @@ class TableController:
 
         self.table.grid(row=0, column=0, sticky='nswe')
         self.table.enable_bindings("all", "edit_header", "edit_index", "ctrl_select")
-
 
     def get_table_selection(self):
         """ Creates a 2D list that matches the dimensions of the tksheet table and fills row list with None.
