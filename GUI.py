@@ -350,7 +350,6 @@ class MeasureSelectionPage(BasePage):
 
     def get_table_data(self):
         # Fetch table data from the CustomTable widget
-
         return self.table.celldType()
 
 
@@ -469,19 +468,9 @@ class DashboardPage(BasePage):
 
     def print_selected_columns(self):
         """Obtain the name of the column the user chose for statistical analysis"""
-        # Get the MeasureSelectionPage instance from the controller
-        measure_page = self.controller.get_page("MeasureSelectionPage")
+        table_controller = self.get_table_controller()
 
-        if not measure_page or not hasattr(measure_page, 'table'):
-            print("Error: Unable to access MeasureSelectionPage or table.")
-            return
-
-        if not hasattr(measure_page.table, 'controller'):
-            print("Error: Table controller is not available.")
-            return
-
-        # Call load_data_from_table with the correct table controller
-        data_frame = self.main_control.load_data_from_table(measure_page.table.controller)
+        data_frame = self.main_control.load_data_from_table(table_controller)
 
         if data_frame.empty:
             print("The loaded data is empty.")
@@ -490,19 +479,8 @@ class DashboardPage(BasePage):
 
     def print_table(self):
         """Obtain the name of the column the user chose for statistical analysis"""
-        # Get the MeasureSelectionPage instance from the controller
-        measure_page = self.controller.get_page("MeasureSelectionPage")
-
-        if not measure_page or not hasattr(measure_page, 'table'):
-            print("Error: Unable to access MeasureSelectionPage or table.")
-            return
-
-        if not hasattr(measure_page.table, 'controller'):
-            print("Error: Table controller is not available.")
-            return
-
-        # Call load_data_from_table with the correct table controller
-        data_frame = self.main_control.load_entire_table(measure_page.table.controller)
+        table_controller = self.get_table_controller()
+        data_frame = self.main_control.load_entire_table(table_controller)
 
         if data_frame.empty:
             print("The loaded data is empty.")
