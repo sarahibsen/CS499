@@ -201,7 +201,7 @@ class MeasureSelectionPage(BasePage):
     """
     def __init__(self, parent, controller):
         super().__init__(parent, controller)
-        self.controller = controller    
+        self.gui_controller = controller   
 
         self.grid_rowconfigure(0, weight = 1)
         self.grid_columnconfigure(2, weight = 2)
@@ -287,15 +287,6 @@ class MeasureSelectionPage(BasePage):
         # self.dashboard_page_button.place()
         self.dashboard_page_button.grid(row=1, column=0, padx=10, pady=10, sticky="ns")
 
-    def import_csv(self):
-        file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
-        if file_path:
-            try:
-                data = pd.read_csv(file_path)
-                # Show data in the table
-                self.display_table(data)
-            except Exception as e:
-                print(f"Error importing CSV: {e}")
 
     def on_data_type_selected(self, event):
         selected_data_type = self.data_type_dropdown.get()
@@ -377,6 +368,9 @@ class MeasureSelectionPage(BasePage):
             messagebox.showinfo("Calculated Statistics", result_str)
            # self.controller.export_results(results)
 
+            self.gui_controller.pages["DashboardPage"].display_results(results)
+            self.gui_controller.show_page("DashboardPage")
+
     def get_table_data(self):
         # Fetch table data from the CustomTable widget
 
@@ -389,6 +383,9 @@ class DashboardPage(BasePage):
     """
     def __init__(self, parent, controller):
         super().__init__(parent, controller)
+        
+        self.result_headers = [] # All headers in results table
+        self.result_rows = {}    # Rach row in the results table (key = row number, value = list of output from a single calculation)
 
         # Create a canvas
         self.canvas = Canvas(self, bg="#FFFFFF", bd=0, highlightthickness=0, relief="ridge")
@@ -431,6 +428,66 @@ class DashboardPage(BasePage):
             "Dashboard page button clicked!"
         )
         self.dashboard_page_button.place()
+
+    def display_headers(self, results):
+        """
+        Updates the header list if calculation requires new headers.
+
+        Args:
+            results (dict): Dictionary containing the results of the calculation.
+        """
+        for value in results.values():
+            for key in value.keys():
+                if key not in self.result_headers: # If header is existing, skip to avoid multiple headers with same name
+                    self.result_headers.append(key)
+
+    def display_row_data(self, results):
+        """
+        Combines all results into a single row of data to be processed by the table.
+
+        Args:
+            results (dict): Dictionary containing the results of the calculation.
+
+        Returns:
+            dict: Dictionary containing the results of the calculation in a single row.
+        """
+        row = {}
+
+        for stat in results.values():
+            for key, value in stat.items():
+                row[key] = value
+
+        return row
+
+    def display_results(self, results):
+        """
+        Updates the result table with the latest calculation. Each row in the table represents a single calculation, but could have multiple columns.
+
+        Args:
+            results (dict): Dictionary containing the results of the calculation.
+        """
+        self.display_headers(results) # Updates the header list if calculation requires new headers
+        result_data = self.display_row_data(results)
+
+        results_frame = tk.Frame(self)
+        results_frame.place(x=129, y=153, width=1123, height=654)
+
+        row_data = [] # Represents a row of data in the table (i.e. 1 calculation)
+        for head in self.result_headers:
+            if head not in result_data.keys():
+                row_data.append("")
+            else:
+                row_data.append(result_data[head])
+              
+        self.result_rows[len(self.result_rows) + 1] = row_data
+
+        table = TableView(results_frame, output=True)
+
+        table.grid(row=0,column=0,sticky='nsew')
+        table.controller.update_table(headers = self.result_headers, data = self.result_rows.values())
+
+        results_frame.grid_rowconfigure(0, weight=1)
+        results_frame.grid_columnconfigure(0, weight=1)
 
 # Run the application
 app = App()

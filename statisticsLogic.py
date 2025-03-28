@@ -71,28 +71,26 @@ class statistic():
         return cleaned_data if len(cleaned_data) > 0 else np.array([[0]])
 
 
-       
-
-        
     def mean(self):
         """
         Return the mean (average) of the data set
         """
         cleaned_data = self._clean_data()
-        return np.mean(cleaned_data)
+        return {"Mean": np.mean(cleaned_data)}
     
     def median(self):
         """
         Return the median of the data set
         """
         cleaned_data = self._clean_data()
-        return np.median(cleaned_data)
+        return {"Median": np.median(cleaned_data)}
+    
     def mode(self):
         """
         Return the mode of the data set
         """
         cleaned_data = self._clean_data()
-        return mode(cleaned_data)
+        return {"Mode": mode(cleaned_data, keepdims=False).mode[0]}
     
     def standardDeviation(self):
         """
@@ -112,7 +110,7 @@ class statistic():
             return 0 # Prevent errors if all values are zero
         
         # Calculate and return the standard deviation
-        return np.std(cleaned_data, ddof=1)
+        return {"Standard Deviation": np.std(cleaned_data, ddof=1)}
     
     def variance(self, variance_type = "Population"):
         """
@@ -132,12 +130,12 @@ class statistic():
             raise ValueError("Data cannot be empty")
         
         if variance_type == "Sample":
-            return np.var(cleaned_data, ddof=1) # Sample variance
+            return {"Sample Variance": np.var(cleaned_data, ddof=1)} # Sample variance
         else:
-            return np.var(cleaned_data, ddof=0) # Population variance
+            return {"Population Variance": np.var(cleaned_data, ddof=0)} # Population variance
         
         # Calculate and return the variance
-        return np.var(cleaned_data, ddof=1)
+        return {"Variance": np.var(cleaned_data, ddof=1)}
 
     def coefficientOfVariation(self):
         """
@@ -157,7 +155,7 @@ class statistic():
         # Calculate and return the coefficent of variation
         mean = self.mean()
         std_dev = self.standardDeviation()
-        return std_dev / mean
+        return {"Coefficient of Variation": std_dev / mean}
     
     @validate_data
     def percentiles(self):
@@ -181,7 +179,7 @@ class statistic():
 
         percentiles_df.insert(0, "Percentiles", [f"{p}th" for p in psequence])  # Insert percentile column (Percentiles:, nth, n+1th)
         #is dataframe neeeded for graphing or exporting formatted text? (remove ".to_numpy()")
-        return percentiles_df.to_numpy()
+        return {"Percentiles": percentiles_df.to_numpy()}
     
 
     
@@ -267,7 +265,7 @@ class statistic():
             return
 
         # Perform binomial distribution calculation
-        return np.random.binomial(n, p, sample_size)
+        return {"Binomial Distribution": np.random.binomial(n, p, sample_size)}
 
 # ----------------------------------------------------------------------------------#
 # separating these statistical functions because these are the ones that I have to really hone on
@@ -293,6 +291,8 @@ class statistic():
       #  print(f" x values: {x}")
       #  print(y)
         # add a check to make sure that mid will be divided properly <3 
+        print(len(x))
+        print(len(y))
         if len(x) != len(y):
             messagebox.showerror("Error", "Both columns must have the same length.")
             raise ValueError("Both columns must have the same length")
@@ -310,7 +310,7 @@ class statistic():
         slope = numerator / denominator
         intercept = y_mean - slope * x_mean
         
-        return slope, intercept
+        return {"Slope": slope, "Y-Intercept": intercept}
 
     @validate_data
     def chiSquared(self):
@@ -355,8 +355,8 @@ class statistic():
             chi_sq_stat, p_value = stats.chisquare(f_obs, f_exp)
 
             result_str = f"Chi-Square Statistic: {chi_sq_stat:.4f}, P-value: {p_value:.4e}"
-            print(result_str)
-            return result_str
+            #print(result_str)
+            return {"Chi-Squared Statistic": f"{chi_sq_stat:.4f}", "P-value": f"{p_value:.4e}"}
 
         except Exception as e:
             messagebox.showerror("Error", f"Chi-square calculation error: {e}")
