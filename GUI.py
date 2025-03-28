@@ -153,12 +153,12 @@ class LaunchPage(BasePage):
             width=20, pady=20, ipadx=20, ipady=10, relief="groove",
         )
 
-        # ----- Image Area (Placeholder for now) ----- #
+        # ----- Image Area ----- #
         image = Image.open("assets/features.png")
         photo = ImageTk.PhotoImage(image)
         self.image_label = Label(self, image = photo, bg="#A9D6ED", bd = 0, highlightthickness = 0)
-        self.image_label.image = photo # keep a reference
-        self.image_label.grid(column = 1, rowspan = 7, sticky = "nsew", padx = 20, pady = 20)
+        self.image_label.image = photo  # keep a reference
+        self.image_label.grid(column=1, rowspan=7, sticky="nsew", padx=20, pady=20)
 
         # self.canvas = Canvas(self, bg="lightblue", bd=0, highlightthickness=0, relief="ridge")
         # self.canvas.grid(column=1, rowspan=7, sticky="nsew", padx=20, pady=20)
@@ -418,9 +418,23 @@ class DashboardPage(BasePage):
 
         self.export_data_button = Button(
             self.dashboard_frame, text="Save Results", style="TButton",
-            command=lambda: self.print_selected_columns() #print("Save Results button clicked!")
+            command=lambda: self.print_table() #print("Save Results button clicked!")
         )
         self.export_data_button.grid(row=1, column=0, padx=10, pady=10, sticky="se")
+
+    def get_table_controller(self):
+        """Retrieve the table controller from MeasureSelectionPage."""
+        measure_page = self.controller.get_page("MeasureSelectionPage")
+
+        if not measure_page or not hasattr(measure_page, 'table'):
+            print("Error: Unable to access MeasureSelectionPage or table.")
+            return None
+
+        if not hasattr(measure_page.table, 'controller'):
+            print("Error: Table controller is not available.")
+            return None
+
+        return measure_page.table.controller
 
     def plot_graph(self, data=None):
         """Handles the logic for updating and displaying graphs."""
@@ -475,46 +489,25 @@ class DashboardPage(BasePage):
             print("Loaded DataFrame:\n", data_frame)
 
     def print_table(self):
-        """Print the complete table data (uploaded or manually entered)"""
-        try:
-            # Get the MeasureSelectionPage instance
-            measure_page = self.controller.get_page("MeasureSelectionPage")
+        """Obtain the name of the column the user chose for statistical analysis"""
+        # Get the MeasureSelectionPage instance from the controller
+        measure_page = self.controller.get_page("MeasureSelectionPage")
 
-            if not measure_page or not hasattr(measure_page, 'table'):
-                print("Error: Unable to access table.")
-                return
+        if not measure_page or not hasattr(measure_page, 'table'):
+            print("Error: Unable to access MeasureSelectionPage or table.")
+            return
 
-            # Get the sheet widget from the TableView
-            sheet = measure_page.table.sheet
+        if not hasattr(measure_page.table, 'controller'):
+            print("Error: Table controller is not available.")
+            return
 
-            # Get all data from the sheet
-            table_data = []
-            for r in range(sheet.total_rows()):
-                row_data = []
-                for c in range(sheet.total_columns()):
-                    cell_value = sheet.get_cell_data(r, c)
-                    row_data.append(cell_value if cell_value is not None else "")  # Replace None with empty string
-                table_data.append(row_data)
+        # Call load_data_from_table with the correct table controller
+        data_frame = self.main_control.load_entire_table(measure_page.table.controller)
 
-            # Get headers - need to call the headers() method
-            headers = sheet.headers() if hasattr(sheet, 'headers') else [f"Column {i + 1}" for i in
-                                                                         range(sheet.total_columns())]
-
-            # Create DataFrame for nice printing
-            df = pd.DataFrame(table_data)
-
-            # Only set columns if we have the right number of headers
-            if len(headers) == df.shape[1]:
-                df.columns = headers
-
-            # Clean empty rows/columns
-            df = df.replace("", pd.NA).dropna(how='all').dropna(axis=1, how='all')
-
-            print("Complete Table Data:")
-            print(df.to_string())
-
-        except Exception as e:
-            print(f"Error printing table: {e}")
+        if data_frame.empty:
+            print("The loaded data is empty.")
+        else:
+            print("Loaded DataFrame:\n", data_frame)
 
     def print_column_headers(self):
         """Print all column headers from the table"""
@@ -544,8 +537,9 @@ class DashboardPage(BasePage):
             return []
 
     def grab_plots(self):
-        "calling to the main controller to get and print the list out of the plots associated"
-        "with the data types"
+        """
+        calling to the main controller to get and print the list out of the plots associated with the data types
+        """
 
         selected_data_type = self.data_type_dropdown.get()
         # we want to clear the existing options
@@ -734,45 +728,6 @@ class DummyPage(BasePage):
         self.selected_stat_label.config(
             text=f"Selected Measures: {', '.join(selected_stats)}" if selected_stats else "Selected Measures: None"
         )
-
-    def calculate_statistics(self):
-        if not hasattr(self.table.controller, 'get_table_selection'):
-            messagebox.showerror("Error", "Table not initialized.")
-            return
-
-        self.controller = Controller()
-
-        selected_data_type = self.data_type_dropdown.get()
-        selected_measures = [self.stat_measures_listbox.get(i) for i in self.stat_measures_listbox.curselection()]
-
-        variance_type = None  # default to none unless variance is selected
-        if "Variance" in selected_measures:
-            variance_type = simpledialog.askstring(
-                "Variance Type",
-                "Enter the type of variance (Population or Sample):",
-                initialvalue="Population"
-            )
-            if variance_type not in ["Population", "Sample"]:
-                messagebox.showerror("Error", "Invalid variance type.")
-                return
-        data_frame = self.controller.load_data_from_table(self.table.controller)
-        print(f"Final Data Before Validation:\n{data_frame}")  # Final confirmation
-
-        if data_frame.empty:
-            messagebox.showerror("Error", "No data to analyze.")
-            return
-
-        if not self.controller.validate_data(data_frame):
-            messagebox.showerror("Error", "Data validation failed.")
-            return
-
-        results = self.controller.perform_statistics(data_frame, selected_measures, selected_data_type, variance_type)
-
-        if results:
-            result_str = "\n".join([f"{key}: {value}" for key, value in results.items()])
-            messagebox.showinfo("Calculated Statistics", result_str)
-        # self.controller.export_results(results)
-
 
 
 # Run the application
