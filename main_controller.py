@@ -37,7 +37,26 @@ class Controller:
         print(f"Data loaded into Controller:\n{data}")
         return data
 
+    @staticmethod
+    def load_entire_table(table_controller):
+        if not hasattr(table_controller, 'get_table_selection'):
+            print("Error: Table instance is not initialized.")
+            return pd.DataFrame()
 
+        data = table_controller.get_entire_table()
+        print(f"Loaded Data:\n{data}")
+
+        # Ensure proper data types
+        for col in data.columns:
+            data[col] = pd.to_numeric(data[col], errors='coerce')
+            # data.fillna(0, inplace=True)  # for missing data
+            data = data.fillna(0).infer_objects(copy=False)
+
+        # Filter non-zero data only
+        data = data[(data != 0).any(axis=1)]
+
+        print(f"Data loaded into Controller:\n{data}")
+        return data
 
     @staticmethod
     def validate_data(data_frame):
