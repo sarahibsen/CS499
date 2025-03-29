@@ -52,6 +52,7 @@ class statistic():
         self.data = data 
 
     def _clean_data(self):
+
         if isinstance(self.data, pd.DataFrame):
             cleaned_data = self.data.select_dtypes(include=[np.number]).to_numpy()
         elif isinstance(self.data, (list, np.ndarray)):
@@ -363,9 +364,6 @@ class statistic():
             return None
 
 
-
-
-    
     @validate_data
     def correlationCoefficient(self):
         """
@@ -373,13 +371,22 @@ class statistic():
         Parameters: Grabs first column as x and second column as y
         Returns the correlation coefficient.
         """
-        cleaned_data = self._clean_data()
-        mid = len(cleaned_data) // 2
-        x = cleaned_data[:mid]
-        y = cleaned_data[mid:]
-        correlation = np.corrcoef(x,y)
-        return correlation
 
+        cleaned_data = self._clean_data()
+
+        # Checks to make sure the number of rows are equal and the number of columns are equal
+
+        # Rows will always have the same number due to the main_controller filling NA with 0's
+        if cleaned_data.shape[0] % 2 != 0 and cleaned_data.shape[1] % 2 != 0:
+            messagebox.showerror("Error", "Both columns must have the same length.")
+            raise ValueError("Both columns must have the same length")
+
+        x, y = np.hsplit(cleaned_data, 2)
+         
+        correlation = np.corrcoef(x.T,y.T)
+        correlation_coefficient = correlation[0, 1]  # Extract the correlation coefficient from the matrix
+        return {"Correlation Coefficient": correlation_coefficient}
+    
     @validate_data
     def significanceTest(self):
         # has known issues w/ parameters that have deprecated since version 1.17.10 of scipy (permutations, alternative hypothesis)
