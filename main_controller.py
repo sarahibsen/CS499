@@ -2,13 +2,14 @@
 import pandas as pd
 from Table import TableController
 from statisticsLogic import statistic
-from main import DataIntegrity, nominalStatistics, ordinalStatistics, discreteStatistics, continuousStatistics, nominalPlot, continuousPlot, ordinalPlot, discretePlot
+from main import DataIntegrity, nominalStatistics, ordinalStatistics, discreteStatistics, continuousStatistics, \
+    nominalPlot, continuousPlot, ordinalPlot, discretePlot
 import datetime
 import numpy as np
 
-
-# adding warning diflection from pandas 
+# adding warning diflection from pandas
 pd.set_option('future.no_silent_downcasting', True)
+
 
 class Controller:
     """
@@ -72,7 +73,6 @@ class Controller:
         print("Data validation successful!")
         return True
 
-
     @staticmethod
     def detect_data_type(data_frame):
         """
@@ -87,7 +87,7 @@ class Controller:
         return DataIntegrity.detect_data_type(data_frame) if data_frame is not None else None
 
     @staticmethod
-    def perform_statistics(data_frame, selected_measures, data_type, variance_type = None):
+    def perform_statistics(data_frame, selected_measures, data_type, variance_type=None):
         """
         Performs statistical computations based on the selected data type and measures.
 
@@ -116,10 +116,9 @@ class Controller:
         logic = statistics_classes[data_type](data_frame)
         stat_instance = statistic(data_frame)
 
-
         # Compute requested measures
         results = {}
-        #TODO : add more measures
+        # TODO : add more measures
         measure_functions = {
             "Mean": stat_instance.mean,
             "Median": stat_instance.median,
@@ -133,16 +132,16 @@ class Controller:
                 data_frame.select_dtypes(include='number').values.flatten()  # Dynamic sample size
             ),
             "Least Square Line": stat_instance.leastSquareLine,
-            "Chi Square": stat_instance.chiSquared, 
+            "Chi Square": stat_instance.chiSquared,
             "Correlation": stat_instance.correlationCoefficient,
             "Significance Test": stat_instance.significanceTest,
             "Rank Sum": stat_instance.rankSum,
             "Spearman Correlation": stat_instance.spearmanRankCorrelation,
-            #"Frequency": stat_instance.frequency,
+            # "Frequency": stat_instance.frequency,
 
         }
         # allow for the possibility of users to input their own measures
-        
+
         for measure in selected_measures:
             if measure in measure_functions:
                 try:
@@ -174,7 +173,7 @@ class Controller:
                 detail_text = f"Analysis performed on {len(value)} selected entries"
             else:
                 detail_text = "Single value result (not iterable)"
-            
+
             detailed_results.append({
                 "Measure": measure,
                 "Value": value,
@@ -201,6 +200,7 @@ class Controller:
             "Discrete": discreteStatistics,
             "Continuous": continuousStatistics,
         }
+
     @staticmethod
     def measures_for_data_type(data_type):
         """
@@ -221,7 +221,6 @@ class Controller:
             if not func.startswith("_") and callable(getattr(class_obj, func))
         ]
 
-        
         display_map = {}
         for method in raw_methods:
             # Convert camelCase or snake_case to display-friendly version
@@ -234,7 +233,7 @@ class Controller:
             display_map[display_name] = method
 
         return display_map
-    
+
     def plots_for_data_type(data_type):
         """
         loading in the graphs for the data type in the GUI
@@ -265,5 +264,3 @@ class Controller:
             display_map[display_name] = method
 
         return display_map
-
-
