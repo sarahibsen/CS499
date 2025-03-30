@@ -282,22 +282,18 @@ class statistic():
         """
         cleaned_data = self._clean_data()
         # the user should be able to choose their own columns--however, they must be the same length 
-        # the user will only be able to grab 2 array's / columns 
-        print(f"data : {cleaned_data}")
-        mid = len(cleaned_data) // 2 
-        x = cleaned_data[:mid]# this should be the first column grabbed 
-        # somehow divide the array by two, one half will be assigned to x, the other half will be assigned to y
-        # if it is uneven // user did not choose the same length columns 
-        y = cleaned_data[mid:]# this will be the second column grabbed 
-      #  print(f" x values: {x}")
-      #  print(y)
-        # add a check to make sure that mid will be divided properly <3 
-        print(len(x))
-        print(len(y))
-        if len(x) != len(y):
-            messagebox.showerror("Error", "Both columns must have the same length.")
-            raise ValueError("Both columns must have the same length")
+
+        # Rows will always have the same number due to the main_controller filling NA with 0's
+        if np.isnan(cleaned_data).any():
+            messagebox.showerror("Error", "Both columns must have the same row length.")
+            raise ValueError("Both columns must have the same row length")
         
+        # Checks to ensure number of columns are equal
+        if cleaned_data.shape[1] % 2 != 0:
+            messagebox.showerror("Error", "The number of columns must be even.")
+            raise ValueError("The number of columns must be even")
+        
+        x, y = np.hsplit(cleaned_data, 2)
         
         # find the mean of the x and y columns 
         x_mean = np.mean(x)
@@ -307,7 +303,9 @@ class statistic():
         denominator = np.sum((x - x_mean)** 2)
 
         if denominator == 0:
+            messagebox.showerror("Error", "Denominator is zero. Ensure that you select at least two (x,y) pairs.")
             raise ZeroDivisionError("Cannot divide by zero!")
+        
         slope = numerator / denominator
         intercept = y_mean - slope * x_mean
         
@@ -317,6 +315,8 @@ class statistic():
     def chiSquared(self):
         """
         Performs Chi-Square Test using two valid columns of data.
+
+        Returns the Chi-Square statistic and p-value.
         """
         print(f"Incoming Data to Chi-Squared:\n{self.data}")  # Debugging point
         
@@ -369,23 +369,31 @@ class statistic():
         """
         Only works for interval & frequency datasets
         Parameters: Grabs first column as x and second column as y
-        Returns the correlation coefficient.
+
+        Returns the correlation coefficient R Value.
         """
 
         cleaned_data = self._clean_data()
 
-        # Checks to make sure the number of rows are equal and the number of columns are equal
-
         # Rows will always have the same number due to the main_controller filling NA with 0's
-        if cleaned_data.shape[0] % 2 != 0 and cleaned_data.shape[1] % 2 != 0:
-            messagebox.showerror("Error", "Both columns must have the same length.")
-            raise ValueError("Both columns must have the same length")
+        if np.isnan(cleaned_data).any():
+            messagebox.showerror("Error", "Both columns must have the same row length.")
+            raise ValueError("Both columns must have the same row length")
+        
+        # Checks to ensure number of columns are equal
+        if cleaned_data.shape[1] % 2 != 0:
+            messagebox.showerror("Error", "The number of columns must be even.")
+            raise ValueError("The number of columns must be even")
 
         x, y = np.hsplit(cleaned_data, 2)
-         
+
+        if len(x) < 2 or len(y) < 2:
+            messagebox.showerror("Error", "Correlation Coefficient requires at least 2 data points in each column.")
+            raise ValueError("Correlation Coefficient requires at least 2 data points in each column.")
+
         correlation = np.corrcoef(x.T,y.T)
         correlation_coefficient = correlation[0, 1]  # Extract the correlation coefficient from the matrix
-        return {"Correlation Coefficient": correlation_coefficient}
+        return {"R Value (Correlation Coefficient)": correlation_coefficient}
     
     @validate_data
     def significanceTest(self):
@@ -431,11 +439,25 @@ class statistic():
             two floats (the spearman rank correlation & p-value).
         """
         cleaned_data = self._clean_data()
-        mid = len(cleaned_data) // 2
-        x = cleaned_data[:mid]
-        y = cleaned_data[mid:]
-        spearman = stats.spearmar(x, y, axis = 0)
-        return spearman
+
+        # Rows will always have the same number due to the main_controller filling NA with 0's
+        if np.isnan(cleaned_data).any():
+            messagebox.showerror("Error", "Both columns must have the same row length.")
+            raise ValueError("Both columns must have the same row length")
+        
+        # Checks to ensure number of columns are equal
+        if cleaned_data.shape[1] % 2 != 0:
+            messagebox.showerror("Error", "The number of columns must be even.")
+            raise ValueError("The number of columns must be even")
+
+        x, y = np.hsplit(cleaned_data, 2)
+
+        if len(x) < 3 or len(y) < 3:
+            messagebox.showerror("Error", "Spearman rank correlation requires at least 3 data points in each column.")
+            raise ValueError("Spearman rank correlation requires at least 3 data points in each column.")
+
+        spearman = stats.spearmanr(x,y)
+        return {"R Value (Spearman Rank Correlation)": spearman.correlation, "P-value (Spearman Rank Correlation)": spearman.pvalue}
     
 
 class plotCreation():
