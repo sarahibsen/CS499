@@ -326,13 +326,13 @@ class GUIToolbar():
             self.export_button = ttk.Button(self.toolbar_frame, text="Export", image=self.export_img, command= lambda: self.export_txt_file())
             self.export_button.grid(row=1,column=0,sticky='ne')
 
-        # Add Export Operations Log Button with an Icon
-        self.export_log_img = Image.open("assets/txticon.png")  
-        self.export_log_img = self.export_log_img.resize((28, 28))  # Resize to 32x32 (adjust the size as necessary)
-        self.export_log_img = ImageTk.PhotoImage(self.export_log_img)  # Convert to a Tkinter-compatible format
+            # Add Export Operations Log Button with an Icon this will be the output 
+            self.export_log_img = Image.open("assets/txticon.png")  
+            self.export_log_img = self.export_log_img.resize((28, 28))  # Resize to 32x32 (adjust the size as necessary)
+            self.export_log_img = ImageTk.PhotoImage(self.export_log_img)  # Convert to a Tkinter-compatible format
 
-        self.export_log_button = ttk.Button(self.toolbar_frame, text="Export Log", image=self.export_log_img, command=self.controller.export_txt_file)
-        self.export_log_button.grid(row=2, column=0, sticky='ne')
+            self.export_log_button = ttk.Button(self.toolbar_frame, text="Export Log", image=self.export_log_img, command=self.controller.export_txt_file)
+            self.export_log_button.grid(row=2, column=0, sticky='ne')
 
 
 
