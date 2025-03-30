@@ -319,7 +319,7 @@ class MeasureSelectionPage(BasePage):
         #     measures = ["Mean", "Median", "Mode", "Standard Deviation", "Variance", "Percentiles", "Probability Distribution", "Binomial Distribution"]
         # elif selected_data_type == "Continuous":
         #     measures = ["Mean", "Median", "Mode", "Standard Deviation", "Variance", "Percentiles", "Probability Distribution", "Binomial Distribution", 
-        #                 "Least Square Line", "Chi-Square Test", "Correlation Coefficient", "Significance Test"]
+        #                 "Least Square Line", "Chi-Square Test", "Correlation Coefficient", "Sign Test"]
 
         # for measure in measures:
         #     self.stat_measures_listbox.insert(tk.END, measure)

@@ -362,10 +362,6 @@ class statistic():
             messagebox.showerror("Error", f"Chi-square calculation error: {e}")
             return None
 
-
-
-
-    
     @validate_data
     def correlationCoefficient(self):
         """
@@ -381,37 +377,59 @@ class statistic():
         return correlation
 
     @validate_data
-    def significanceTest(self):
-        # has known issues w/ parameters that have deprecated since version 1.17.10 of scipy (permutations, alternative hypothesis)
+    def signTest(self):
         """
-        Only works for interval & frequency datasets
+        Any datasets
         Parameters: Grabs first column as x and second column as y
         Returns the p-value.
         """
         cleaned_data = self._clean_data()
-        mid = len(cleaned_data) // 2
-        x = cleaned_data[:mid]
-        y = cleaned_data[mid:]
-        sigTest = stats.ttest_ind(x, y)
-        return sigTest
+        x = cleaned_data[:, 0]
+        y = cleaned_data[:, 1]
+
+        if len(x) != len(y):
+            raise ValueError("Both samples must be of the same length.")
+        signs = [xi - yi for xi, yi in zip(x, y) if xi != yi]
+        n = len(signs)
+        n_positive = sum(1 for s in signs if s > 0)
         
+        result = stats.binomtest(n_positive, n, p=0.5, alternative='two-sided')
+        sign = {"Sign Count": n, "P-Value": result.pvalue}
+        print(f"Sign Test: {sign}")
+        return  sign
 
     @validate_data
     def rankSum(self):
-        # known issues (alternative hypothesis)
-        """
-        Only works for ordinal datasets
-        Parameters:
-            Grabs two arrays (x,y), alternative hypothesis, axis
-        Returns:
-            the rank sum & p-value as floats
-        """
+        #TODO: add x & y switching since H1 depends on this
+        '''
+        Best for ordinal datasets
+        Parameters: 
+            grabs two arrays (can be different lengths, CURRENTLY 1st column is x and 2nd column is y), 
+            user specified alternative hypothesis (H1), 
+            and default auto method (exact-to-approximate results)
+        Returns: the rank sum statistic and p-value.
+        '''
         cleaned_data = self._clean_data()
-        mid = len(cleaned_data) // 2
-        x = cleaned_data[:mid]
-        y = cleaned_data[mid:]
-        rank = stats.ranksums(x, y)
-        return rank
+        x = cleaned_data[:, 0]
+        y = cleaned_data[:, 1]
+        alternative = tkinter.simpledialog.askstring(
+            "Alternative Hypothesis",
+            "Choose one: two-sided, less, greater"
+        )
+
+        if alternative not in ["two-sided", "less", "greater"]:
+            tkinter.messagebox.showerror("Error", "Invalid alternative hypothesis. Please choose 'two-sided', 'less', or 'greater'.")
+            return None
+
+        try:
+            result = stats.mannwhitneyu(x, y, method='auto', alternative=alternative)
+            rank = {"Statistic": result.statistic, "P-Value": result.pvalue}
+
+            print(f"Rank Sum: {rank}")
+            return rank
+        except Exception as e:
+            tkinter.messagebox.showerror("Error", f"An error occurred while performing the rank sum test: {e}")
+            return None
 
     @validate_data
     def spearmanRankCorrelation(self):
