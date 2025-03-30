@@ -348,7 +348,7 @@ class MeasureSelectionPage(BasePage):
             result_str = "\n".join([f"{key}: {value}" for key, value in results.items()])
             messagebox.showinfo("Calculated Statistics", result_str)
 
-            # 🔥 Log the operation
+            # Log the operation
             table_controller = self.table.controller
             for key, value in results.items():
                 operation_entry = f"{key}: {value}"

@@ -163,7 +163,7 @@ class TableController:
     def export_table(self):
         """ Export table to .csv (Comma delimited) or .tsv (Tab delimited) file """
 
-        file_types = [('CSV (Comma delimited)', '.csv'), ('Tab (Tab delimited)', '.tsv')]
+        file_types = [('CSV (Comma delimited)', '.csv'), ('Tab (Tab delimited)', '.tsv'), ('Text', '.txt')]
         file = filedialog.asksaveasfile(
             filetypes=file_types, 
             defaultextension=file_types)
@@ -176,6 +176,9 @@ class TableController:
                 df.to_csv(file,index=False,lineterminator='\n')
             if file.name.endswith('.tsv'):
                 df.to_csv(file,index=False, sep='\t',lineterminator='\n')
+            if file.name.endswith('.txt'):
+                df.to_csv(file,index=False, sep='\t',lineterminator='\n')
+
 
 
     
