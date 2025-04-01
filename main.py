@@ -176,6 +176,10 @@ class discreteStatistics:
         return self.perform_statistics(self.data, ['probability distribution'], 'discrete')["Probability Distribution"]
     def binomialDistribution(self):
         return self.perform_statistics(self.data, ['binomial distribution'], 'discrete')["Binomial Distribution"]
+    def spearmanCorrelation(self, data2):
+        return self.perform_statistics(self.data, ['spearman correlation'], 'ordinal')["Spearman Correlation"]
+    def correlation(self, data2):
+        return self.perform_statistics(self.data, ['correlation'], 'continuous')["Correlation"]
     
 
 class continuousStatistics:
@@ -209,6 +213,8 @@ class continuousStatistics:
         return self.perform_statistics(self.data, ['sign test'], 'continuous')["Sign Test"]
     def correlation(self, data2):
         return self.perform_statistics(self.data, ['correlation'], 'continuous')["Correlation"]
+    def spearmanCorrelation(self, data2):
+        return self.perform_statistics(self.data, ['spearman correlation'], 'ordinal')["Spearman Correlation"]
 
 
 

@@ -4,6 +4,7 @@ from Table import TableController
 from statisticsLogic import statistic
 from main import DataIntegrity, nominalStatistics, ordinalStatistics, discreteStatistics, continuousStatistics
 import datetime
+from tkinter import filedialog
 import numpy as np
 
 
@@ -14,7 +15,7 @@ class Controller:
     """
     A lightweight component class responsible for handling statistical operations
     without storing data.
-    """
+    """ 
 
     @staticmethod
     def load_data_from_table(table_controller):
@@ -29,15 +30,14 @@ class Controller:
         for col in data.columns:
             data[col] = pd.to_numeric(data[col], errors='coerce')
             #data.fillna(0, inplace=True)  # for missing data
-            data = data.fillna(0).infer_objects(copy=False)
+            #data = data.fillna(0).infer_objects(copy=False)
 
         # Filter non-zero data only
         data = data[(data != 0).any(axis=1)]
+        data = data.dropna(axis=1, how='all')  # Drop columns with all NaN values
 
         print(f"Data loaded into Controller:\n{data}")
         return data
-
-
 
     @staticmethod
     def validate_data(data_frame):

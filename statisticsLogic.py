@@ -52,6 +52,7 @@ class statistic():
         self.data = data 
 
     def _clean_data(self):
+
         if isinstance(self.data, pd.DataFrame):
             cleaned_data = self.data.select_dtypes(include=[np.number]).to_numpy()
         elif isinstance(self.data, (list, np.ndarray)):
@@ -71,28 +72,26 @@ class statistic():
         return cleaned_data if len(cleaned_data) > 0 else np.array([[0]])
 
 
-       
-
-        
     def mean(self):
         """
         Return the mean (average) of the data set
         """
         cleaned_data = self._clean_data()
-        return np.mean(cleaned_data)
+        return {"Mean": np.mean(cleaned_data)}
     
     def median(self):
         """
         Return the median of the data set
         """
         cleaned_data = self._clean_data()
-        return np.median(cleaned_data)
+        return {"Median": np.median(cleaned_data)}
+    
     def mode(self):
         """
         Return the mode of the data set
         """
         cleaned_data = self._clean_data()
-        return mode(cleaned_data)
+        return {"Mode": mode(cleaned_data, keepdims=False).mode[0]}
     
     def standardDeviation(self):
         """
@@ -112,7 +111,7 @@ class statistic():
             return 0 # Prevent errors if all values are zero
         
         # Calculate and return the standard deviation
-        return np.std(cleaned_data, ddof=1)
+        return {"Standard Deviation": np.std(cleaned_data, ddof=1)}
     
     def variance(self, variance_type = "Population"):
         """
@@ -132,12 +131,12 @@ class statistic():
             raise ValueError("Data cannot be empty")
         
         if variance_type == "Sample":
-            return np.var(cleaned_data, ddof=1) # Sample variance
+            return {"Sample Variance": np.var(cleaned_data, ddof=1)} # Sample variance
         else:
-            return np.var(cleaned_data, ddof=0) # Population variance
+            return {"Population Variance": np.var(cleaned_data, ddof=0)} # Population variance
         
         # Calculate and return the variance
-        return np.var(cleaned_data, ddof=1)
+        return {"Variance": np.var(cleaned_data, ddof=1)}
 
     def coefficientOfVariation(self):
         """
@@ -157,7 +156,7 @@ class statistic():
         # Calculate and return the coefficent of variation
         mean = self.mean()
         std_dev = self.standardDeviation()
-        return std_dev / mean
+        return {"Coefficient of Variation": std_dev / mean}
     
     @validate_data
     def percentiles(self):
@@ -181,7 +180,7 @@ class statistic():
 
         percentiles_df.insert(0, "Percentiles", [f"{p}th" for p in psequence])  # Insert percentile column (Percentiles:, nth, n+1th)
         #is dataframe neeeded for graphing or exporting formatted text? (remove ".to_numpy()")
-        return percentiles_df.to_numpy()
+        return {"Percentiles": percentiles_df.to_numpy()}
     
 
     
@@ -267,7 +266,7 @@ class statistic():
             return
 
         # Perform binomial distribution calculation
-        return np.random.binomial(n, p, sample_size)
+        return {"Binomial Distribution": np.random.binomial(n, p, sample_size)}
 
 # ----------------------------------------------------------------------------------#
 # separating these statistical functions because these are the ones that I have to really hone on
@@ -283,20 +282,18 @@ class statistic():
         """
         cleaned_data = self._clean_data()
         # the user should be able to choose their own columns--however, they must be the same length 
-        # the user will only be able to grab 2 array's / columns 
-        print(f"data : {cleaned_data}")
-        mid = len(cleaned_data) // 2 
-        x = cleaned_data[:mid]# this should be the first column grabbed 
-        # somehow divide the array by two, one half will be assigned to x, the other half will be assigned to y
-        # if it is uneven // user did not choose the same length columns 
-        y = cleaned_data[mid:]# this will be the second column grabbed 
-      #  print(f" x values: {x}")
-      #  print(y)
-        # add a check to make sure that mid will be divided properly <3 
-        if len(x) != len(y):
-            messagebox.showerror("Error", "Both columns must have the same length.")
-            raise ValueError("Both columns must have the same length")
+
+        # Rows will always have the same number due to the main_controller filling NA with 0's
+        if np.isnan(cleaned_data).any():
+            messagebox.showerror("Error", "Both columns must have the same row length.")
+            raise ValueError("Both columns must have the same row length")
         
+        # Checks to ensure number of columns are equal
+        if cleaned_data.shape[1] % 2 != 0:
+            messagebox.showerror("Error", "The number of columns must be even.")
+            raise ValueError("The number of columns must be even")
+        
+        x, y = np.hsplit(cleaned_data, 2)
         
         # find the mean of the x and y columns 
         x_mean = np.mean(x)
@@ -306,16 +303,20 @@ class statistic():
         denominator = np.sum((x - x_mean)** 2)
 
         if denominator == 0:
+            messagebox.showerror("Error", "Denominator is zero. Ensure that you select at least two (x,y) pairs.")
             raise ZeroDivisionError("Cannot divide by zero!")
+        
         slope = numerator / denominator
         intercept = y_mean - slope * x_mean
         
-        return slope, intercept
+        return {"Slope": slope, "Y-Intercept": intercept}
 
     @validate_data
     def chiSquared(self):
         """
         Performs Chi-Square Test using two valid columns of data.
+
+        Returns the Chi-Square statistic and p-value.
         """
         print(f"Incoming Data to Chi-Squared:\n{self.data}")  # Debugging point
         
@@ -355,8 +356,8 @@ class statistic():
             chi_sq_stat, p_value = stats.chisquare(f_obs, f_exp)
 
             result_str = f"Chi-Square Statistic: {chi_sq_stat:.4f}, P-value: {p_value:.4e}"
-            print(result_str)
-            return result_str
+            #print(result_str)
+            return {"Chi-Squared Statistic": f"{chi_sq_stat:.4f}", "P-value": f"{p_value:.4e}"}
 
         except Exception as e:
             messagebox.showerror("Error", f"Chi-square calculation error: {e}")
@@ -367,15 +368,32 @@ class statistic():
         """
         Only works for interval & frequency datasets
         Parameters: Grabs first column as x and second column as y
-        Returns the correlation coefficient.
-        """
-        cleaned_data = self._clean_data()
-        mid = len(cleaned_data) // 2
-        x = cleaned_data[:mid]
-        y = cleaned_data[mid:]
-        correlation = np.corrcoef(x,y)
-        return correlation
 
+        Returns the correlation coefficient R Value.
+        """
+
+        cleaned_data = self._clean_data()
+
+        # Rows will always have the same number due to the main_controller filling NA with 0's
+        if np.isnan(cleaned_data).any():
+            messagebox.showerror("Error", "Both columns must have the same row length.")
+            raise ValueError("Both columns must have the same row length")
+        
+        # Checks to ensure number of columns are equal
+        if cleaned_data.shape[1] % 2 != 0:
+            messagebox.showerror("Error", "The number of columns must be even.")
+            raise ValueError("The number of columns must be even")
+
+        x, y = np.hsplit(cleaned_data, 2)
+
+        if len(x) < 2 or len(y) < 2:
+            messagebox.showerror("Error", "Correlation Coefficient requires at least 2 data points in each column.")
+            raise ValueError("Correlation Coefficient requires at least 2 data points in each column.")
+
+        correlation = np.corrcoef(x.T,y.T)
+        correlation_coefficient = correlation[0, 1]  # Extract the correlation coefficient from the matrix
+        return {"R Value (Correlation Coefficient)": correlation_coefficient}
+    
     @validate_data
     def signTest(self):
         """
@@ -442,11 +460,25 @@ class statistic():
             two floats (the spearman rank correlation & p-value).
         """
         cleaned_data = self._clean_data()
-        mid = len(cleaned_data) // 2
-        x = cleaned_data[:mid]
-        y = cleaned_data[mid:]
-        spearman = stats.spearmar(x, y, axis = 0)
-        return spearman
+
+        # Rows will always have the same number due to the main_controller filling NA with 0's
+        if np.isnan(cleaned_data).any():
+            messagebox.showerror("Error", "Both columns must have the same row length.")
+            raise ValueError("Both columns must have the same row length")
+        
+        # Checks to ensure number of columns are equal
+        if cleaned_data.shape[1] % 2 != 0:
+            messagebox.showerror("Error", "The number of columns must be even.")
+            raise ValueError("The number of columns must be even")
+
+        x, y = np.hsplit(cleaned_data, 2)
+
+        if len(x) < 3 or len(y) < 3:
+            messagebox.showerror("Error", "Spearman rank correlation requires at least 3 data points in each column.")
+            raise ValueError("Spearman rank correlation requires at least 3 data points in each column.")
+
+        spearman = stats.spearmanr(x,y)
+        return {"R Value (Spearman Rank Correlation)": spearman.correlation, "P-value (Spearman Rank Correlation)": spearman.pvalue}
     
 
 class plotCreation():
