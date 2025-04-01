@@ -403,7 +403,7 @@ class statistic():
     def signTest(self):
         """
         Parameters:
-            grabs either one array (for one-sample sign test) or two arrays (for paired sample sign test),
+            grabs either one array (for one-sample sign test) or two arrays of same length (for paired sample sign test),
             user specified alternative hypothesis (H1),
             and default auto method (exact-to-approximate results).
         Returns:
