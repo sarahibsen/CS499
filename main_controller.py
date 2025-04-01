@@ -4,6 +4,7 @@ from Table import TableController
 from statisticsLogic import statistic
 from main import DataIntegrity, nominalStatistics, ordinalStatistics, discreteStatistics, continuousStatistics
 import datetime
+from tkinter import filedialog
 import numpy as np
 
 
@@ -14,7 +15,7 @@ class Controller:
     """
     A lightweight component class responsible for handling statistical operations
     without storing data.
-    """
+    """ 
 
     @staticmethod
     def load_data_from_table(table_controller):

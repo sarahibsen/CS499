@@ -3,6 +3,8 @@ from tkinter import filedialog, messagebox
 from tksheet import Sheet
 from tkinter import ttk, PhotoImage
 import tkinter as tk
+from PIL import Image, ImageTk
+
 
 
 class TableModel:
@@ -61,10 +63,12 @@ class TableController:
     TableController class is used to reference the current table to provide the current table selection of an existing table
     or import a CSV that will overwrite the current table.  
     """
+    operations_log = []  # Store all operations performed
     def __init__(self, parent, table):
         self.model = TableModel()
         self.parent = parent
         self.table = table
+        
 
     def get_table_data(self):
         return self.model.get_data()         
@@ -151,12 +155,15 @@ class TableController:
                 self.update_table(headers=df.columns.tolist(), data=df.values.tolist()) # Table will include user provided headers
             else:
                 self.update_table(data=df.values.tolist())  # Table will keep default headings
+            
+        self.log_operation(f"Imported file: {file_path}")
+
 
         
     def export_table(self):
         """ Export table to .csv (Comma delimited) or .tsv (Tab delimited) file """
 
-        file_types = [('CSV (Comma delimited)', '.csv'), ('Tab (Tab delimited)', '.tsv')]
+        file_types = [('CSV (Comma delimited)', '.csv'), ('Tab (Tab delimited)', '.tsv'), ('Text', '.txt')]
         file = filedialog.asksaveasfile(
             filetypes=file_types, 
             defaultextension=file_types)
@@ -169,6 +176,27 @@ class TableController:
                 df.to_csv(file,index=False,lineterminator='\n')
             if file.name.endswith('.tsv'):
                 df.to_csv(file,index=False, sep='\t',lineterminator='\n')
+            if file.name.endswith('.txt'):
+                df.to_csv(file,index=False, sep='\t',lineterminator='\n')
+
+
+
+    
+    def log_operation(self, operation):
+        """ Log the operation performed. """
+        self.operations_log.append(operation)
+        print(f"Operation logged: {operation}")
+
+    def export_txt_file(self):
+        file_path = filedialog.asksaveasfilename(
+        title="Select a location to save the text file",
+        filetypes=[("Text files", "*.txt")]
+        )
+
+        if file_path:
+            with open(file_path, 'w') as file:
+                for operation in self.operations_log:
+                    file.write(operation + "\n")
             
 
 class TableView(tk.Frame):
@@ -187,6 +215,7 @@ class TableView(tk.Frame):
         self.controller = TableController(parent, self.sheet)
 
         self.toolbar = GUIToolbar(parent, self.controller, self.sheet, output)
+
 
 
 class GUIToolbar():
@@ -294,8 +323,18 @@ class GUIToolbar():
                     +'1XVXXnv19VdCazihZVxNPPGEe0Sc9ANfOeCAwxYNNFDddUxkt11334U3Xnnnpbdee+/JF'
                     +'x999uEHAghkIIEEJVYUauihhkLywgtXFFBAYIMVpqdijDnm1E49/RTUUEUdldRSTT0VVUAAOw==')
             
-            self.export_button = ttk.Button(self.toolbar_frame, text="Export", image=self.export_img, command= lambda: self.controller.export_table())
+            self.export_button = ttk.Button(self.toolbar_frame, text="Export", image=self.export_img, command= lambda: self.export_txt_file())
             self.export_button.grid(row=1,column=0,sticky='ne')
+
+            # Add Export Operations Log Button with an Icon this will be the output 
+            self.export_log_img = Image.open("assets/txticon.png")  
+            self.export_log_img = self.export_log_img.resize((28, 28))  # Resize to 32x32 (adjust the size as necessary)
+            self.export_log_img = ImageTk.PhotoImage(self.export_log_img)  # Convert to a Tkinter-compatible format
+
+            self.export_log_button = ttk.Button(self.toolbar_frame, text="Export Log", image=self.export_log_img, command=self.controller.export_txt_file)
+            self.export_log_button.grid(row=2, column=0, sticky='ne')
+
+
 
         
 
