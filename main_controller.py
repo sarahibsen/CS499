@@ -116,7 +116,7 @@ class Controller:
             "Least Square Line": stat_instance.leastSquareLine,
             "Chi Square": stat_instance.chiSquared, 
             "Correlation": stat_instance.correlationCoefficient,
-            "Significance Test": stat_instance.significanceTest,
+            "Sign Test": stat_instance.signTest,
             "Rank Sum": stat_instance.rankSum,
             "Spearman Correlation": stat_instance.spearmanRankCorrelation,
             #"Frequency": stat_instance.frequency,

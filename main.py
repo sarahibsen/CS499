@@ -209,8 +209,8 @@ class continuousStatistics:
         return self.perform_statistics(self.data, ['least square line'], 'continuous')["Least Square Line"]
     def chiSquare(self):
         return self.perform_statistics(self.data, ['chi square'], 'continuous')["Chi Square"]
-    def significanceTest(self):
-        return self.perform_statistics(self.data, ['significance test'], 'continuous')["Significance Test"]
+    def signTest(self):
+        return self.perform_statistics(self.data, ['sign test'], 'continuous')["Sign Test"]
     def correlation(self, data2):
         return self.perform_statistics(self.data, ['correlation'], 'continuous')["Correlation"]
     def spearmanCorrelation(self, data2):
