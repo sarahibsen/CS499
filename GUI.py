@@ -525,49 +525,6 @@ class DashboardPage(BasePage):
         for display_name in self.measure_name_map.keys():
             self.stat_measures_listbox.insert(tk.END, display_name)
 
-    def create_visualization(self):
-        """Create visualization based on selected measure and column"""
-        selected_measure = self.measure_dropdown.get()
-        selected_column = self.column_dropdown.get()
-
-        if not selected_measure or not selected_column:
-            messagebox.showerror("Error", "Please select both a measure and a column")
-            return
-
-        # Get the data for visualization
-        measure_page = self.controller.get_page("MeasureSelectionPage")
-        if not measure_page or not hasattr(measure_page, 'table'):
-            messagebox.showerror("Error", "No data available for visualization")
-            return
-
-        try:
-            # Load data from table
-            data_frame = self.main_control.load_entire_table(measure_page.table.controller)
-
-            # Clear previous graph
-            self.ax.clear()
-
-            # Create visualization based on selected options
-            if selected_measure in ["Mean", "Median", "Mode"]:
-                # Group data by selected column and calculate the measure
-                grouped_data = data_frame.groupby(selected_column).agg(selected_measure.lower())
-                grouped_data.plot(kind='bar', ax=self.ax)
-                self.ax.set_title(f"{selected_measure} by {selected_column}")
-                self.ax.set_ylabel(selected_measure)
-            else:
-                # Default visualization for other measures
-                data_frame[selected_column].value_counts().plot(kind='bar', ax=self.ax)
-                self.ax.set_title(f"Distribution of {selected_column}")
-                self.ax.set_ylabel("Count")
-
-            # Rotate x-axis labels for better readability
-            self.ax.tick_params(axis='x', rotation=45)
-
-            # Redraw the canvas
-            self.canvas_widget.draw()
-
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to create visualization: {str(e)}")
 
     def update_dropdowns(self, selected_measures):
         """Update the measure and column dropdowns with available options while excluding selected columns."""
@@ -617,6 +574,11 @@ class DashboardPage(BasePage):
     def get_grouped_data(self):
         """Retrieve the selected measure and column, then apply groupby() to the DataFrame."""
 
+        statsController = Controller()
+
+        measure_page = self.controller.get_page("MeasureSelectionPage")
+        selected_data_type = measure_page.data_type_dropdown.get()
+
         # Ensure the table controller is available
         table_controller = self.get_table_controller()
         if not table_controller:
@@ -652,22 +614,27 @@ class DashboardPage(BasePage):
             messagebox.showerror("Error", "Please select both a measure and a column.")
             return None
 
-        df2 = data_frame.groupby([groupby_column])[selected_columns]
+        # Group the data once
+        grouped = data_frame.groupby([groupby_column])[selected_columns]
 
-        # Set options to display the full DataFrame
-        pd.set_option('display.max_rows', None)
-        pd.set_option('display.max_columns', None)
-        pd.set_option('display.max_colwidth', None)
+        # Create visualization based on selected options
+        if selected_measure in ["Mean", "Median", "Mode"]:
+            if selected_measure == "Mean":
+                grouped_data = grouped.mean()
+            elif selected_measure == "Median":
+                grouped_data = grouped.median()
+            elif selected_measure == "Mode":
+                grouped_data = grouped.agg(lambda x: x.mode().iloc[0] if not x.mode().empty else None)
 
-        print(df2.mean())
+            grouped_data.plot(kind='bar', ax=self.ax)
+            self.ax.set_title(f"{selected_measure} by {groupby_column}")
+            self.ax.set_ylabel(selected_measure)
 
-        # Define aggregation functions
+        # Rotate x-axis labels for better readability
+        self.ax.tick_params(axis='x', rotation=45)
 
-        # Apply groupby() with the selected function
-        # grouped_data = data_frame.groupby(groupby_column).agg(
-        #    {groupby_column: aggregation_functions[selected_measure]})
-        # grouped_data.reset_index(inplace=True)
-        # return grouped_data
+        # Redraw the canvas
+        self.canvas_widget.draw()
 
 
 class ResultsPage(BasePage):
