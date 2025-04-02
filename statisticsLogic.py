@@ -2,19 +2,21 @@ import tkinter.simpledialog
 import numpy as np
 from scipy import stats
 from statistics import mode
-import sys 
+import sys
 import pandas as pd
 import matplotlib.pyplot as plt
-import tkinter 
+import tkinter
 
 from scipy.stats import mode, norm
 from tkinter import simpledialog, messagebox
+
 
 def validate_data(func):
     """Decorator to validate the data before executing a method.
     Changed to make it so where if the user does have characters or strings in their chosen data -- we will just take the
     numerical values not the strings ! : ) 
     """
+
     def wrapper(self, *args, **kwargs):
         if not isinstance(self.data, (list, np.ndarray, pd.DataFrame)):
             raise TypeError("Data must be a list, NumPy array, or Pandas DataFrame of numbers.")
@@ -30,26 +32,27 @@ def validate_data(func):
         elif isinstance(self.data, pd.DataFrame):
             # Select only numeric columns
             self.data = self.data.select_dtypes(include=[np.number]).to_numpy()
-            
+
             if len(self.data) == 0:
                 raise ValueError("Data cannot be empty or contain only non-numeric values.")
-                
-        return func(self, *args, **kwargs)
-    return wrapper
 
+        return func(self, *args, **kwargs)
+
+    return wrapper
 
 
 class statistic():
     """
-    Equations for calculating statistics on a dataset 
-    Parameters: 
+    Equations for calculating statistics on a dataset
+    Parameters:
 
     """
+
     def __init__(self, data):
         """
         Initializes the Statistics class with a dataset
         """
-        self.data = data 
+        self.data = data
 
     def _clean_data(self):
 
@@ -71,28 +74,27 @@ class statistic():
 
         return cleaned_data if len(cleaned_data) > 0 else np.array([[0]])
 
-
     def mean(self):
         """
         Return the mean (average) of the data set
         """
         cleaned_data = self._clean_data()
         return {"Mean": np.mean(cleaned_data)}
-    
+
     def median(self):
         """
         Return the median of the data set
         """
         cleaned_data = self._clean_data()
         return {"Median": np.median(cleaned_data)}
-    
+
     def mode(self):
         """
         Return the mode of the data set
         """
         cleaned_data = self._clean_data()
         return {"Mode": mode(cleaned_data, keepdims=False).mode[0]}
-    
+
     def standardDeviation(self):
         """
         Calculate and return the sample standard deviation of the given data set.
@@ -105,22 +107,23 @@ class statistic():
         # Validate the data
         if not isinstance(cleaned_data, (list, np.ndarray)):
             raise TypeError("Data must be a list or NumPy array of numbers")
-        if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in cleaned_data.flatten()): #flatten the data to check for all values // multi column support will still be there
+        if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in
+                   cleaned_data.flatten()):  # flatten the data to check for all values // multi column support will still be there
             raise TypeError("All elements in the data must be numbers")
-        if len(cleaned_data) < 2 :
-            return 0 # Prevent errors if all values are zero
-        
+        if len(cleaned_data) < 2:
+            return 0  # Prevent errors if all values are zero
+
         # Calculate and return the standard deviation
         return {"Standard Deviation": np.std(cleaned_data, ddof=1)}
-    
-    def variance(self, variance_type = "Population"):
+
+    def variance(self, variance_type="Population"):
         """
         Calculate and return the sample variance of the given data set.
         Returns:
             float: The sample variance of the data.
         """
 
-        # TODO: a.any or a.all to check if all values are the same 
+        # TODO: a.any or a.all to check if all values are the same
         cleaned_data = self._clean_data()
         # Validate the data
         if not isinstance(cleaned_data, (list, np.ndarray)):
@@ -129,12 +132,12 @@ class statistic():
             raise TypeError("All elements in the data must be numbers")
         if len(cleaned_data) == 0:
             raise ValueError("Data cannot be empty")
-        
+
         if variance_type == "Sample":
-            return {"Sample Variance": np.var(cleaned_data, ddof=1)} # Sample variance
+            return {"Sample Variance": np.var(cleaned_data, ddof=1)}  # Sample variance
         else:
-            return {"Population Variance": np.var(cleaned_data, ddof=0)} # Population variance
-        
+            return {"Population Variance": np.var(cleaned_data, ddof=0)}  # Population variance
+
         # Calculate and return the variance
         return {"Variance": np.var(cleaned_data, ddof=1)}
 
@@ -152,43 +155,38 @@ class statistic():
             raise TypeError("All elements in the data must be numbers")
         if len(cleaned_data) == 0:
             raise ValueError("Data cannot be empty")
-        
+
         # Calculate and return the coefficent of variation
         mean = self.mean()
         std_dev = self.standardDeviation()
         return {"Coefficient of Variation": std_dev / mean}
-    
+
     @validate_data
     def percentiles(self):
         """
-        Method applies with ordinal, frequency, and interval
+        Method applies w/ ordinal, frequency, and interval
         Parameters:
-            numpy.ndarray object, 
-            list of percentiles, 
-            axis = 0 (for reading columns)
+            numpy.ndarray object, list of percentiles, axis
+                (axis=0 for columns, =1 for rows, unspecified for entire dataset)
         Returns:
             NumPy ndarray for further processing
         """
         cleaned_data = self._clean_data()
-        user_input=simpledialog.askstring("Percentiles", "Enter the percentiles you would like to calculate (e.g. 25, 50, 75): ")
-        try:
-            psequence = list(map(int, user_input.split(",")))
-        except ValueError:
-            messagebox.showerror(
-                "Percentiles Input Error",
-                "Please enter only integers separated by commas (e.g. 25, 50, 75)."
-            )
-            return None
+        psequence = list(
+            map(int, input("Enter the percentiles you would like to calculate (e.g. 25, 50, 75): ").split(",")))
 
         percentiles_array = np.percentile(cleaned_data, psequence, axis=0)
 
-        percentiles_df = pd.DataFrame(percentiles_array, columns=[f"Column {i+1}" for i in range(cleaned_data.shape[1])])
+        percentiles_df = pd.DataFrame(
+            percentiles_array,
+            columns=[f"Column {i + 1}" for i in range(cleaned_data.shape[1])]
+        )
 
-        percentiles_df.insert(0, "Percentiles", [f"{p}th" for p in psequence])  # Insert percentile column (Percentiles:, nth, n+1th)
+        percentiles_df.insert(0, "Percentiles",
+                              [f"{p}th" for p in psequence])  # Insert percentile column (Percentiles:, nth, n+1th)
+        # is dataframe neeeded for graphing or exporting formatted text? (remove ".to_numpy()")
         return {"Percentiles": percentiles_df.to_numpy()}
-    
 
-    
     def probabilityDistribution(self):
         """
         Automatically computes Probability Distribution using the loaded data.
@@ -198,8 +196,8 @@ class statistic():
         Decided to stray away from asking for the users input on this one / this should
         take what the user chooses on the data table
 
-        The values will be needed when we implement plotting. The CDF and PDF will be mostly beneficial 
-        for the plot function 
+        The values will be needed when we implement plotting. The CDF and PDF will be mostly beneficial
+        for the plot function
         """
         cleaned_data = self._clean_data()
 
@@ -211,8 +209,8 @@ class statistic():
             return None
 
         distribution_choice = distribution_choice.lower()
-        #x = np.linspace(min(cleaned_data), max(cleaned_data), 100)
-        # flatten the data -- because there is a 2D array being passed, there is no min or max values 
+        # x = np.linspace(min(cleaned_data), max(cleaned_data), 100)
+        # flatten the data -- because there is a 2D array being passed, there is no min or max values
         flat = cleaned_data.flatten()
         x = np.linspace(np.min(flat), np.max(flat), 100)
 
@@ -220,31 +218,33 @@ class statistic():
             mean = np.mean(cleaned_data)
             std_dev = np.std(cleaned_data)
             normal_values = norm.pdf(x, mean, std_dev)
-            return {"Distribution": "Normal", "Mean": mean, "Standard Deviation": std_dev} #"Values": normal_values.tolist()
+            return {"Distribution": "Normal", "Mean": mean,
+                    "Standard Deviation": std_dev}  # "Values": normal_values.tolist()
 
         elif distribution_choice == 'pdf':
             mean = np.mean(cleaned_data)
             std_dev = np.std(cleaned_data)
             pdf_values = norm.pdf(x, mean, std_dev)
-            return {"Distribution": "PDF", "Mean": mean, "Standard Deviation": std_dev} #"Values": normal_values.tolist()
+            return {"Distribution": "PDF", "Mean": mean,
+                    "Standard Deviation": std_dev}  # "Values": normal_values.tolist()
 
         elif distribution_choice == 'cdf':
             mean = np.mean(cleaned_data)
             std_dev = np.std(cleaned_data)
             cdf_values = norm.cdf(x, mean, std_dev)
-            return {"Distribution": "CDF", "Mean": mean, "Standard Deviation": std_dev} #"Values": normal_values.tolist()
+            return {"Distribution": "CDF", "Mean": mean,
+                    "Standard Deviation": std_dev}  # "Values": normal_values.tolist()
 
         else:
             messagebox.showerror("Error", "Invalid distribution choice. Please select Normal, PDF, or CDF.")
             return None
 
-    
     def binomialDistribution(self, selected_data):
         """
         Return the binomial distribution of the selected data set.
         The sample size is automatically calculated based on the number of selected data points.
 
-        The binomial distribution is not taking the values that are selected in the data set but 
+        The binomial distribution is not taking the values that are selected in the data set but
         the number of cells that are selected in the data set.
         """
         # Ask for number of trials
@@ -256,7 +256,8 @@ class statistic():
         # Ask for probability with improved validation
         while True:
             try:
-                p = float(tkinter.simpledialog.askstring("Binomial Distribution", "Enter the probability of success (between 0 and 1):"))
+                p = float(tkinter.simpledialog.askstring("Binomial Distribution",
+                                                         "Enter the probability of success (between 0 and 1):"))
                 if 0 <= p <= 1:
                     break
                 else:
@@ -273,58 +274,58 @@ class statistic():
         # Perform binomial distribution calculation
         return {"Binomial Distribution": np.random.binomial(n, p, sample_size)}
 
-# ----------------------------------------------------------------------------------#
-# separating these statistical functions because these are the ones that I have to really hone on
-# they are all very specific and need to be tuned for the GUI 
+    # ----------------------------------------------------------------------------------#
+    # separating these statistical functions because these are the ones that I have to really hone on
+    # they are all very specific and need to be tuned for the GUI
     def leastSquareLine(self):
         """
         Only works for interval & frequency datasets
-        Parameters: 
+        Parameters:
             Grabs two arrays (can be np.array) as x and as y columns.
-                (e.g. Expected/Actual Freq. Data). 
+                (e.g. Expected/Actual Freq. Data).
         Returns:
             the slope, intercept, and equation of the regression line.
         """
         cleaned_data = self._clean_data()
-        # the user should be able to choose their own columns--however, they must be the same length 
+        # the user should be able to choose their own columns--however, they must be the same length
 
         # Rows will always have the same number due to the main_controller filling NA with 0's
         if np.isnan(cleaned_data).any():
             messagebox.showerror("Error", "Both columns must have the same row length.")
             raise ValueError("Both columns must have the same row length")
-        
+
         # Checks to ensure number of columns are equal
         if cleaned_data.shape[1] % 2 != 0:
             messagebox.showerror("Error", "The number of columns must be even.")
             raise ValueError("The number of columns must be even")
-        
+
         x, y = np.hsplit(cleaned_data, 2)
-        
-        # find the mean of the x and y columns 
+
+        # find the mean of the x and y columns
         x_mean = np.mean(x)
         y_mean = np.mean(y)
 
         numerator = np.sum((x - x_mean) * (y - y_mean))
-        denominator = np.sum((x - x_mean)** 2)
+        denominator = np.sum((x - x_mean) ** 2)
 
         if denominator == 0:
             messagebox.showerror("Error", "Denominator is zero. Ensure that you select at least two (x,y) pairs.")
             raise ZeroDivisionError("Cannot divide by zero!")
-        
+
         slope = numerator / denominator
         intercept = y_mean - slope * x_mean
-        
+
         return {"Slope": slope, "Y-Intercept": intercept}
 
     @validate_data
     def chiSquared(self):
         """
         Performs Chi-Square Test using two valid columns of data.
-        Returns: the Chi-Square statistic and p-value.
+
+        Returns the Chi-Square statistic and p-value.
         """
         print(f"Incoming Data to Chi-Squared:\n{self.data}")  # Debugging point
-        
-        
+
         if isinstance(self.data, pd.DataFrame):
             if self.data.shape[1] >= 2:
                 f_exp = pd.to_numeric(self.data.iloc[:, 0], errors='coerce').dropna().astype(int).values
@@ -334,10 +335,10 @@ class statistic():
                 return None
 
         elif isinstance(self.data, np.ndarray) and self.data.shape[1] >= 2:
-            
+
             f_exp = self.data[:, 0].astype(int)
             f_obs = self.data[:, 1].astype(int)
-            
+
         else:
             messagebox.showerror("Error", "Chi-square test requires two valid columns of data.")
             return None
@@ -360,7 +361,7 @@ class statistic():
             chi_sq_stat, p_value = stats.chisquare(f_obs, f_exp)
 
             result_str = f"Chi-Square Statistic: {chi_sq_stat:.4f}, P-value: {p_value:.4e}"
-            #print(result_str)
+            # print(result_str)
             return {"Chi-Squared Statistic": f"{chi_sq_stat:.4f}", "P-value": f"{p_value:.4e}"}
 
         except Exception as e:
@@ -370,11 +371,10 @@ class statistic():
     @validate_data
     def correlationCoefficient(self):
         """
-        Best for interval & frequency datasets
-        Parameters: 
-            grabs two columns of equal length
-        Returns:
-            the correlation coefficient R Value
+        Only works for interval & frequency datasets
+        Parameters: Grabs first column as x and second column as y
+
+        Returns the correlation coefficient R Value.
         """
 
         cleaned_data = self._clean_data()
@@ -383,7 +383,7 @@ class statistic():
         if np.isnan(cleaned_data).any():
             messagebox.showerror("Error", "Both columns must have the same row length.")
             raise ValueError("Both columns must have the same row length")
-        
+
         # Checks to ensure number of columns are equal
         if cleaned_data.shape[1] % 2 != 0:
             messagebox.showerror("Error", "The number of columns must be even.")
@@ -395,103 +395,51 @@ class statistic():
             messagebox.showerror("Error", "Correlation Coefficient requires at least 2 data points in each column.")
             raise ValueError("Correlation Coefficient requires at least 2 data points in each column.")
 
-        correlation = np.corrcoef(x.T,y.T)
+        correlation = np.corrcoef(x.T, y.T)
         correlation_coefficient = correlation[0, 1]  # Extract the correlation coefficient from the matrix
         return {"R Value (Correlation Coefficient)": correlation_coefficient}
-    
+
     @validate_data
-    def signTest(self):
+    def significanceTest(self):
+        # has known issues w/ parameters that have deprecated since version 1.17.10 of scipy (permutations, alternative hypothesis)
         """
-        Parameters:
-            grabs either one array (for one-sample sign test) or two arrays of same length (for paired sample sign test),
-            user specified alternative hypothesis (H1),
-            and default auto method (exact-to-approximate results).
-        Returns:
-            two floats: the sign test statistic & p-value.
+        Only works for interval & frequency datasets
+        Parameters: Grabs first column as x and second column as y
+        Returns the p-value.
         """
         cleaned_data = self._clean_data()
-
-        # ONE-SAMPLE SIGN TEST
-        if cleaned_data.shape[1] == 1:
-            x = cleaned_data.ravel()
-            print(f"X: {x}")  # Debugging point
-            median = 0  #can change
-            signs = [xi - median for xi in x if xi != median]
-            n = len(signs)
-            n_positive = sum(1 for s in signs if s > 0)
-
-        # PAIRED SAMPLE SIGN TEST
-        elif cleaned_data.shape[1] == 2:
-            if np.isnan(cleaned_data).any():
-                messagebox.showerror("Paired signTest Error", "Both columns must have the same row length.")
-                raise ValueError("Both columns must have the same row length")
-            x, y = np.hsplit(cleaned_data, 2)
-            x = x.ravel()
-            y = y.ravel()
-            print(f"X: {x}, Y: {y}")  # Debugging point
-            signs = [xi - yi for xi, yi in zip(x, y) if xi != yi]
-            n = len(signs)
-            n_positive = sum(1 for s in signs if s > 0)
-
-        else:
-            messagebox.showerror("signTest Error", "Data must have either one or two columns.")
-            raise ValueError("Data must have either one or two columns.")
-        
-        H_prompt = tkinter.simpledialog.askstring("Alternative Hypothesis", "Choose one: two-sided, less, greater")
-        if H_prompt not in ["two-sided", "less", "greater"]:
-            tkinter.messagebox.showerror("signTest Error", "Invalid alternative hypothesis. Please choose 'two-sided', 'less', or 'greater'.")
-            return None
-
-        result = stats.binomtest(n_positive, n, p=0.5, alternative=H_prompt)
-        sign = {"Sign Count": n, "P-Value": result.pvalue}
-        print(f"Sign Test: {sign}")
-        return sign
+        mid = len(cleaned_data) // 2
+        x = cleaned_data[:mid]
+        y = cleaned_data[mid:]
+        sigTest = stats.ttest_ind(x, y)
+        return sigTest
 
     @validate_data
     def rankSum(self):
-        '''
-        Best for ordinal datasets
-        Parameters: 
-            grabs two arrays (can be different lengths), 
-            user specified alternative hypothesis (H1), 
-            and default auto method (exact-to-approximate results)
-        Returns: 
-            two floats: the rank sum statistic & p-value.
-        '''
+        # known issues (alternative hypothesis)
+        """
+        Only works for ordinal datasets
+        Parameters:
+            Grabs two arrays (x,y), alternative hypothesis, axis
+        Returns:
+            the rank sum & p-value as floats
+        """
         cleaned_data = self._clean_data()
-        
-        x, y = np.hsplit(cleaned_data, 2)
-        x = x.ravel()
-        y = y.ravel()
-        # Remove any NaN values from x and y separately
-        x = x[~np.isnan(x)]
-        y = y[~np.isnan(y)]
-        print(f"X: {x}, Y: {y}")  # Debugging point
-
-        H_prompt = tkinter.simpledialog.askstring("Alternative Hypothesis", "Choose one: two-sided, less, greater")
-
-        if H_prompt not in ["two-sided", "less", "greater"]:
-            tkinter.messagebox.showerror("rankSum Error", "Invalid alternative hypothesis. Please choose 'two-sided', 'less', or 'greater'.")
-            return None
-
-        try:
-            result = stats.mannwhitneyu(x, y, method='auto', alternative=H_prompt)
-            rank = {"Statistic": result.statistic, "P-Value": result.pvalue}
-
-            print(f"Rank Sum: {rank}")
-            return rank
-        except Exception as e:
-            tkinter.messagebox.showerror("rankSum Error", f"An error occurred while performing the rank sum test: {e}")
-            return None
+        mid = len(cleaned_data) // 2
+        x = cleaned_data[:mid]
+        y = cleaned_data[mid:]
+        rank = stats.ranksums(x, y)
+        return rank
 
     @validate_data
     def spearmanRankCorrelation(self):
         """
         Only works for ordinal datasets
         Parameters:
-            grabs two arrays from an np.ndarray object
+            Grabs two arrays from an np.ndarray object ("x" & "y" column), axis if none ravel/flatten both arrays before performing
+                #source https://www.youtube.com/watch?v=XV_W1w4Nwoc
         Returns:
-            the spearman rank correlation & p-value.
+            two floats (the spearman rank correlation & p-value).
         """
         cleaned_data = self._clean_data()
 
@@ -499,7 +447,7 @@ class statistic():
         if np.isnan(cleaned_data).any():
             messagebox.showerror("Error", "Both columns must have the same row length.")
             raise ValueError("Both columns must have the same row length")
-        
+
         # Checks to ensure number of columns are equal
         if cleaned_data.shape[1] % 2 != 0:
             messagebox.showerror("Error", "The number of columns must be even.")
@@ -511,9 +459,10 @@ class statistic():
             messagebox.showerror("Error", "Spearman rank correlation requires at least 3 data points in each column.")
             raise ValueError("Spearman rank correlation requires at least 3 data points in each column.")
 
-        spearman = stats.spearmanr(x,y)
-        return {"R Value (Spearman Rank Correlation)": spearman.correlation, "P-value (Spearman Rank Correlation)": spearman.pvalue}
-    
+        spearman = stats.spearmanr(x, y)
+        return {"R Value (Spearman Rank Correlation)": spearman.correlation,
+                "P-value (Spearman Rank Correlation)": spearman.pvalue}
+
 
 class plotCreation():
     def __init__(self, data):
@@ -522,14 +471,14 @@ class plotCreation():
         """
         self.data = data
 
-    def plot_histogram(self, title = "Histogram"):
+    def plot_histogram(self, title="Histogram"):
         """
-        Creates a histogram of the data set 
-        Parameters: 
-            title (str): the title of the histogram 
+        Creates a histogram of the data set
+        Parameters:
+            title (str): the title of the histogram
         """
         plt.figure()
-        plt.hist(self.data, color = 'blue', edgecolor = 'black')
+        plt.hist(self.data, color='blue', edgecolor='black')
         plt.title(title)
         plt.xlabel('Value')
         plt.ylabel('Frequency')
@@ -541,9 +490,9 @@ class plotCreation():
 
         width = 0.3
         x = np.arange(len(self.data.index))  # Number of rows in the dataset
-        
+
         x_labels = self.data.iloc[:, 0]  # First column after index (Percentiles: nth, n+1th)
-    
+
         # Plot each column as a separate bar
         for i, col in enumerate(self.data.columns[1:]):  # Skip 'Percentiles' column
             plt.bar(x + i * width, self.data[col], width=width, label=col)
@@ -555,7 +504,6 @@ class plotCreation():
         plt.legend()
         plt.tight_layout()
         plt.show()
-
 
     def plot_lineChart(self, title="Line Plot"):
         """
@@ -585,26 +533,23 @@ class plotCreation():
         plt.tight_layout()
         plt.show()
 
-    #TODO: revision, +pie, +curve
-    
+    # TODO: revision, +pie, +curve
 
 # # Function to extract numeric columns
-# # shouldn't need this function when jarrett implements the loading of csv and the extraction of numerical data from the file 
+# # shouldn't need this function when jarrett implements the loading of csv and the extraction of numerical data from the file
 # # if not, this function will be used to extract the numerical data from the file
 # def extract_numeric_data(dataframe):
 #     """
 #     Extract only numeric columns from a DataFrame and flatten the data.
-    
+
 #     Parameters:
 #         dataframe (pd.DataFrame): Input DataFrame with mixed data types.
-        
+
 #     Returns:
 #         np.ndarray: A 1D array of numeric data.
 #     """
 #     numeric_data = dataframe.select_dtypes(include=[np.number])
 #     return numeric_data.to_numpy().flatten()
-
-
 
 
 # if __name__ == "__main__":
@@ -617,7 +562,7 @@ class plotCreation():
 #         exit()
 
 
-#     print("DataFrame content:\n", data)   
+#     print("DataFrame content:\n", data)
 #     numeric_data = data.select_dtypes(include=[np.number])
 #     print("Numeric data:\n", numeric_data)
 
