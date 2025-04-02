@@ -182,6 +182,8 @@ class MeasureSelectionPage(BasePage):
     """
     def __init__(self, parent, controller):
         super().__init__(parent, controller)
+        self.gui_controller = controller
+
         self.controller = controller
 
         self.grid_rowconfigure(0, weight=1)
@@ -354,6 +356,9 @@ class MeasureSelectionPage(BasePage):
                 operation_entry = f"{key}: {value}"
                 table_controller.log_operation(operation_entry)
 
+            self.gui_controller.pages["DashboardPage"].display_results(results)
+            self.gui_controller.show_page("DashboardPage")
+
 
     def get_table_data(self):
         # Fetch table data from the CustomTable widget
@@ -370,6 +375,9 @@ class DashboardPage(BasePage):
         super().__init__(parent, controller)
         self.controller = controller  # Ensure the controller is accessible
         self.main_control = Controller()  # Instantiate the class
+
+        self.result_headers = [] # All headers in results table
+        self.result_rows = {}    # Rach row in the results table (key = row number, value = list of output from a single calculation)
 
         # Configure rows and columns
         self.grid_rowconfigure(0, weight=1)
@@ -428,6 +436,67 @@ class DashboardPage(BasePage):
             command=lambda: self.print_selected_columns() #print("Save Results button clicked!")
         )
         self.export_data_button.grid(row=1, column=0, padx=10, pady=10, sticky="se")
+
+    def display_headers(self, results):
+        """
+        Updates the header list if calculation requires new headers.
+
+        Args:
+            results (dict): Dictionary containing the results of the calculation.
+        """
+        for value in results.values():
+            for key in value.keys():
+                if key not in self.result_headers: # If header is existing, skip to avoid multiple headers with same name
+                    self.result_headers.append(key)
+
+    def display_row_data(self, results):
+        """
+        Combines all results into a single row of data to be processed by the table.
+
+        Args:
+            results (dict): Dictionary containing the results of the calculation.
+
+        Returns:
+            dict: Dictionary containing the results of the calculation in a single row.
+        """
+        row = {}
+
+        for stat in results.values():
+            for key, value in stat.items():
+                row[key] = value
+
+        return row
+
+    def display_results(self, results):
+        """
+        Updates the result table with the latest calculation. Each row in the table represents a single calculation, but could have multiple columns.
+
+        Args:
+            results (dict): Dictionary containing the results of the calculation.
+        """
+        self.display_headers(results) # Updates the header list if calculation requires new headers
+        result_data = self.display_row_data(results)
+
+        results_frame = tk.Frame(self)
+        #results_frame.place(x=129, y=153, width=1123, height=654)
+        results_frame.grid(row=1, column=1, sticky='nsew')
+
+        row_data = [] # Represents a row of data in the table (i.e. 1 calculation)
+        for head in self.result_headers:
+            if head not in result_data.keys():
+                row_data.append("")
+            else:
+                row_data.append(result_data[head])
+              
+        self.result_rows[len(self.result_rows) + 1] = row_data
+
+        table = TableView(results_frame, output=True)
+
+        table.grid(row=0,column=0,sticky='nsew')
+        table.controller.update_table(headers = self.result_headers, data = self.result_rows.values())
+
+        results_frame.grid_rowconfigure(0, weight=1)
+        results_frame.grid_columnconfigure(0, weight=1)
 
     def plot_graph(self, data=None):
         """Handles the logic for updating and displaying graphs."""
