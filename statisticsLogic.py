@@ -14,7 +14,7 @@ from tkinter import simpledialog, messagebox
 def validate_data(func):
     """Decorator to validate the data before executing a method.
     Changed to make it so where if the user does have characters or strings in their chosen data -- we will just take the
-    numerical values not the strings ! : ) 
+    numerical values not the strings ! : )
     """
 
     def wrapper(self, *args, **kwargs):
@@ -164,27 +164,33 @@ class statistic():
     @validate_data
     def percentiles(self):
         """
-        Method applies w/ ordinal, frequency, and interval
+        Method applies with ordinal, frequency, and interval
         Parameters:
-            numpy.ndarray object, list of percentiles, axis
-                (axis=0 for columns, =1 for rows, unspecified for entire dataset)
+            numpy.ndarray object,
+            list of percentiles,
+            axis = 0 (for reading columns)
         Returns:
             NumPy ndarray for further processing
         """
         cleaned_data = self._clean_data()
-        psequence = list(
-            map(int, input("Enter the percentiles you would like to calculate (e.g. 25, 50, 75): ").split(",")))
+        user_input = simpledialog.askstring("Percentiles",
+                                            "Enter the percentiles you would like to calculate (e.g. 25, 50, 75): ")
+        try:
+            psequence = list(map(int, user_input.split(",")))
+        except ValueError:
+            messagebox.showerror(
+                "Percentiles Input Error",
+                "Please enter only integers separated by commas (e.g. 25, 50, 75)."
+            )
+            return None
 
         percentiles_array = np.percentile(cleaned_data, psequence, axis=0)
 
-        percentiles_df = pd.DataFrame(
-            percentiles_array,
-            columns=[f"Column {i + 1}" for i in range(cleaned_data.shape[1])]
-        )
+        percentiles_df = pd.DataFrame(percentiles_array,
+                                      columns=[f"Column {i + 1}" for i in range(cleaned_data.shape[1])])
 
         percentiles_df.insert(0, "Percentiles",
                               [f"{p}th" for p in psequence])  # Insert percentile column (Percentiles:, nth, n+1th)
-        # is dataframe neeeded for graphing or exporting formatted text? (remove ".to_numpy()")
         return {"Percentiles": percentiles_df.to_numpy()}
 
     def probabilityDistribution(self):
@@ -321,8 +327,7 @@ class statistic():
     def chiSquared(self):
         """
         Performs Chi-Square Test using two valid columns of data.
-
-        Returns the Chi-Square statistic and p-value.
+        Returns: the Chi-Square statistic and p-value.
         """
         print(f"Incoming Data to Chi-Squared:\n{self.data}")  # Debugging point
 
@@ -371,10 +376,11 @@ class statistic():
     @validate_data
     def correlationCoefficient(self):
         """
-        Only works for interval & frequency datasets
-        Parameters: Grabs first column as x and second column as y
-
-        Returns the correlation coefficient R Value.
+        Best for interval & frequency datasets
+        Parameters:
+            grabs two columns of equal length
+        Returns:
+            the correlation coefficient R Value
         """
 
         cleaned_data = self._clean_data()
@@ -400,46 +406,100 @@ class statistic():
         return {"R Value (Correlation Coefficient)": correlation_coefficient}
 
     @validate_data
-    def significanceTest(self):
-        # has known issues w/ parameters that have deprecated since version 1.17.10 of scipy (permutations, alternative hypothesis)
+    def signTest(self):
         """
-        Only works for interval & frequency datasets
-        Parameters: Grabs first column as x and second column as y
-        Returns the p-value.
+        Parameters:
+            grabs either one array (for one-sample sign test) or two arrays of same length (for paired sample sign test),
+            user specified alternative hypothesis (H1),
+            and default auto method (exact-to-approximate results).
+        Returns:
+            two floats: the sign test statistic & p-value.
         """
         cleaned_data = self._clean_data()
-        mid = len(cleaned_data) // 2
-        x = cleaned_data[:mid]
-        y = cleaned_data[mid:]
-        sigTest = stats.ttest_ind(x, y)
-        return sigTest
+
+        # ONE-SAMPLE SIGN TEST
+        if cleaned_data.shape[1] == 1:
+            x = cleaned_data.ravel()
+            print(f"X: {x}")  # Debugging point
+            median = 0  # can change
+            signs = [xi - median for xi in x if xi != median]
+            n = len(signs)
+            n_positive = sum(1 for s in signs if s > 0)
+
+        # PAIRED SAMPLE SIGN TEST
+        elif cleaned_data.shape[1] == 2:
+            if np.isnan(cleaned_data).any():
+                messagebox.showerror("Paired signTest Error", "Both columns must have the same row length.")
+                raise ValueError("Both columns must have the same row length")
+            x, y = np.hsplit(cleaned_data, 2)
+            x = x.ravel()
+            y = y.ravel()
+            print(f"X: {x}, Y: {y}")  # Debugging point
+            signs = [xi - yi for xi, yi in zip(x, y) if xi != yi]
+            n = len(signs)
+            n_positive = sum(1 for s in signs if s > 0)
+
+        else:
+            messagebox.showerror("signTest Error", "Data must have either one or two columns.")
+            raise ValueError("Data must have either one or two columns.")
+
+        H_prompt = tkinter.simpledialog.askstring("Alternative Hypothesis", "Choose one: two-sided, less, greater")
+        if H_prompt not in ["two-sided", "less", "greater"]:
+            tkinter.messagebox.showerror("signTest Error",
+                                         "Invalid alternative hypothesis. Please choose 'two-sided', 'less', or 'greater'.")
+            return None
+
+        result = stats.binomtest(n_positive, n, p=0.5, alternative=H_prompt)
+        sign = {"Sign Count": n, "P-Value": result.pvalue}
+        print(f"Sign Test: {sign}")
+        return sign
 
     @validate_data
     def rankSum(self):
-        # known issues (alternative hypothesis)
-        """
-        Only works for ordinal datasets
+        '''
+        Best for ordinal datasets
         Parameters:
-            Grabs two arrays (x,y), alternative hypothesis, axis
+            grabs two arrays (can be different lengths),
+            user specified alternative hypothesis (H1),
+            and default auto method (exact-to-approximate results)
         Returns:
-            the rank sum & p-value as floats
-        """
+            two floats: the rank sum statistic & p-value.
+        '''
         cleaned_data = self._clean_data()
-        mid = len(cleaned_data) // 2
-        x = cleaned_data[:mid]
-        y = cleaned_data[mid:]
-        rank = stats.ranksums(x, y)
-        return rank
+
+        x, y = np.hsplit(cleaned_data, 2)
+        x = x.ravel()
+        y = y.ravel()
+        # Remove any NaN values from x and y separately
+        x = x[~np.isnan(x)]
+        y = y[~np.isnan(y)]
+        print(f"X: {x}, Y: {y}")  # Debugging point
+
+        H_prompt = tkinter.simpledialog.askstring("Alternative Hypothesis", "Choose one: two-sided, less, greater")
+
+        if H_prompt not in ["two-sided", "less", "greater"]:
+            tkinter.messagebox.showerror("rankSum Error",
+                                         "Invalid alternative hypothesis. Please choose 'two-sided', 'less', or 'greater'.")
+            return None
+
+        try:
+            result = stats.mannwhitneyu(x, y, method='auto', alternative=H_prompt)
+            rank = {"Statistic": result.statistic, "P-Value": result.pvalue}
+
+            print(f"Rank Sum: {rank}")
+            return rank
+        except Exception as e:
+            tkinter.messagebox.showerror("rankSum Error", f"An error occurred while performing the rank sum test: {e}")
+            return None
 
     @validate_data
     def spearmanRankCorrelation(self):
         """
         Only works for ordinal datasets
         Parameters:
-            Grabs two arrays from an np.ndarray object ("x" & "y" column), axis if none ravel/flatten both arrays before performing
-                #source https://www.youtube.com/watch?v=XV_W1w4Nwoc
+            grabs two arrays from an np.ndarray object
         Returns:
-            two floats (the spearman rank correlation & p-value).
+            the spearman rank correlation & p-value.
         """
         cleaned_data = self._clean_data()
 
