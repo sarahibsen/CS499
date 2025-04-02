@@ -107,7 +107,7 @@ class App(tk.Tk):
             self.add_page(page_name, page_class)
 
         # Show the initial page
-        self.show_page("DashboardPage")
+        self.show_page("LaunchPage")
 
     def add_page(self, page_name, page_class):
         """Add a new page to the application."""
@@ -188,6 +188,7 @@ class MeasureSelectionPage(BasePage):
     def __init__(self, parent, controller):
         super().__init__(parent, controller)
         self.gui_controller = controller
+        self.selected_stats = []  # Store selected measures
 
         # ----- Configure grid, canvas, and frames ----- #
         self.grid_rowconfigure(0, weight=1)
@@ -302,6 +303,7 @@ class MeasureSelectionPage(BasePage):
                 data = pd.read_csv(file_path)
                 # Show data in the table
                 self.display_table(data)
+
             except Exception as e:
                 print(f"Error importing CSV: {e}")
 
@@ -320,16 +322,22 @@ class MeasureSelectionPage(BasePage):
     def on_stat_measure_selected(self, event):
         # Get selected items from the listbox
         selected_indices = self.stat_measures_listbox.curselection()
-        selected_stats = [self.stat_measures_listbox.get(i) for i in selected_indices]
+        self.selected_stats = [self.stat_measures_listbox.get(i) for i in selected_indices]  # Update the stored list
 
         # Limit selection to 3 measures
-        if len(selected_stats) > 3:
+        if len(self.selected_stats) > 3:
             self.stat_measures_listbox.selection_clear(selected_indices[0])  # Remove the first selected item
+            self.selected_stats.pop(0)  # Remove from the stored list as well
 
         # Update the label with selected measures
         self.selected_stat_label.config(
-            text=f"Selected Measures: {', '.join(selected_stats)}" if selected_stats else "Selected Measures: None"
+            text=f"Selected Measures: {', '.join(self.selected_stats)}"
+            if self.selected_stats else "Selected Measures: None"
         )
+
+    def get_selected_measures(self):
+        """Return the selected measures so other classes can retrieve them."""
+        return self.selected_stats
 
     def calculate_statistics(self):
         if not hasattr(self.table.controller, 'get_table_selection'):
@@ -361,6 +369,10 @@ class MeasureSelectionPage(BasePage):
 
             self.gui_controller.pages["ResultsPage"].display_results(results)
             self.gui_controller.show_page("ResultsPage")
+
+            # Notify Dashboard Page to update measure dropdown
+            dashboard_page = self.gui_controller.get_page("DashboardPage")
+            dashboard_page.update_dropdowns(self.selected_stats)
 
     def get_table_data(self):
         # Fetch table data from the CustomTable widget
@@ -414,8 +426,9 @@ class DashboardPage(BasePage):
         spacer1.grid(row=0, column=1)
 
         # Measure selection dropdown
-        tk.Label(self.control_frame, text="Select Measure:", font=("Roboto", 14), bg="#FFFFFF").grid(row=1, column=0,
-                    sticky="w", pady=(10, 0))
+        tk.Label(self.control_frame, text="Select Measure:", font=("Roboto", 14), bg="#FFFFFF").grid(
+            row=1, column=0, sticky="w", pady=(10, 0)
+        )
         self.measure_dropdown = ttk.Combobox(self.control_frame, state="readonly", font=("Roboto", 14))
         self.measure_dropdown.grid(row=2, column=0, sticky="ew", pady=(0, 10))
 
@@ -425,14 +438,12 @@ class DashboardPage(BasePage):
         self.column_dropdown = ttk.Combobox(self.control_frame, state="readonly", font=("Roboto", 14))
         self.column_dropdown.grid(row=4, column=0, sticky="ew")
 
-        self.update_dropdowns()
-
         # Create button
         self.create_viz_button = Button(
             self.control_frame,
             text="Graph it",
             style="TButton",
-            command=lambda: self.plot_graph() #command=self.create_visualization
+            command=lambda: self.get_grouped_data() #self.plot_graph() #command=self.create_visualization
         )
         self.create_viz_button.grid(row=5, column=0, sticky="ew", pady=10)
 
@@ -499,54 +510,6 @@ class DashboardPage(BasePage):
         """Resize the rectangle dynamically when the window changes size."""
         self.canvas.coords(self.toolbarBackground, 0, 0, 100, event.height)  # Adjust height dynamically
 
-    def print_selected_columns(self):
-        """Obtain the name of the column the user chose for statistical analysis"""
-        table_controller = self.get_table_controller()
-
-        data_frame = self.main_control.load_data_from_table(table_controller)
-
-        if data_frame.empty:
-            print("The loaded data is empty.")
-        else:
-            print("Loaded DataFrame:\n", data_frame)
-
-    def print_table(self):
-        """Obtain the name of the column the user chose for statistical analysis"""
-        table_controller = self.get_table_controller()
-        data_frame = self.main_control.load_entire_table(table_controller)
-
-        if data_frame.empty:
-            print("The loaded data is empty.")
-        else:
-            print("Loaded DataFrame:\n", data_frame)
-
-    def print_column_headers(self):
-        """Print all column headers from the table"""
-        try:
-            # Get the MeasureSelectionPage instance
-            measure_page = self.controller.get_page("MeasureSelectionPage")
-
-            if not measure_page or not hasattr(measure_page, 'table'):
-                print("Error: Unable to access table.")
-                return
-
-            # Get the sheet widget from the TableView
-            sheet = measure_page.table.sheet
-
-            # Get headers - need to call the headers() method
-            headers = sheet.headers() if hasattr(sheet, 'headers') else [f"Column {i + 1}" for i in
-                                                                         range(sheet.total_columns())]
-
-            print("\nTable Column Headers:")
-            for i, header in enumerate(headers, 1):
-                print(f"{i}. {header}")
-
-            return headers  # Optional: return the headers if you need them
-
-        except Exception as e:
-            print(f"Error printing column headers: {e}")
-            return []
-
     def grab_plots(self):
         """
         calling to the main controller to get and print the list out of the plots associated with the data types
@@ -606,22 +569,105 @@ class DashboardPage(BasePage):
         except Exception as e:
             messagebox.showerror("Error", f"Failed to create visualization: {str(e)}")
 
-    def update_dropdowns(self):
-        """Update the measure and column dropdowns with available options"""
-        # Get available measures from ResultsPage
-        results_page = self.controller.get_page("ResultsPage")
-        if results_page and hasattr(results_page, 'result_headers'):
-            self.measure_dropdown['values'] = results_page.result_headers
-            if results_page.result_headers:
-                self.measure_dropdown.current(0)
+    def update_dropdowns(self, selected_measures):
+        """Update the measure and column dropdowns with available options while excluding selected columns."""
 
-        # Get available columns from MeasureSelectionPage
-        measure_page = self.controller.get_page("MeasureSelectionPage")
-        if measure_page and hasattr(measure_page, 'table'):
-            headers = measure_page.table.sheet.headers() if hasattr(measure_page.table.sheet, 'headers') else []
-            self.column_dropdown['values'] = headers
-            if headers:
-                self.column_dropdown.current(0)
+        # Ensure the table controller is available
+        table_controller = self.get_table_controller()
+        if not table_controller:
+            print("Error: Table controller not found.")
+            return
+
+        # Load data from the table
+        data_frame = self.main_control.load_entire_table(table_controller)
+
+        # Load table selection
+        selected_table = self.main_control.load_data_from_table(table_controller)
+
+        # Check if data is retrieved TODO: Change to dialogbox
+        if data_frame.empty:
+            print("Error: Data frame is empty, cannot populate dropdown.")
+            return
+
+        # Retrieve column names
+        all_columns = list(data_frame.columns)
+        selected_columns = list(selected_table.columns)
+
+        # Exclude selected columns from all_columns
+        available_columns = [col for col in all_columns if col not in selected_columns]
+
+        # Debugging: Print filtered columns
+        print("Available columns:", available_columns)
+        print("Selected columns:", selected_columns)
+
+        # Reset dropdowns before updating
+        self.column_dropdown.set("")
+        self.measure_dropdown.set("")
+
+        # Update column dropdown
+        self.column_dropdown["values"] = available_columns
+        if available_columns:
+            self.column_dropdown.current(0)  # Set first column as default
+
+        # Update measure dropdown
+        self.measure_dropdown["values"] = selected_measures
+        if selected_measures:
+            self.measure_dropdown.current(0)  # Set first measure as default
+
+    def get_grouped_data(self):
+        """Retrieve the selected measure and column, then apply groupby() to the DataFrame."""
+
+        # Ensure the table controller is available
+        table_controller = self.get_table_controller()
+        if not table_controller:
+            print("Error: Table controller not found.")
+            return
+
+        # Load data from the table
+        data_frame = self.main_control.load_entire_table(table_controller)
+        if data_frame.empty:
+            messagebox.showerror("Error", "Table is empty.")
+            return None
+
+        # Load table selection
+        selected_table = self.main_control.load_data_from_table(table_controller)
+
+        # Check if data is retrieved TODO: Change to dialogbox
+        if data_frame.empty:
+            print("Error: Data frame is empty, cannot populate dropdown.")
+            return
+
+        # Get selected columns from table
+        selected_columns = list(selected_table.columns) #TODO: Split if multiple columns
+
+        # Get selected values from dropdowns
+        selected_measure = self.measure_dropdown.get()
+        groupby_column = self.column_dropdown.get()
+
+        print(data_frame[groupby_column].to_string(index=False))
+        print(selected_columns)
+
+        # TODO: Change this to only show error if no measure
+        if not selected_measure or not groupby_column:
+            messagebox.showerror("Error", "Please select both a measure and a column.")
+            return None
+
+        df2 = data_frame.groupby([groupby_column])[selected_columns]
+
+        # Set options to display the full DataFrame
+        pd.set_option('display.max_rows', None)
+        pd.set_option('display.max_columns', None)
+        pd.set_option('display.max_colwidth', None)
+
+        print(df2.mean())
+
+        # Define aggregation functions
+
+        # Apply groupby() with the selected function
+        # grouped_data = data_frame.groupby(groupby_column).agg(
+        #    {groupby_column: aggregation_functions[selected_measure]})
+        # grouped_data.reset_index(inplace=True)
+        # return grouped_data
 
 
 class ResultsPage(BasePage):
