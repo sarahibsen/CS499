@@ -42,6 +42,7 @@ class Controller:
 
     @staticmethod
     def load_entire_table(table_controller):
+        """ Retrieves data in table w/o converting it to numeric """
         if not hasattr(table_controller, 'get_table_selection'):
             print("Error: Table instance is not initialized.")
             return pd.DataFrame()
@@ -49,14 +50,8 @@ class Controller:
         data = table_controller.get_entire_table()
         print(f"Loaded Data:\n{data}")
 
-        # Ensure proper data types
-        for col in data.columns:
-            data[col] = pd.to_numeric(data[col], errors='coerce')
-            # data.fillna(0, inplace=True)  # for missing data
-            data = data.fillna(0).infer_objects(copy=False)
-
-        # Filter non-zero data only
-        data = data[(data != 0).any(axis=1)]
+        # Drop columns with all NaN values
+        data = data.dropna(axis=1, how='all')
 
         print(f"Data loaded into Controller:\n{data}")
         return data
