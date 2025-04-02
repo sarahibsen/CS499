@@ -341,16 +341,6 @@ class MeasureSelectionPage(BasePage):
         selected_data_type = self.data_type_dropdown.get()
         selected_measures = [self.stat_measures_listbox.get(i) for i in self.stat_measures_listbox.curselection()]
 
-        variance_type = None  # default to none unless variance is selected
-        if "Variance" in selected_measures:
-            variance_type = simpledialog.askstring(
-                "Variance Type",
-                "Enter the type of variance (Population or Sample):",
-                initialvalue="Population"
-            )
-            if variance_type not in ["Population", "Sample"]:
-                messagebox.showerror("Error", "Invalid variance type.")
-                return
         data_frame = self.controller.load_data_from_table(self.table.controller)
         print(f"Final Data Before Validation:\n{data_frame}")  # Final confirmation
 
@@ -362,7 +352,7 @@ class MeasureSelectionPage(BasePage):
             messagebox.showerror("Error", "Data validation failed.")
             return
 
-        results = self.controller.perform_statistics(data_frame, selected_measures, selected_data_type, variance_type)
+        results = self.controller.perform_statistics(data_frame, selected_measures, selected_data_type)
 
         if results:
             result_str = "\n".join([f"{key}: {value}" for key, value in results.items()])
