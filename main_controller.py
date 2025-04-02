@@ -89,7 +89,7 @@ class Controller:
         return DataIntegrity.detect_data_type(data_frame) if data_frame is not None else None
 
     @staticmethod
-    def perform_statistics(data_frame, selected_measures, data_type, variance_type = None):
+    def perform_statistics(data_frame, selected_measures, data_type, variance_type=None):
         """
         Performs statistical computations based on the selected data type and measures.
 
@@ -118,10 +118,9 @@ class Controller:
         logic = statistics_classes[data_type](data_frame)
         stat_instance = statistic(data_frame)
 
-
         # Compute requested measures
         results = {}
-        #TODO : add more measures
+        # TODO : add more measures
         measure_functions = {
             "Mean": stat_instance.mean,
             "Median": stat_instance.median,
@@ -135,16 +134,16 @@ class Controller:
                 data_frame.select_dtypes(include='number').values.flatten()  # Dynamic sample size
             ),
             "Least Square Line": stat_instance.leastSquareLine,
-            "Chi Square": stat_instance.chiSquared, 
+            "Chi Square": stat_instance.chiSquared,
             "Correlation": stat_instance.correlationCoefficient,
-            "Sign Test": stat_instance.signTest,
+            "Significance Test": stat_instance.significanceTest,
             "Rank Sum": stat_instance.rankSum,
             "Spearman Correlation": stat_instance.spearmanRankCorrelation,
-            #"Frequency": stat_instance.frequency,
+            # "Frequency": stat_instance.frequency,
 
         }
         # allow for the possibility of users to input their own measures
-        
+
         for measure in selected_measures:
             if measure in measure_functions:
                 try:
