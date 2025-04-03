@@ -626,6 +626,7 @@ class DashboardPage(BasePage):
             elif selected_measure == "Mode":
                 grouped_data = grouped.agg(lambda x: x.mode().iloc[0] if not x.mode().empty else None)
 
+            self.ax.clear()
             grouped_data.plot(kind='bar', ax=self.ax)
             self.ax.set_title(f"{selected_measure} by {groupby_column}")
             self.ax.set_ylabel(selected_measure)
