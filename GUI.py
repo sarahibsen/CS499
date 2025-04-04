@@ -10,7 +10,8 @@ from matplotlib.figure import Figure
 import seaborn as sns
 from PIL import Image, ImageTk
 from Table import TableView
-
+from colors import ColorPalette
+from statisticsLogic import statistic
 
 # using the controller class to handle the communication between all components
 from main_controller import Controller
@@ -80,8 +81,11 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
 
+        # Default mode is light
+        self.colors = ColorPalette(mode="light")
+
         # Configure window
-        self.configure(bg="white")
+        self.configure(bg=self.colors.get_color("background"))
         self.title("STATS")
 
         # Bind Escape key to close the application
@@ -143,6 +147,17 @@ class LaunchPage(BasePage):
     def __init__(self, parent, controller):
         super().__init__(parent, controller)
 
+
+        # ----- Initialize colors ----- #
+        background_color = controller.colors.get_color("background")
+        primary_color = controller.colors.get_color("primary")
+        text_color = controller.colors.get_color("text")
+        button_hover = controller.colors.get_color("button_hover")
+        button_text = controller.colors.get_color("button_text")
+
+        # Set the background color of the window
+        self.configure(bg=background_color)
+
         # ----- Configure grid, canvas, and frames ----- #
         # Configure row weights
         for i in range(7):
@@ -155,14 +170,14 @@ class LaunchPage(BasePage):
         # Button style
         style = Style()
         style.configure(
-            "TButton", font=("Arial", 20), background="white", height=50,
+            "TButton", font=("Arial", 20), background=primary_color, activebackground=button_hover, height=50,
             width=20, pady=20, ipadx=20, ipady=10, relief="groove",
         )
 
         # ----- Image Area ----- #
         image = Image.open("assets/features.png")
         photo = ImageTk.PhotoImage(image)
-        self.image_label = Label(self, image=photo, bg="#A9D6ED", bd=0, highlightthickness=0)
+        self.image_label = Label(self, image=photo, bg=background_color, fg=text_color, bd=0, highlightthickness=0)
         self.image_label.image = photo  # keep a reference
         self.image_label.grid(column=1, rowspan=7, sticky="nsew", padx=20, pady=20)
 
@@ -172,10 +187,9 @@ class LaunchPage(BasePage):
         self.grid_columnconfigure(1, weight=2)
 
         # ----- Text Area ----- #
-        tk.Label(self, text="STAT", bg="white", font=("Arial", 40)).grid(column=0, row=1, sticky="nsew")
-        tk.Label(self, text="Statistical Tracking and \n Analysis Toolkit", bg="white", font=("Arial", 25)).grid(
-            column=0, row=2,
-            sticky="nsew")
+        tk.Label(self, text="STAT", bg=background_color, fg=text_color,  font=("Arial", 40)).grid(column=0, row=1, sticky="nsew")
+        tk.Label(self, text="Statistical Tracking and \n Analysis Toolkit", bg=background_color, fg=text_color,
+                 font=("Arial", 25)).grid(column=0, row=2, sticky="nsew")
         # Continue Button
         Button(self, text="Start", style="TButton",
                command=lambda: controller.show_page("MeasureSelectionPage")).grid(column=0, row=5)
@@ -508,9 +522,9 @@ class DashboardPage(BasePage):
         # Load table selection
         selected_table = self.main_control.load_data_from_table(table_controller)
 
-        # Check if data is retrieved TODO: Change to dialogbox
+        # Check if data is retrieved
         if data_frame.empty:
-            print("Error: Data frame is empty, cannot populate dropdown.")
+            messagebox.showerror("Error", "Data frame is empty, cannot populate dropdown.")
             return
 
         # Retrieve column names
@@ -559,7 +573,11 @@ class DashboardPage(BasePage):
         # Load table selection
         selected_table = self.main_control.load_data_from_table(table_controller)
 
-        # Check if data is retrieved
+        # TODO: Get selected rows
+        selected_rows = table_controller.get_selected_rows()
+        print("Retrieved Selected Rows:", selected_rows)
+
+        # Check if data was successfully retrieved
         if selected_table.empty:
             print("Error: Data frame is empty, cannot populate dropdown.")
             return
@@ -580,13 +598,51 @@ class DashboardPage(BasePage):
         # Group the data
         grouped = data_frame.groupby([groupby_column])[selected_columns]
 
-        # Perform statistical measure on grouped data
+        # Perform statistical measure on grouped data and create dataframe
         if selected_measure == "Mean":
             grouped_data = grouped.mean()
+
         elif selected_measure == "Median":
             grouped_data = grouped.median()
+
         elif selected_measure == "Mode":
             grouped_data = grouped.agg(lambda x: x.mode().iloc[0] if not x.mode().empty else None)
+
+        elif selected_measure == "Standard Deviation":
+            grouped_data = grouped.std()
+
+        elif selected_measure == "Coefficient of Variation":
+            grouped_std = grouped.std()
+            grouped_mean = grouped.mean()
+            grouped_data = grouped_std / grouped_mean
+
+        elif selected_measure == "Percentiles":
+            #TODO: Pull percentile that user enters
+            grouped_data = grouped.quantile(0.25)
+
+        elif selected_measure == "Probability Distribution":
+            grouped_data = None
+
+        elif selected_measure == "Binomial Distribution":
+            grouped_data = None
+
+        elif selected_measure == "Least Square Line":
+            grouped_data = None
+
+        elif selected_measure == "Chi Square":
+            grouped_data = None
+
+        elif selected_measure == "Correlation":
+            grouped_data = grouped.corr()
+
+        elif selected_measure == "Sign Test":
+            grouped_data = None
+
+        elif selected_measure == "Rank Sum":
+            grouped_data = None
+
+        elif selected_measure == "Spearman Correlation":
+            grouped_data = None
         else:
             messagebox.showerror("Error", "Invalid measure selected.")
             return None
@@ -597,27 +653,21 @@ class DashboardPage(BasePage):
         # Generate the selected graph
         if graph_type == "Horizontal Bar Chart":
             grouped_data.plot(kind="barh", ax=self.ax, legend=False)
-
         elif graph_type == "Vertical Bar Chart":
             grouped_data.plot(kind="bar", ax=self.ax, legend=False)
-
-
         elif graph_type == "Pie Chart":
             pie_data = grouped_data[selected_columns[0]]  # Choose the first column for pie chart plotting
             pie_data.plot(kind="pie", ax=self.ax, legend=False, autopct='%1.1f%%')
-
         elif graph_type == "Normal Distribution Curve":
             # Plot a KDE (Kernel Density Estimation) curve to approximate normal distribution
             for col in selected_columns:
                 sns.kdeplot(data_frame[col], ax=self.ax, fill=True, label=col)
             self.ax.legend()
-
         elif graph_type == "Scatter Plot":
             # Scatter plot (X-Y graph)
             for col in selected_columns:
                 self.ax.scatter(data_frame[groupby_column], data_frame[col], label=col)
             self.ax.legend()
-
         else:
             messagebox.showerror("Error", "Invalid graph type selected.")
             return None
