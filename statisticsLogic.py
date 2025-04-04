@@ -105,8 +105,11 @@ class statistic():
         # Validate the data
         if not isinstance(cleaned_data, (list, np.ndarray)):
             raise TypeError("Data must be a list or NumPy array of numbers")
-        if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in cleaned_data.flatten()): #flatten the data to check for all values // multi column support will still be there
+
+        # Flatten the data to check for all values // multi column support will still be there
+        if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in cleaned_data.flatten()):
             raise TypeError("All elements in the data must be numbers")
+
         if len(cleaned_data) < 2 :
             return 0 # Prevent errors if all values are zero
         
