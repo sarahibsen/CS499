@@ -496,10 +496,6 @@ class DashboardPage(BasePage):
     def update_dropdowns(self, selected_measures, selected_data_type):
         """Update the measure and column dropdowns with available options while excluding selected columns."""
 
-        #measure_page = self.controller.get_page("MeasureSelectionPage")
-        #selected_data_type = measure_page.data_type_dropdown.get()
-        #print("Selected data type: {}".format(selected_data_type))
-
         # Ensure the table controller is available
         table_controller = self.get_table_controller()
         if not table_controller:
@@ -532,18 +528,18 @@ class DashboardPage(BasePage):
         # Update column dropdown
         self.column_dropdown["values"] = available_columns
         if available_columns:
-            self.column_dropdown.current(0)  # Set first column as default
+            self.column_dropdown.set(available_columns[0] if available_columns else "")
 
         # Update measure dropdown
         self.measure_dropdown["values"] = selected_measures
         if selected_measures:
-            self.measure_dropdown.current(0)  # Set first measure as default
+            self.measure_dropdown.set(selected_measures[0] if selected_measures else "")
 
         # Update graph dropdown
         graph_types = Controller.plots_for_data_type(selected_data_type)
         self.graph_dropdown["values"] = graph_types
         if graph_types:
-            self.graph_dropdown.current(0)  # Set first measure as default
+            self.graph_dropdown.set(graph_types[0] if graph_types else "")
 
     def get_grouped_data(self):
         """Retrieve the selected measure and column, apply groupby() to the DataFrame, and create a plot."""
@@ -599,22 +595,24 @@ class DashboardPage(BasePage):
         self.ax.clear()
 
         # Generate the selected graph
-        if graph_type == "horizontalbargraph":
+        if graph_type == "Horizontal Bar Chart":
             grouped_data.plot(kind="barh", ax=self.ax, legend=False)
 
-        elif graph_type == "verticalbargraph":
+        elif graph_type == "Vertical Bar Chart":
             grouped_data.plot(kind="bar", ax=self.ax, legend=False)
 
-        elif graph_type == "piechart":
-            grouped_data.plot(kind="pie", ax=self.ax, legend=False, autopct='%1.1f%%')
 
-        elif graph_type == "normaldistribution":
+        elif graph_type == "Pie Chart":
+            pie_data = grouped_data[selected_columns[0]]  # Choose the first column for pie chart plotting
+            pie_data.plot(kind="pie", ax=self.ax, legend=False, autopct='%1.1f%%')
+
+        elif graph_type == "Normal Distribution Curve":
             # Plot a KDE (Kernel Density Estimation) curve to approximate normal distribution
             for col in selected_columns:
                 sns.kdeplot(data_frame[col], ax=self.ax, fill=True, label=col)
             self.ax.legend()
 
-        elif graph_type == "xygraph":
+        elif graph_type == "Scatter Plot":
             # Scatter plot (X-Y graph)
             for col in selected_columns:
                 self.ax.scatter(data_frame[groupby_column], data_frame[col], label=col)
@@ -630,7 +628,7 @@ class DashboardPage(BasePage):
         self.ax.set_xlabel(groupby_column)
 
         # Rotate x-axis labels for better readability (except for pie charts)
-        if graph_type != "piechart":
+        if graph_type != "Pie Chart":
             self.ax.tick_params(axis='x', rotation=45)
 
         # Redraw the canvas
