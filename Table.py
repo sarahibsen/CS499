@@ -74,6 +74,12 @@ class TableController:
     def get_table_data(self):
         return self.model.get_data()
 
+    # TODO: Get selected rows
+    def get_selected_rows(self):
+        selected_rows = self.table.get_selected_rows()
+        print("Selected Rows:", selected_rows)  # Debugging statement
+        return selected_rows
+
     def get_entire_table(self):
         """ Retrieves the entire table data from the tksheet widget and converts it into a pandas DataFrame. """
 
@@ -128,11 +134,10 @@ class TableController:
             Iterates over the entire table only updating the cells that are selected.
             Table selection is then matched with its header and converted to pandas df
         """
-        # self.table = table
-
         self.currently_selected = self.table.get_currently_selected()
-        self.column_headers = self.table[:].expand().options(table=False,
-                                                             header=True).data  # Gets all headers regardless of selection or if header is default
+
+        # Gets all headers regardless of selection or if header is default
+        self.column_headers = self.table[:].expand().options(table=False, header=True).data
 
         self.TwoDList = []
 
