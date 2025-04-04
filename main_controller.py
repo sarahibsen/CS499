@@ -231,7 +231,8 @@ class Controller:
             display_map[display_name] = method
 
         return display_map
-    
+
+    @staticmethod
     def plots_for_data_type(data_type):
         """
         Loading in the graphs for the data type in the GUI.
