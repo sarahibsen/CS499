@@ -170,7 +170,7 @@ class LaunchPage(BasePage):
         # Button style
         style = Style()
         style.configure(
-            "TButton", font=("Arial", 20), background=primary_color, activebackground=button_hover, height=50,
+            "TButton", font=("Arial", 20), background=primary_color, height=50,
             width=20, pady=20, ipadx=20, ipady=10, relief="groove",
         )
 
