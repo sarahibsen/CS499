@@ -233,7 +233,7 @@ class Controller:
 
     def plots_for_data_type(data_type):
         """
-        loading in the graphs for the data type in the GUI
+        Loading in the graphs for the data type in the GUI.
         """
         classes = {
             "Nominal": nominalPlot,
@@ -242,22 +242,11 @@ class Controller:
             "Continuous": continuousPlot
         }
         if data_type not in classes:
-            return {}
+            return []
+
         class_obj = classes[data_type]
 
-        raw_methods = [
+        return [
             func for func in dir(class_obj)
             if not func.startswith("_") and callable(getattr(class_obj, func))
         ]
-        display_map = {}
-        for method in raw_methods:
-            # Convert camelCase or snake_case to display-friendly version
-            display_name = (
-                ''.join([' ' + c if c.isupper() else c for c in method])
-                .replace('_', ' ')
-                .title()
-                .strip()
-            )
-            display_map[display_name] = method
-
-        return display_map
