@@ -7,9 +7,9 @@ import datetime
 from tkinter import filedialog
 import numpy as np
 
-
 # adding warning diflection from pandas 
 pd.set_option('future.no_silent_downcasting', True)
+
 
 class Controller:
     """
@@ -35,6 +35,22 @@ class Controller:
         # Filter non-zero data only
         data = data[(data != 0).any(axis=1)]
         data = data.dropna(axis=1, how='all')  # Drop columns with all NaN values
+
+        print(f"Data loaded into Controller:\n{data}")
+        return data
+
+    @staticmethod
+    def load_entire_table(table_controller):
+        """ Retrieves data in table w/o converting it to numeric """
+        if not hasattr(table_controller, 'get_table_selection'):
+            print("Error: Table instance is not initialized.")
+            return pd.DataFrame()
+
+        data = table_controller.get_entire_table()
+        print(f"Loaded Data:\n{data}")
+
+        # Drop columns with all NaN values
+        data = data.dropna(axis=1, how='all')
 
         print(f"Data loaded into Controller:\n{data}")
         return data
@@ -215,3 +231,14 @@ class Controller:
             display_map[display_name] = method
 
         return display_map
+    
+    def plots_for_data_type(data_type):
+        """
+        Loading in the graphs for the data type in the GUI.
+        """
+        if data_type == "Continuous":
+            return ["Normal Distribution Curve", "Scatter Plot"]
+        if data_type == "Nominal" or data_type == "Ordinal":
+            return ["Horizontal Bar Chart", "Vertical Bar Chart", "Pie Chart"]
+        if data_type == "Discrete":
+            return ["Horizontal Bar Chart", "Vertical Bar Chart", "Scatter Plot"]
