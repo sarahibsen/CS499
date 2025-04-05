@@ -574,7 +574,7 @@ class DashboardPage(BasePage):
         selected_table = self.main_control.load_data_from_table(table_controller)
 
         # TODO: Get selected rows
-        selected_rows = table_controller.get_selected_rows()
+        selected_rows = table_controller.get_table_selection()
         print("Retrieved Selected Rows:", selected_rows)
 
         # Check if data was successfully retrieved
