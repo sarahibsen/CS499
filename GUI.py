@@ -555,7 +555,7 @@ class DashboardPage(BasePage):
         if graph_types:
             self.graph_dropdown.set(graph_types[0] if graph_types else "")
 
-        def get_grouped_data(self):
+    def get_grouped_data(self):
         """Retrieve the selected measure and column, apply groupby() to the DataFrame, and create a plot."""
 
         # Ensure the table controller is available
@@ -575,6 +575,8 @@ class DashboardPage(BasePage):
 
         #  Get selected rows
         selected_rows = table_controller.get_table_selection()
+        if not selected_rows.empty:
+            data_frame = data_frame.loc[selected_rows.index]
 
         # Check if data was successfully retrieved
         if selected_table.empty:
@@ -653,26 +655,30 @@ class DashboardPage(BasePage):
             messagebox.showerror("Error", "Invalid measure selected.")
             return None
 
-        # Clear previous plot
-        self.ax.clear()
+        # Clear previous plot and recreate axes to ensure clean state
+        self.figure.clear()
+        self.ax = self.figure.add_subplot(111)  # Recreate the main axes
+        self.canvas_widget.draw_idle()  # Refresh the canvas
+        plt.style.use('seaborn-v0_8-deep')
 
         # Generate the selected graph
         if graph_type == "Horizontal Bar Chart":
-            grouped_data.plot(kind="barh", ax=self.ax, legend=False)
+            grouped_data.plot(kind="barh", ax=self.ax)
         elif graph_type == "Vertical Bar Chart":
-            grouped_data.plot(kind="bar", ax=self.ax, legend=False)
+            grouped_data.plot(kind="bar", ax=self.ax)
         elif graph_type == "Pie Chart":
-            pie_data = grouped_data[selected_columns[0]]  # Choose the first column for pie chart plotting
-            pie_data.plot(kind="pie", ax=self.ax, legend=False, autopct='%1.1f%%')
+            num_cols = len(selected_columns)
+            # Create subplots for each column
+            for i, col in enumerate(selected_columns, 1):
+                ax = self.figure.add_subplot(1, num_cols, i)
+                grouped_data[col].plot(kind="pie", ax=ax, autopct='%1.1f%%', title=col)
         elif graph_type == "Normal Distribution Curve":
-            # Plot a KDE (Kernel Density Estimation) curve to approximate normal distribution
             for col in selected_columns:
-                sns.kdeplot(data_frame[col], ax=self.ax, fill=True, label=col)
+                sns.kdeplot(grouped_data[col], ax=self.ax, fill=True, label=col)
             self.ax.legend()
-        elif graph_type == "Scatter Plot":
-            # Scatter plot (X-Y graph)
+        elif graph_type == "Scatter Plot": # X-Y Graph
             for col in selected_columns:
-                self.ax.scatter(data_frame[groupby_column], data_frame[col], label=col)
+                self.ax.scatter(grouped_data.index, grouped_data[col], label=col)
             self.ax.legend()
         else:
             messagebox.showerror("Error", "Invalid graph type selected.")
@@ -689,6 +695,7 @@ class DashboardPage(BasePage):
 
         # Redraw the canvas
         self.canvas_widget.draw()
+
 
 class ResultsPage(BasePage):
     """
