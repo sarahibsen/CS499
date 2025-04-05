@@ -555,7 +555,7 @@ class DashboardPage(BasePage):
         if graph_types:
             self.graph_dropdown.set(graph_types[0] if graph_types else "")
 
-    def get_grouped_data(self):
+        def get_grouped_data(self):
         """Retrieve the selected measure and column, apply groupby() to the DataFrame, and create a plot."""
 
         # Ensure the table controller is available
@@ -573,9 +573,8 @@ class DashboardPage(BasePage):
         # Load table selection
         selected_table = self.main_control.load_data_from_table(table_controller)
 
-        # TODO: Get selected rows
+        #  Get selected rows
         selected_rows = table_controller.get_table_selection()
-        print("Retrieved Selected Rows:", selected_rows)
 
         # Check if data was successfully retrieved
         if selected_table.empty:
@@ -594,6 +593,13 @@ class DashboardPage(BasePage):
         if not selected_measure or not groupby_column:
             messagebox.showerror("Error", "Please select both a measure and a column.")
             return None
+
+        # Filter the dataframe to only include rows with indices from selected_rows
+        if not selected_rows.empty:
+            # Get the indices from the selected rows
+            selected_indices = selected_rows.index
+            # Filter the original dataframe
+            data_frame = data_frame.loc[selected_indices]
 
         # Group the data
         grouped = data_frame.groupby([groupby_column])[selected_columns]
@@ -683,7 +689,6 @@ class DashboardPage(BasePage):
 
         # Redraw the canvas
         self.canvas_widget.draw()
-
 
 class ResultsPage(BasePage):
     """
