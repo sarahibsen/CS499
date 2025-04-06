@@ -15,7 +15,24 @@ from statisticsLogic import statistic
 
 # using the controller class to handle the communication between all components
 from main_controller import Controller
+import pathlib
+import os
+import sys
 
+
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        # In development or --onedir mode, use the script's directory
+        # Use pathlib to ensure the path is absolute and correct
+        base_path = pathlib.Path(__file__).parent.absolute()
+        # If assets are relative to the *project root* instead of the script file, adjust:
+        # base_path = pathlib.Path('.').absolute() 
+
+    return os.path.join(base_path, relative_path)
 
 # ----- Supplementary Functions ----- #
 def relative_to_assets(path: str) -> Path:
@@ -86,7 +103,7 @@ class App(tk.Tk):
 
         # Configure window
         self.configure(bg=self.colors.get_color("background"))
-        self.title("STATS")
+        self.title("STAT")
 
         # Bind Escape key to close the application
         self.bind("<Escape>", lambda event: self.quit())
@@ -175,8 +192,9 @@ class LaunchPage(BasePage):
         )
 
         # ----- Image Area ----- #
-        image = Image.open("assets/features.png")
-        photo = ImageTk.PhotoImage(image)
+        image = resource_path("assets/features.png")
+        pil_image = Image.open(image)
+        photo = ImageTk.PhotoImage(pil_image)
         self.image_label = Label(self, image=photo, bg=background_color, fg=text_color, bd=0, highlightthickness=0)
         self.image_label.image = photo  # keep a reference
         self.image_label.grid(column=1, rowspan=7, sticky="nsew", padx=20, pady=20)
@@ -827,5 +845,9 @@ class ResultsPage(BasePage):
 
 
 # Run the application
+
 app = App()
 app.mainloop()
+root = tk.Tk()
+icon_path = resource_path('assets/icon.ico') 
+root.iconbitmap(icon_path)
