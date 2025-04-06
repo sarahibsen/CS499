@@ -6,7 +6,7 @@ import numpy as np
 import logging
 
 # logging for bugging / testing purposes
-logging.basicConfig(filename='data_integrity.log', level=logging.ERROR)
+#logging.basicConfig(filename='data_integrity.log', level=logging.ERROR)
 
 
 def process_selection(df, operation):
@@ -47,7 +47,7 @@ class DataIntegrity:
                 if pd.isnull(value) or not isinstance(value, (int, float)):
                     return False  # Found invalid data
             except Exception as e:
-                logging.error(f"Error accessing cell ({row}, {col}): {e}")
+                #logging.error(f"Error accessing cell ({row}, {col}): {e}")
                 return False
         return True
 
@@ -67,7 +67,7 @@ class DataIntegrity:
                         continue  # Skip NaN values
                 cleaned_values.append(value)
             except Exception as e:
-                logging.error(f"Error handling missing data in cell ({row}, {col}): {e}")
+                #logging.error(f"Error handling missing data in cell ({row}, {col}): {e}")
                 continue
         return cleaned_values
 
@@ -94,7 +94,7 @@ class DataIntegrity:
             else:
                 return "Error: Unsupported operation"
         except Exception as e:
-            logging.error(f"Operation error: {e}")
+           # logging.error(f"Operation error: {e}")
             return "Error: Calculation failed"
 
 
