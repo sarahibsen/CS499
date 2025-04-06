@@ -5,6 +5,7 @@ from tkinter import ttk, PhotoImage
 import tkinter as tk
 from PIL import Image, ImageTk
 
+theme = "light blue" # Default theme for the table
 
 class TableModel:
     def __init__(self):
@@ -73,6 +74,11 @@ class TableController:
 
     def get_table_data(self):
         return self.model.get_data()
+    
+    def update_table_theme(self, to_theme, table):
+        table.change_theme(to_theme)
+        global theme
+        theme = to_theme # Update the global theme variable
 
     # TODO: Get selected rows
     def get_selected_rows(self):
@@ -126,8 +132,13 @@ class TableController:
         else:
             self.table = Sheet(self.parent, headers=list(headers), data=list(data))
 
+        self.table.change_theme(theme)
+        self.table.popup_menu_add_command("Light Mode", lambda: self.update_table_theme("light blue", self.table))
+        self.table.popup_menu_add_command("Dark Mode", lambda: self.update_table_theme("dark blue", self.table))
+
         self.table.grid(row=0, column=0, sticky='nswe')
         self.table.enable_bindings("all", "edit_header", "edit_index", "ctrl_select")
+        self.adjust_cell_sizes(self.table) # Adjust cell sizes to fit content
 
     def get_table_selection(self):
         """ Creates a 2D list that matches the dimensions of the tksheet table and fills row list with None.
@@ -167,6 +178,30 @@ class TableController:
         df.dropna(axis=1, how="all", inplace=True)  # Dropna axis 1 drops all NaN columns
 
         return df
+    
+    def adjust_cell_sizes(self, sheet):
+        """
+        Automatically adjust column widths based on the text length in each header and cell.
+        Args:
+            sheet (Sheet): The tksheet instance.
+        """
+        # Adjust column widths
+        column_widths = []
+        for col_index in range(sheet.total_columns()):
+            max_width = 0
+            header_value = sheet.get_header_data(c=col_index)
+            if header_value:
+                 max_width = max(max_width, len(str(header_value))) # Need to check headers as well, they could be longer than the data itself
+
+            for row_index in range(sheet.total_rows()):
+                cell_value = sheet.get_cell_data(r=row_index, c=col_index)
+                if str(cell_value):
+                    max_width = max(max_width, len(str(cell_value)))
+
+            column_widths.append(max_width * 10)
+
+            # Set column width (multiply by a factor to account for font size)
+            sheet.set_column_widths(column_widths)
 
     def import_csv(self):
         """
@@ -185,10 +220,9 @@ class TableController:
             ask_headers = messagebox.askyesno("Headers", "Does your data have headers?")
 
             if ask_headers:
-                self.update_table(headers=df.columns.tolist(),
-                                  data=df.values.tolist())  # Table will include user provided headers
+                self.update_table(headers=df.columns.tolist(), data=df.values.tolist())  # Table will include user provided headers
             else:
-                self.update_table(data=df.values.tolist())  # Table will keep default headings
+                self.update_table(data = [df.columns.tolist()] + df.values.tolist())  # Table will keep default headings
 
         self.log_operation(f"Imported file: {file_path}")
 
@@ -200,13 +234,24 @@ class TableController:
             filetypes=file_types,
             defaultextension=file_types)
 
-        df = self.get_table_selection(self.table)
+        df = self.get_table_selection()
 
         if file and not df.empty:  # Make sure filename was entered and table has data
             if file.name.endswith('.csv'):
                 df.to_csv(file, index=False, lineterminator='\n')
             if file.name.endswith('.tsv'):
                 df.to_csv(file, index=False, sep='\t', lineterminator='\n')
+            if file.name.endswith('.txt'):
+                # Export as a formatted table
+                column_widths = [max(len(str(value)) for value in df[col].tolist() + [col]) for col in df.columns]
+                header = " | ".join(f"{col:<{column_widths[i]}}" for i, col in enumerate(df.columns))
+                separator = "-+-".join("-" * width for width in column_widths)
+                rows = "\n".join(
+                    " | ".join(f"{str(value):<{column_widths[i]}}" for i, value in enumerate(row))
+                    for row in df.values
+                )
+                table_string = f"{header}\n{separator}\n{rows}"
+                file.write(table_string)
 
     def log_operation(self, operation):
         """ Log the operation performed. """
@@ -238,9 +283,17 @@ class TableView(tk.Frame):
         self.sheet.grid(row=0,column=0,sticky='nswe')
         self.sheet.enable_bindings("all", "edit_header", "edit_index", "ctrl_select")
 
+        self.sheet.popup_menu_add_command("Light Mode", lambda: self.update_table_theme("light blue", self.sheet))
+        self.sheet.popup_menu_add_command("Dark Mode", lambda: self.update_table_theme("dark blue", self.sheet))
+
         self.controller = TableController(parent, self.sheet)
 
         self.toolbar = GUIToolbar(parent, self.controller, self.sheet, output)
+
+    def update_table_theme(self, to_theme, table):
+        table.change_theme(to_theme)
+        global theme
+        theme = to_theme
 
 
 class GUIToolbar:
@@ -351,7 +404,7 @@ class GUIToolbar:
             + 'x999uEHAghkIIEEJVYUauihhkLywgtXFFBAYIMVpqdijDnm1E49/RTUUEUdldRSTT0VVUAAOw==')
 
             self.export_button = ttk.Button(self.toolbar_frame, text="Export", image=self.export_img,
-                                            command=lambda: self.export_txt_file())
+                                            command=lambda: self.controller.export_table())
             self.export_button.grid(row=1, column=0, sticky='ne')
 
             # Add Export Operations Log Button with an Icon this will be the output

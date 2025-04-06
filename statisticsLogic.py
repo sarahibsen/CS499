@@ -504,9 +504,9 @@ class statistic():
             raise ValueError("Both columns must have the same row length")
         
         # Checks to ensure number of columns are equal
-        if cleaned_data.shape[1] % 2 != 0:
-            messagebox.showerror("Error", "The number of columns must be even.")
-            raise ValueError("The number of columns must be even")
+        if cleaned_data.shape[1] != 2:
+            messagebox.showerror("Error", "The number of columns must be equal to 2 (x,y).")
+            raise ValueError("The number of columns must be equal to 2 (x,y)")
 
         x, y = np.hsplit(cleaned_data, 2)
 
