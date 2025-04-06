@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import *
 from tkinter import Canvas, Button, PhotoImage, filedialog, ttk, messagebox, Label, simpledialog
 from tkinter.ttk import Button, Style
 import pandas as pd
@@ -18,6 +19,7 @@ from main_controller import Controller
 import pathlib
 import os
 import sys
+from menu_functions import set_theme, about_the_app, show_help
 
 
 def resource_path(relative_path):
@@ -108,6 +110,25 @@ class App(tk.Tk):
         # Bind Escape key to close the application
         self.bind("<Escape>", lambda event: self.quit())
 
+        # --- Creation of the menu bar here ---
+        menubar = Menu(self)
+        self.config(menu=menubar) # Assign the menu to the window
+
+        # File Menu
+        filemenu = Menu(menubar, tearoff=0)
+        filemenu.add_separator()
+        filemenu.add_command(label="Exit", command=self.quit) # Use self.quit 
+        menubar.add_cascade(label="File", menu=filemenu) # Add the cascade to the menubar
+        # Help Menu
+        helpmenu = Menu(menubar, tearoff=0)
+        helpmenu.add_command(label="About", command= about_the_app) 
+        helpmenu.add_command(label = "Help", command = show_help)
+        menubar.add_cascade(label="Help", menu=helpmenu)
+        viewmenu = Menu(menubar, tearoff=0)
+        viewmenu.add_command(label="Set Theme",
+                            command=lambda: set_theme(self)) 
+        menubar.add_cascade(label="View", menu=viewmenu)
+        #----
         # Create a container to hold pages
         self.container = tk.Frame(self, bg="white")
         self.container.grid(row=0, column=0, sticky="nsew")
@@ -149,6 +170,25 @@ class App(tk.Tk):
         """Retrieves the stored instance of a page."""
         return self.pages.get(page_name)
 
+    # --- This method is called by menu_functions to make sure that the theme is applied to the whole application ---
+    def update_ui_colors(self):
+        """Updates colors for the main window and all pages."""
+        print("App updating UI colors...")
+        new_bg = self.colors.get_color("background")
+        self.configure(bg=new_bg)
+        if hasattr(self, 'container') and self.container.winfo_exists():
+            self.container.configure(bg=new_bg)
+
+        for page_name, page in self.pages.items():
+             # Check if page exists and has the update method
+            if page and hasattr(page, 'update_colors') and callable(page.update_colors):
+                try:
+                     page.update_colors()
+                except Exception as e:
+                     print(f"Error updating colors for page {page_name}: {e}")
+            else:
+                 print(f"Warning: Page {page_name} ({type(page).__name__}) has no update_colors method or doesn't exist.")
+        print("App finished updating UI colors.")
 
 class BasePage(tk.Frame):
     """Base class for all pages."""
@@ -156,7 +196,17 @@ class BasePage(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg="white")
         self.controller = controller
-
+    def update_colors(self):
+        """Updates the background of the base page frame."""
+        # Check if controller and colors exist
+        if hasattr(self.controller, 'colors'):
+            new_bg = self.controller.colors.get_color("background")
+            try:
+                self.configure(bg=new_bg)
+            except tk.TclError as e:
+                print(f"Error configuring BasePage background for {type(self).__name__}: {e}")
+        else:
+            print(f"Warning: Cannot update colors for {type(self).__name__}, controller or colors missing.")
 
 class LaunchPage(BasePage):
     """Start page of the application."""
@@ -261,6 +311,8 @@ class MeasureSelectionPage(BasePage):
         )
         self.dashboard_page_button.grid(row=1, column=0, padx=10, pady=10, sticky="ns")
 
+        self.update_colors()
+        
         # ----- Data Table ----- #
         self.table_frame = tk.Frame(self)
 
@@ -296,14 +348,13 @@ class MeasureSelectionPage(BasePage):
         # Label to show selected measures
         self.selected_stat_label = tk.Label(
             self.measurement_frame,
-            text="Selected Measures: None",
-            font=("Roboto", 14),
-            bg="#FFFFFF",
-            wraplength=350,
+            text="Selected: None",
+            font=("Roboto", 12), 
+            # REMOVED: bg="#FFFFFF", 
+            wraplength=300,
             justify="left",
-            anchor="w"
+            anchor="nw"
         )
-
         # self.selected_stat_label.place(x=151, y=500, width=351, height=50)
         self.selected_stat_label.grid(row=3, column=1, padx=10, pady=10, sticky='nw')
 
@@ -330,17 +381,53 @@ class MeasureSelectionPage(BasePage):
         # Update the window inside the canvas
         self.canvas.coords(self.measurement_window, 100, 0)  # Ensure it starts at (100,0)
         self.canvas.itemconfig(self.measurement_window, width=new_width, height=canvas_height)
+    def update_colors(self):
+        """Updates colors for non-ttk widgets and specific configurations."""
+        # If BasePage only sets its own bg, call it:
+        if hasattr(super(), 'update_colors'):
+             super().update_colors()
 
-    def import_csv(self):
-        file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
-        if file_path:
-            try:
-                data = pd.read_csv(file_path)
-                # Show data in the table
-                self.display_table(data)
+        # Check if controller and colors palette exist
+        if not (hasattr(self.controller, 'colors') and self.controller.colors):
+            print(f"Warning: Cannot update colors for {type(self).__name__}, controller or colors missing.")
+            return
 
-            except Exception as e:
-                print(f"Error importing CSV: {e}")
+        # Get colors from the central palette
+        background_color = self.controller.colors.get_color("background")
+        text_color = self.controller.colors.get_color("text")
+        toolbar_bg_color = self.controller.colors.get_color("toolbar_bg")
+
+
+        # Update Frames 
+        if hasattr(self, 'toolbar_frame'): self.toolbar_frame.configure(bg=toolbar_bg_color)
+        if hasattr(self, 'measurement_frame'): self.measurement_frame.configure(bg=background_color)
+        if hasattr(self, 'table_frame'): self.table_frame.configure(bg=background_color)
+        if hasattr(self, 'stat_measures_listbox'):
+             listbox_parent = self.stat_measures_listbox.master
+             if isinstance(listbox_parent, tk.Frame):
+                 listbox_parent.configure(bg=background_color) # Match measurement frame bg
+
+
+        if hasattr(self, 'label_data_type'): self.label_data_type.configure(bg=background_color, fg=text_color)
+        if hasattr(self, 'label_measures'): self.label_measures.configure(bg=background_color, fg=text_color)
+        if hasattr(self, 'label_selected'): self.label_selected.configure(bg=background_color, fg=text_color)
+
+        if hasattr(self, 'selected_stat_label') and self.selected_stat_label.winfo_exists():
+            self.selected_stat_label.configure(bg=background_color, fg=text_color)
+
+        if hasattr(self, 'table') and hasattr(self.table, 'update_theme') and callable(self.table.update_theme):
+            self.table.update_theme(self.controller.colors)
+
+    # def import_csv(self):
+    #     file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
+    #     if file_path:
+    #         try:
+    #             data = pd.read_csv(file_path)
+    #             # Show data in the table
+    #             self.display_table(data)
+
+    #         except Exception as e:
+    #             print(f"Error importing CSV: {e}")
 
     def on_data_type_selected(self, event):
         selected_data_type = self.data_type_dropdown.get()
@@ -412,6 +499,7 @@ class MeasureSelectionPage(BasePage):
     def get_table_data(self):
         # Fetch table data from the CustomTable widget
         return self.table.celldType()
+
 
 
 class DashboardPage(BasePage):
@@ -507,6 +595,9 @@ class DashboardPage(BasePage):
         self.toolbar = NavigationToolbar2Tk(self.canvas_widget, self.graph_container)
         self.toolbar.update()
 
+        # --- Initial Color Update ---
+        self.update_colors()
+
     def get_table_controller(self):
         """Retrieve the table controller from MeasureSelectionPage."""
         measure_page = self.controller.get_page("MeasureSelectionPage")
@@ -572,6 +663,61 @@ class DashboardPage(BasePage):
         self.graph_dropdown["values"] = graph_types
         if graph_types:
             self.graph_dropdown.set(graph_types[0] if graph_types else "")
+
+
+    def update_colors(self):
+        """Updates colors for non-ttk widgets and Matplotlib elements."""
+        if not (hasattr(self.controller, 'colors') and self.controller.colors):
+            print(f"Warning: Cannot update colors for {type(self).__name__}, controller or colors missing.")
+            return
+        if hasattr(super(), 'update_colors'):
+            super().update_colors()
+
+        background_color = self.controller.colors.get_color("background")
+        text_color = self.controller.colors.get_color("text")
+        toolbar_bg_color = self.controller.colors.get_color("toolbar_bg")
+        # Use a slightly different color for axes background? Or match primary/background??
+        plot_bg_color = background_color # Figure background matches window
+
+        # Update Frames
+        if hasattr(self, 'toolbar_frame'): self.toolbar_frame.configure(bg=toolbar_bg_color)
+        if hasattr(self, 'control_frame'): self.control_frame.configure(bg=background_color)
+        if hasattr(self, 'dashboard_frame'): self.dashboard_frame.configure(bg=background_color)
+        if hasattr(self, 'graph_container'): self.graph_container.configure(bg=background_color)
+
+        # Update tk Labels in control_frame
+        if hasattr(self, 'label_measure'): self.label_measure.configure(bg=background_color, fg=text_color)
+        if hasattr(self, 'label_group_by'): self.label_group_by.configure(bg=background_color, fg=text_color)
+        if hasattr(self, 'label_graph_type'): self.label_graph_type.configure(bg=background_color, fg=text_color)
+
+
+        # Update Matplotlib colors
+        try:
+            # Set figure and axes background
+            self.figure.patch.set_facecolor(plot_bg_color)
+
+            # Update text colors (title, labels, ticks)
+            self.ax.title.set_color(text_color)
+            self.ax.xaxis.label.set_color(text_color)
+            self.ax.yaxis.label.set_color(text_color)
+            self.ax.tick_params(axis='x', colors=text_color)
+            self.ax.tick_params(axis='y', colors=text_color)
+
+            # Update spines (axes borders) color
+            self.ax.spines['top'].set_color(text_color)
+            self.ax.spines['bottom'].set_color(text_color)
+            self.ax.spines['left'].set_color(text_color)
+            self.ax.spines['right'].set_color(text_color)
+
+            # Update the canvas widget background itself (the tk part)
+            if hasattr(self, 'canvas_tk_widget'):
+                  self.canvas_tk_widget.configure(bg=plot_bg_color)
+
+            # Redraw the canvas
+            self.canvas_widget.draw_idle()
+
+        except Exception as e:
+             print(f"Error updating plot colors: {e}")
 
     def get_grouped_data(self):
         """Retrieve the selected measure and column, apply groupby() to the DataFrame, and create a plot."""
@@ -782,6 +928,31 @@ class ResultsPage(BasePage):
             bg="#D9D9D9"
         )
         self.placeholder_label.grid(row=0, column=0)
+        # --- Initial Color Update ---
+        self.update_colors()
+
+    def update_colors(self):
+        """Updates colors for non-ttk widgets and frames."""
+        if not (hasattr(self.controller, 'colors') and self.controller.colors):
+            print(f"Warning: Cannot update colors for {type(self).__name__}, controller or colors missing.")
+            return
+        if hasattr(super(), 'update_colors'):
+            super().update_colors()
+
+        background_color = self.controller.colors.get_color("background")
+        text_color = self.controller.colors.get_color("text")
+        toolbar_bg_color = self.controller.colors.get_color("toolbar_bg")
+        results_bg_color = self.controller.colors.get_color("results_bg") # Specific results area color
+
+        # Update Frames
+        if hasattr(self, 'toolbar_frame'): self.toolbar_frame.configure(bg=toolbar_bg_color)
+        if hasattr(self, 'main_frame'): self.main_frame.configure(bg=background_color)
+        if hasattr(self, 'button_frame'): self.button_frame.configure(bg=background_color) # Button is ttk
+        if hasattr(self, 'results_display_frame'): self.results_display_frame.configure(bg=results_bg_color)
+
+        if hasattr(self, 'placeholder_label') and self.placeholder_label.winfo_exists():
+            self.placeholder_label.configure(bg=results_bg_color, fg=text_color)
+
 
     def resize_toolbar(self, event):
         """Resize the rectangle dynamically when the window changes size."""
@@ -848,6 +1019,3 @@ class ResultsPage(BasePage):
 
 app = App()
 app.mainloop()
-root = tk.Tk()
-icon_path = resource_path('assets/icon.ico') 
-root.iconbitmap(icon_path)
