@@ -15,7 +15,7 @@
 **Important:** You do **not** need to install Python or any other libraries to run this program.
 
 1.  **Download:**
-    *   Go to the [Releases page](link-to-your-github-releases-or-download-page).
+    *   Go to the [Releases page](https://github.com/sarahibsen/CS499/releases/tag/v1.0.0-alpha).
     *   Download the correct file for your operating system:
         *   **Windows:** Download `[stat].exe`
         *   **macOS:** Download `[stat].dmg` or `[stat].app.zip` (adjust as needed)
