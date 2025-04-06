@@ -821,7 +821,7 @@ class ResultsPage(BasePage):
         self.results_table_frame.grid_columnconfigure(0, weight=1)
 
         # Create and populate table
-        table = TableView(self.results_table_frame)
+        table = TableView(self.results_table_frame, output=True)
         table.grid(row=0, column=0, sticky='nsew')
         table.controller.update_table(headers=self.result_headers, data=self.result_rows.values())
 
