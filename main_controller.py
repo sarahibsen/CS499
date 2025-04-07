@@ -233,13 +233,19 @@ class Controller:
         return display_map
 
     @staticmethod
-    def plots_for_data_type(data_type):
-        """
-        Loading in the graphs for the data type in the GUI.
-        """
-        if data_type == "Continuous":
-            return ["Normal Distribution Curve", "Scatter Plot"]
-        if data_type == "Nominal" or data_type == "Ordinal":
-            return ["Horizontal Bar Chart", "Vertical Bar Chart", "Pie Chart"]
-        if data_type == "Discrete":
-            return ["Horizontal Bar Chart", "Vertical Bar Chart", "Scatter Plot"]
+    def plots_for_measure(measure):
+        """Return appropriate plots based on the selected statistical measure."""
+        if measure in ["Mean", "Median", "Mode", "Standard Deviation", "Coefficient of Variation", "Percentiles"]:
+            return ["Horizontal Bar Chart", "Vertical Bar Chart", "Pie Chart", "Normal Distribution Curve"]
+
+        elif measure in ["Probability Distribution", "Binomial Distribution", "Least Square Line"]:
+            return ["Scatter Plot", "Normal Distribution Curve"]
+
+        elif measure in ["Chi Square", "Sign Test", "Rank Sum"]:
+            return ["Horizontal Bar Chart", "Vertical Bar Chart"]
+
+        elif measure in ["Correlation", "Spearman Correlation"]:
+            return ["Scatter Plot"]
+
+        else:
+            return ["Horizontal Bar Chart", "Vertical Bar Chart"]  # Safe fallback
