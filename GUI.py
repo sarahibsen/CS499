@@ -501,7 +501,6 @@ class MeasureSelectionPage(BasePage):
         return self.table.celldType()
 
 
-
 class DashboardPage(BasePage):
     """Dashboard page of the application. Users can select what graphs they would like to display."""
 
@@ -553,6 +552,7 @@ class DashboardPage(BasePage):
             row=1, column=0, sticky="w", pady=(10, 0)
         )
         self.measure_dropdown = ttk.Combobox(self.control_frame, state="readonly", font=("Roboto", 14))
+        self.measure_dropdown.bind("<<ComboboxSelected>>", self.on_measure_change)
         self.measure_dropdown.grid(row=2, column=0, sticky="ew", pady=(0, 10))
 
         # Column selection dropdown
@@ -598,6 +598,15 @@ class DashboardPage(BasePage):
         # --- Initial Color Update ---
         self.update_colors()
 
+    def on_measure_change(self, event=None):
+        selected_measure = self.measure_dropdown.get()
+        graph_types = Controller.plots_for_measure(selected_measure)
+
+        self.graph_dropdown.set("")
+        self.graph_dropdown["values"] = graph_types
+        if graph_types:
+            self.graph_dropdown.set(graph_types[0])
+
     def get_table_controller(self):
         """Retrieve the table controller from MeasureSelectionPage."""
         measure_page = self.controller.get_page("MeasureSelectionPage")
@@ -616,7 +625,7 @@ class DashboardPage(BasePage):
         """Resize the rectangle dynamically when the window changes size."""
         self.canvas.coords(self.toolbarBackground, 0, 0, 100, event.height)  # Adjust height dynamically
 
-    def update_dropdowns(self, selected_measures, selected_data_type):
+    def update_dropdowns(self, selected_measures, selected_measure):
         """Update the measure and column dropdowns with available options while excluding selected columns."""
 
         # Ensure the table controller is available
@@ -625,45 +634,40 @@ class DashboardPage(BasePage):
             print("Error: Table controller not found.")
             return
 
-        # Load data from the table
+            # Load data from the table
         data_frame = self.main_control.load_entire_table(table_controller)
-
-        # Load table selection
         selected_table = self.main_control.load_data_from_table(table_controller)
 
-        # Check if data is retrieved
         if data_frame.empty:
             messagebox.showerror("Error", "Data frame is empty, cannot populate dropdown.")
             return
 
-        # Retrieve column names
+            # Get column info
         all_columns = list(data_frame.columns)
         selected_columns = list(selected_table.columns)
-
-        # Exclude selected columns from all_columns
         available_columns = [col for col in all_columns if col not in selected_columns]
 
-        # Reset dropdowns before updating
+        # Reset dropdowns
         self.column_dropdown.set("")
         self.measure_dropdown.set("")
         self.graph_dropdown.set("")
 
-        # Update column dropdown
+        # Set column dropdown
         self.column_dropdown["values"] = available_columns
         if available_columns:
-            self.column_dropdown.set(available_columns[0] if available_columns else "")
+            self.column_dropdown.set(available_columns[0])
 
-        # Update measure dropdown
+        # Set measure dropdown
         self.measure_dropdown["values"] = selected_measures
         if selected_measures:
-            self.measure_dropdown.set(selected_measures[0] if selected_measures else "")
+            self.measure_dropdown.set(selected_measures[0])
 
-        # Update graph dropdown
-        graph_types = Controller.plots_for_data_type(selected_data_type)
-        self.graph_dropdown["values"] = graph_types
-        if graph_types:
-            self.graph_dropdown.set(graph_types[0] if graph_types else "")
-
+        # Set graph dropdown based on selected measure
+        if selected_measure:
+            graph_types = Controller.plots_for_measure(selected_measure)
+            self.graph_dropdown["values"] = graph_types
+            if graph_types:
+                self.graph_dropdown.set(graph_types[0])
 
     def update_colors(self):
         """Updates colors for non-ttk widgets and Matplotlib elements."""
