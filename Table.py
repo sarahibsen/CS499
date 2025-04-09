@@ -253,15 +253,16 @@ class TableController:
                 table_string = f"{header}\n{separator}\n{rows}"
                 file.write(table_string)
 
-    def log_operation(self, operation):
+    def log_operation(self, selected_operations, dataType, results):
         """ Log the operation performed. """
+        operation = f"Operation: {selected_operations}, Data Type: {dataType}, Results: {results}"
         self.operations_log.append(operation)
         print(f"Operation logged: {operation}")
 
     def export_txt_file(self):
         file_path = filedialog.asksaveasfilename(
             title="Select a location to save the text file",
-            filetypes=[("Text files", "*.txt")]
+            filetypes=[("Text files", '.txt')]
         )
 
         if file_path:
