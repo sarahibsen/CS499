@@ -180,7 +180,7 @@ class Controller:
 
         # Add timestamp
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        filename = filename or f"stats_results_{timestamp}.csv"
+        filename = filename or f"stats_results_{timestamp}.txt"
 
         df = pd.DataFrame(detailed_results)
         df.to_csv(filename, index=False)
