@@ -180,7 +180,7 @@ class Controller:
 
         # Add timestamp
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        filename = filename or f"stats_results_{timestamp}.csv"
+        filename = filename or f"stats_results_{timestamp}.txt"
 
         df = pd.DataFrame(detailed_results)
         df.to_csv(filename, index=False)
@@ -234,18 +234,27 @@ class Controller:
 
     @staticmethod
     def plots_for_measure(measure):
-        """Return appropriate plots based on the selected statistical measure."""
-        if measure in ["Mean", "Median", "Mode", "Standard Deviation", "Coefficient of Variation", "Percentiles"]:
-            return ["Horizontal Bar Chart", "Vertical Bar Chart", "Pie Chart", "Normal Distribution Curve"]
+            """Return appropriate plots/distribution types based on the selected measure."""
+            print(f"plots_for_measure called with: {measure}")  # Debugging
+            # --- Handle Probability Distribution Separately ---
+            if measure == "Probability Distribution":
+                # These are the specific distribution plots for this measure
+                return ["Skewness Plot", "Kurtosis Plot", "IQR Plot"]
 
-        elif measure in ["Probability Distribution", "Binomial Distribution", "Least Square Line"]:
-            return ["Scatter Plot", "Normal Distribution Curve"]
+            elif measure in ["Mean", "Median", "Mode", "Standard Deviation", "Coefficient of Variation", "Percentiles"]:
+            
+                return ["Vertical Bar Chart", "Horizontal Bar Chart", "Pie Chart"] # Removed Normal Dist curve here
 
-        elif measure in ["Chi Square", "Sign Test", "Rank Sum"]:
-            return ["Horizontal Bar Chart", "Vertical Bar Chart"]
+            elif measure in ["Chi Square", "Sign Test", "Rank Sum"]:
+                return ["Vertical Bar Chart", "Horizontal Bar Chart"]
 
-        elif measure in ["Correlation", "Spearman Correlation"]:
-            return ["Scatter Plot"]
+            elif measure in ["Correlation", "Spearman Correlation", "Least Square Line"]:
+                return ["Scatter Plot"] # Grouped regression/correlation plots
 
-        else:
-            return ["Horizontal Bar Chart", "Vertical Bar Chart"]  # Safe fallback
+            elif measure == "Binomial Distribution":
+                return ["Bar Chart (Probability Mass)", "CDF Plot"]
+
+            # --- Fallback ---
+            else:
+                # Sensible default if measure not explicitly handled
+                return ["Vertical Bar Chart", "Horizontal Bar Chart"]
