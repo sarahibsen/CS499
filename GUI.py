@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import *
 from tkinter import Canvas, Button, PhotoImage, filedialog, ttk, messagebox, Label, simpledialog
 from tkinter.ttk import Button, Style
+import scipy.stats as stats
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -725,6 +726,8 @@ class DashboardPage(BasePage):
         except Exception as e:
              print(f"Error updating plot colors: {e}")
 
+
+
     def get_grouped_data(self):
         """Retrieve the selected measure and column, apply groupby() to the DataFrame, and create a plot."""
 
@@ -743,7 +746,7 @@ class DashboardPage(BasePage):
         # Load table selection
         selected_table = self.main_control.load_data_from_table(table_controller)
 
-        #  Get selected rows
+        # Get selected rows
         selected_rows = table_controller.get_table_selection()
         if not selected_rows.empty:
             data_frame = data_frame.loc[selected_rows.index]
@@ -779,46 +782,49 @@ class DashboardPage(BasePage):
         # Perform statistical measure on grouped data and create dataframe
         if selected_measure == "Mean":
             grouped_data = grouped.mean()
-
         elif selected_measure == "Median":
             grouped_data = grouped.median()
-
         elif selected_measure == "Mode":
             grouped_data = grouped.agg(lambda x: x.mode().iloc[0] if not x.mode().empty else None)
-
         elif selected_measure == "Standard Deviation":
             grouped_data = grouped.std()
-
         elif selected_measure == "Coefficient of Variation":
             grouped_std = grouped.std()
             grouped_mean = grouped.mean()
             grouped_data = grouped_std / grouped_mean
-
         elif selected_measure == "Percentiles":
             #TODO: Pull percentile that user enters
             grouped_data = grouped.quantile(0.25)
-
         elif selected_measure == "Probability Distribution":
-            grouped_data = None
-
+            try:
+                dist_data = []
+                for name, group in grouped:
+                    flat_data = group.values.flatten()
+                    group_mean = flat_data.mean()
+                    group_std = flat_data.std()
+                    dist_data.append({
+                        "Group": name,
+                        "Mean": group_mean,
+                        "StdDev": group_std,
+                        "Distribution": stats.norm.pdf(flat_data, group_mean, group_std)
+                    })
+                grouped_data = pd.DataFrame(dist_data)
+            except Exception as e:
+                print(f"Error calculating Probability Distribution: {e}")
+                return
+               
         elif selected_measure == "Binomial Distribution":
             grouped_data = None
-
         elif selected_measure == "Least Square Line":
             grouped_data = None
-
         elif selected_measure == "Chi Square":
             grouped_data = None
-
         elif selected_measure == "Correlation":
             grouped_data = grouped.corr()
-
         elif selected_measure == "Sign Test":
             grouped_data = None
-
         elif selected_measure == "Rank Sum":
             grouped_data = None
-
         elif selected_measure == "Spearman Correlation":
             grouped_data = None
         else:
@@ -831,11 +837,31 @@ class DashboardPage(BasePage):
         self.canvas_widget.draw_idle()  # Refresh the canvas
         plt.style.use('seaborn-v0_8-deep')
 
+        # Debugging print to check the grouped_data
+      #  print(f"grouped_data for Probability Distribution: {grouped_data}")
         # Generate the selected graph
         if graph_type == "Horizontal Bar Chart":
-            grouped_data.plot(kind="barh", ax=self.ax)
+            if isinstance(grouped_data, dict):
+                # Handle probability distribution specifically
+                for col, dist_data in grouped_data.items():
+                    # Flatten the data (since grouped_data[col] is a list of distributions)
+                    all_dist_data = [item for sublist in dist_data for item in sublist]
+                    # Remove NaN values from the data
+                    all_dist_data = [x for x in all_dist_data if not np.isnan(x)]
+                    if all_dist_data:  # Ensure there's data to plot
+                        self.ax.hist(all_dist_data, bins=20, density=True, alpha=0.5, label=f"{col} - Probability Distribution")
+            else:
+                grouped_data.plot(kind="barh", ax=self.ax)
         elif graph_type == "Vertical Bar Chart":
-            grouped_data.plot(kind="bar", ax=self.ax)
+            if isinstance(grouped_data, dict):
+                # Handle probability distribution specifically
+                for col, dist_data in grouped_data.items():
+                    all_dist_data = [item for sublist in dist_data for item in sublist]
+                    all_dist_data = [x for x in all_dist_data if not np.isnan(x)]  # Remove NaN values
+                    if all_dist_data:  # Ensure there's data to plot
+                        self.ax.hist(all_dist_data, bins=20, density=True, alpha=0.5, label=f"{col} - Probability Distribution")
+            else:
+                grouped_data.plot(kind="bar", ax=self.ax)
         elif graph_type == "Pie Chart":
             num_cols = len(selected_columns)
             # Create subplots for each column
@@ -846,13 +872,11 @@ class DashboardPage(BasePage):
             for col in selected_columns:
                 sns.kdeplot(grouped_data[col], ax=self.ax, fill=True, label=col)
             self.ax.legend()
-        elif graph_type == "Scatter Plot": # X-Y Graph
+        elif graph_type == "Scatter Plot":  # X-Y Graph
             for col in selected_columns:
                 self.ax.scatter(grouped_data.index, grouped_data[col], label=col)
             self.ax.legend()
-        else:
-            messagebox.showerror("Error", "Invalid graph type selected.")
-            return None
+
 
         # Set labels and title
         self.ax.set_title(f"{selected_measure} by {groupby_column}")
