@@ -472,7 +472,7 @@ class MeasureSelectionPage(BasePage):
         selected_measures = [self.stat_measures_listbox.get(i) for i in self.stat_measures_listbox.curselection()]
 
         data_frame = self.controller.load_data_from_table(self.table.controller)
-        print(f"Final Data Before Validation:\n{data_frame}")  # Final confirmation
+        #print(f"Final Data Before Validation:\n{data_frame}")  # Final confirmation
 
         if data_frame.empty:
             messagebox.showerror("Error", "No data to analyze.")
@@ -600,6 +600,7 @@ class DashboardPage(BasePage):
 
     def on_measure_change(self, event=None):
         selected_measure = self.measure_dropdown.get()
+        print(f"Selected Measure: {selected_measure}")
         graph_types = Controller.plots_for_measure(selected_measure)
 
         self.graph_dropdown.set("")
@@ -664,6 +665,7 @@ class DashboardPage(BasePage):
 
         # Set graph dropdown based on selected measure
         if selected_measure:
+            print(f"668 Selected Measure: {selected_measure}")
             graph_types = Controller.plots_for_measure(selected_measure)
             self.graph_dropdown["values"] = graph_types
             if graph_types:
@@ -806,7 +808,9 @@ class DashboardPage(BasePage):
             grouped_data = None
 
         elif selected_measure == "Chi Square":
-            grouped_data = None
+            grouped_data = grouped.apply(lambda x: x)
+            grouped_data.iloc[:,0] = pd.to_numeric(grouped_data.iloc[:,0], errors='coerce').dropna().astype(int).values
+            grouped_data.iloc[:,1] = pd.to_numeric(grouped_data.iloc[:,1], errors='coerce').dropna().astype(int).values
 
         elif selected_measure == "Correlation":
             grouped_data = grouped.corr()
@@ -829,6 +833,8 @@ class DashboardPage(BasePage):
         self.canvas_widget.draw_idle()  # Refresh the canvas
         plt.style.use('seaborn-v0_8-deep')
 
+        print(f"Grouped Data:\n{grouped_data}")  # Debugging output
+        print(f"Type Grouped Data:\n{type(grouped_data)}")  # Debugging output
         # Generate the selected graph
         if graph_type == "Horizontal Bar Chart":
             grouped_data.plot(kind="barh", ax=self.ax)
@@ -979,7 +985,10 @@ class ResultsPage(BasePage):
         for key, value in results.items():
             if isinstance(value, dict):
                 for subkey, subvalue in value.items():
-                    row[subkey] = subvalue
+                    if isinstance(subvalue, np.ndarray):
+                        row[subkey] = ", ".join(map(str, subvalue.flatten()))
+                    else:
+                        row[subkey] = subvalue
             else:
                 row[key] = value
         return row

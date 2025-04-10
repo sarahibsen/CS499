@@ -24,7 +24,7 @@ class Controller:
             return pd.DataFrame()
 
         data = table_controller.get_table_selection()
-        print(f"Loaded Data:\n{data}")
+        #print(f"Loaded Data:\n{data}")
 
         # Ensure proper data types
         for col in data.columns:
@@ -36,7 +36,7 @@ class Controller:
         data = data[(data != 0).any(axis=1)]
         data = data.dropna(axis=1, how='all')  # Drop columns with all NaN values
 
-        print(f"Data loaded into Controller:\n{data}")
+        #print(f"Data loaded into Controller:\n{data}")
         return data
 
     @staticmethod
@@ -47,12 +47,12 @@ class Controller:
             return pd.DataFrame()
 
         data = table_controller.get_entire_table()
-        print(f"Loaded Data:\n{data}")
+        #print(f"Loaded Data:\n{data}")
 
         # Drop columns with all NaN values
         data = data.dropna(axis=1, how='all')
 
-        print(f"Data loaded into Controller:\n{data}")
+        #print(f"Data loaded into Controller:\n{data}")
         return data
 
     @staticmethod

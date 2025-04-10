@@ -188,7 +188,9 @@ class statistic():
         percentiles_df = pd.DataFrame(percentiles_array, columns=[f"Column {i+1}" for i in range(cleaned_data.shape[1])])
 
         percentiles_df.insert(0, "Percentiles", [f"{p}th" for p in psequence])  # Insert percentile column (Percentiles:, nth, n+1th)
+        
         return {"Percentiles": percentiles_df.to_numpy()}
+
     
 
     
