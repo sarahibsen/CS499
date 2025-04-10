@@ -239,7 +239,7 @@ class Controller:
             # --- Handle Probability Distribution Separately ---
             if measure == "Probability Distribution":
                 # These are the specific distribution plots for this measure
-                return ["Skewness", "Kurtosis", "IQR"]
+                return ["Skewness Plot", "Kurtosis Plot", "IQR Plot"]
 
             elif measure in ["Mean", "Median", "Mode", "Standard Deviation", "Coefficient of Variation", "Percentiles"]:
             
