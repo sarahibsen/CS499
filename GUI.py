@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import *
 from tkinter import Canvas, Button, PhotoImage, filedialog, ttk, messagebox, Label, simpledialog
 from tkinter.ttk import Button, Style
+import scipy.stats as stats
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -565,8 +566,8 @@ class DashboardPage(BasePage):
 
         # Graph selection dropdown
         tk.Label(self.control_frame, text="Graph Type:", font=("Roboto", 18), bg="#FFFFFF").grid(row=5, column=0,
-                                                                                                      sticky="w",
-                                                                                                      pady=(0, 5))
+                                                                                                 sticky="w",
+                                                                                                 pady=(0, 5))
         self.graph_dropdown = ttk.Combobox(self.control_frame, state="readonly", font=("Roboto", 14))
         self.graph_dropdown.grid(row=6, column=0, sticky="ew")
 
@@ -636,7 +637,7 @@ class DashboardPage(BasePage):
             print("Error: Table controller not found.")
             return
 
-            # Load data from the table
+         # Load data from the table
         data_frame = self.main_control.load_entire_table(table_controller)
         selected_table = self.main_control.load_data_from_table(table_controller)
 
@@ -644,7 +645,7 @@ class DashboardPage(BasePage):
             messagebox.showerror("Error", "Data frame is empty, cannot populate dropdown.")
             return
 
-            # Get column info
+        # Get column info
         all_columns = list(data_frame.columns)
         selected_columns = list(selected_table.columns)
         available_columns = [col for col in all_columns if col not in selected_columns]
@@ -660,9 +661,13 @@ class DashboardPage(BasePage):
             self.column_dropdown.set(available_columns[0])
 
         # Set measure dropdown
-        self.measure_dropdown["values"] = selected_measures
         if selected_measures:
-            self.measure_dropdown.set(selected_measures[0])
+            measure_options = ["Select value"] + selected_measures
+            self.measure_dropdown["values"] = measure_options
+            self.measure_dropdown.set("Select value")
+        else:
+            self.measure_dropdown.set("")  # Clear if no measures available
+            self.measure_dropdown["values"] = []
 
         # Set graph dropdown based on selected measure
         if selected_measure:
@@ -695,7 +700,6 @@ class DashboardPage(BasePage):
         if hasattr(self, 'label_measure'): self.label_measure.configure(bg=background_color, fg=text_color)
         if hasattr(self, 'label_group_by'): self.label_group_by.configure(bg=background_color, fg=text_color)
         if hasattr(self, 'label_graph_type'): self.label_graph_type.configure(bg=background_color, fg=text_color)
-
 
         # Update Matplotlib colors
         try:
@@ -743,7 +747,7 @@ class DashboardPage(BasePage):
         # Load table selection
         selected_table = self.main_control.load_data_from_table(table_controller)
 
-        #  Get selected rows
+        # Get selected rows
         selected_rows = table_controller.get_table_selection()
         if not selected_rows.empty:
             data_frame = data_frame.loc[selected_rows.index]
@@ -762,9 +766,18 @@ class DashboardPage(BasePage):
         graph_type = self.graph_dropdown.get()
 
         # Validate selections
-        if not selected_measure or not groupby_column:
-            messagebox.showerror("Error", "Please select both a measure and a column.")
+        if selected_measure == "Select value":
+            messagebox.showerror("Error", "Please select a measure.")
             return None
+
+        if not groupby_column:
+            messagebox.showerror("Error", "Please select a column.")
+            return None
+
+        if not graph_type:
+            messagebox.showerror("Error", "Please select a graph.")
+            return None
+
 
         # Filter the dataframe to only include rows with indices from selected_rows
         if not selected_rows.empty:
@@ -776,49 +789,44 @@ class DashboardPage(BasePage):
         # Group the data
         grouped = data_frame.groupby([groupby_column])[selected_columns]
 
+        # Get probability distribution plot type if applicable
+        prob_dist_plot_type = None
+
         # Perform statistical measure on grouped data and create dataframe
         if selected_measure == "Mean":
             grouped_data = grouped.mean()
-
         elif selected_measure == "Median":
             grouped_data = grouped.median()
-
         elif selected_measure == "Mode":
             grouped_data = grouped.agg(lambda x: x.mode().iloc[0] if not x.mode().empty else None)
-
         elif selected_measure == "Standard Deviation":
             grouped_data = grouped.std()
-
         elif selected_measure == "Coefficient of Variation":
             grouped_std = grouped.std()
             grouped_mean = grouped.mean()
             grouped_data = grouped_std / grouped_mean
-
         elif selected_measure == "Percentiles":
             #TODO: Pull percentile that user enters
             grouped_data = grouped.quantile(0.25)
-
         elif selected_measure == "Probability Distribution":
-            grouped_data = None
-
+            if hasattr(self, 'prob_dist_plot_dropdown'):
+                prob_dist_plot_type = self.prob_dist_plot_dropdown.get()
+                if not prob_dist_plot_type:
+                    messagebox.showerror("Error", "Please select a probability distribution plot type.")
+                    return None
+               
         elif selected_measure == "Binomial Distribution":
             grouped_data = None
-
         elif selected_measure == "Least Square Line":
             grouped_data = None
-
         elif selected_measure == "Chi Square":
             grouped_data = None
-
         elif selected_measure == "Correlation":
             grouped_data = grouped.corr()
-
         elif selected_measure == "Sign Test":
             grouped_data = None
-
         elif selected_measure == "Rank Sum":
             grouped_data = None
-
         elif selected_measure == "Spearman Correlation":
             grouped_data = None
         else:
@@ -838,7 +846,6 @@ class DashboardPage(BasePage):
             grouped_data.plot(kind="bar", ax=self.ax)
         elif graph_type == "Pie Chart":
             num_cols = len(selected_columns)
-            # Create subplots for each column
             for i, col in enumerate(selected_columns, 1):
                 ax = self.figure.add_subplot(1, num_cols, i)
                 grouped_data[col].plot(kind="pie", ax=ax, autopct='%1.1f%%', title=col)
@@ -846,13 +853,35 @@ class DashboardPage(BasePage):
             for col in selected_columns:
                 sns.kdeplot(grouped_data[col], ax=self.ax, fill=True, label=col)
             self.ax.legend()
-        elif graph_type == "Scatter Plot": # X-Y Graph
+        elif graph_type == "Scatter Plot":  # X-Y Graph
             for col in selected_columns:
                 self.ax.scatter(grouped_data.index, grouped_data[col], label=col)
             self.ax.legend()
-        else:
-            messagebox.showerror("Error", "Invalid graph type selected.")
-            return None
+        elif graph_type == "Skewness Plot":
+            # Calculate skewness for each column
+            skewness_data = grouped.skew()
+            skewness_data.plot(kind="bar", ax=self.ax, color='skyblue')
+            self.ax.set_title(f"Skewness by {groupby_column}")
+            self.ax.set_ylabel("Skewness")
+            # Add horizontal line at 0 for reference
+            self.ax.axhline(0, color='gray', linestyle='--')
+        elif graph_type == "Kurtosis Plot":
+            # Calculate kurtosis for each column
+            kurtosis_data = grouped.apply(pd.DataFrame.kurt)
+            kurtosis_data.plot(kind="bar", ax=self.ax, color='lightgreen')
+            self.ax.set_title(f"Kurtosis by {groupby_column}")
+            self.ax.set_ylabel("Kurtosis")
+            # Add horizontal line at 0 for reference (normal distribution)
+            self.ax.axhline(0, color='gray', linestyle='--')
+        elif graph_type == "IQR Plot":
+            # Calculate IQR for each column
+            q1 = grouped.quantile(0.25)
+            q3 = grouped.quantile(0.75)
+            iqr_data = q3 - q1
+            iqr_data.plot(kind="bar", ax=self.ax, color='salmon')
+            self.ax.set_title(f"Interquartile Range (IQR) by {groupby_column}")
+            self.ax.set_ylabel("IQR")
+
 
         # Set labels and title
         self.ax.set_title(f"{selected_measure} by {groupby_column}")

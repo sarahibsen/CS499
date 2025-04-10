@@ -257,7 +257,7 @@ class TableController:
         """ Log the operation performed. """
         operation = f"Operation: {selected_operations}, Data Type: {dataType}, Results: {results}"
         self.operations_log.append(operation)
-        print(f"Operation logged: {operation}")
+        #print(f"Operation logged: {operation}")
 
     def export_txt_file(self):
         file_path = filedialog.asksaveasfilename(
