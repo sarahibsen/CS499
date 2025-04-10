@@ -796,21 +796,19 @@ class DashboardPage(BasePage):
             #TODO: Pull percentile that user enters
             grouped_data = grouped.quantile(0.25)
         elif selected_measure == "Probability Distribution":
-            try:
-                dist_data = []
-                for name, group in grouped:
-                    flat_data = group.values.flatten()
-                    group_mean = flat_data.mean()
-                    group_std = flat_data.std()
-                    dist_data.append({
-                        "Group": name,
-                        "Mean": group_mean,
-                        "StdDev": group_std,
-                        "Distribution": stats.norm.pdf(flat_data, group_mean, group_std)
-                    })
-                grouped_data = pd.DataFrame(dist_data)
-            except Exception as e:
-                print(f"Error calculating Probability Distribution: {e}")
+            if graph_type == "Skewness Plot":
+                grouped_data = grouped.skew()
+                calculation_description = "Skewness" 
+            elif graph_type == "Kurtosis Plot":
+                grouped_data = grouped.kurt()
+                calculation_description = "Kurtosis"
+            elif graph_type == "IQR Plot":
+                q1 = grouped.quantile(0.25)
+                q3 = grouped.quantile(0.75)
+                grouped_data = q3 - q1
+                calculation_description = "Interquartile Range (IQR)"
+            else:
+                messagebox.showerror("Error", f"Invalid graph type '{graph_type}' for 'Probability Distribution' measure.")
                 return
                
         elif selected_measure == "Binomial Distribution":
