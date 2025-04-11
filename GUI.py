@@ -809,11 +809,10 @@ class DashboardPage(BasePage):
             #TODO: Pull percentile that user enters
             grouped_data = grouped.quantile(0.25)
         elif selected_measure == "Probability Distribution":
-            if hasattr(self, 'prob_dist_plot_dropdown'):
-                prob_dist_plot_type = self.prob_dist_plot_dropdown.get()
-                if not prob_dist_plot_type:
-                    messagebox.showerror("Error", "Please select a probability distribution plot type.")
-                    return None
+            # calculating the frequency of each group
+            group_counts = grouped.size()  # Get counts for each group
+            total_count = group_counts.sum()  # Total number of rows
+            grouped_data = group_counts / total_count  
                
         elif selected_measure == "Binomial Distribution":
             grouped_data = None
@@ -857,30 +856,7 @@ class DashboardPage(BasePage):
             for col in selected_columns:
                 self.ax.scatter(grouped_data.index, grouped_data[col], label=col)
             self.ax.legend()
-        elif graph_type == "Skewness Plot":
-            # Calculate skewness for each column
-            skewness_data = grouped.skew()
-            skewness_data.plot(kind="bar", ax=self.ax, color='skyblue')
-            self.ax.set_title(f"Skewness by {groupby_column}")
-            self.ax.set_ylabel("Skewness")
-            # Add horizontal line at 0 for reference
-            self.ax.axhline(0, color='gray', linestyle='--')
-        elif graph_type == "Kurtosis Plot":
-            # Calculate kurtosis for each column
-            kurtosis_data = grouped.apply(pd.DataFrame.kurt)
-            kurtosis_data.plot(kind="bar", ax=self.ax, color='lightgreen')
-            self.ax.set_title(f"Kurtosis by {groupby_column}")
-            self.ax.set_ylabel("Kurtosis")
-            # Add horizontal line at 0 for reference (normal distribution)
-            self.ax.axhline(0, color='gray', linestyle='--')
-        elif graph_type == "IQR Plot":
-            # Calculate IQR for each column
-            q1 = grouped.quantile(0.25)
-            q3 = grouped.quantile(0.75)
-            iqr_data = q3 - q1
-            iqr_data.plot(kind="bar", ax=self.ax, color='salmon')
-            self.ax.set_title(f"Interquartile Range (IQR) by {groupby_column}")
-            self.ax.set_ylabel("IQR")
+ 
 
 
         # Set labels and title

@@ -236,25 +236,23 @@ class Controller:
     def plots_for_measure(measure):
             """Return appropriate plots/distribution types based on the selected measure."""
             print(f"plots_for_measure called with: {measure}")  # Debugging
-            # --- Handle Probability Distribution Separately ---
-            if measure == "Probability Distribution":
-                # These are the specific distribution plots for this measure
-                return ["Skewness Plot", "Kurtosis Plot", "IQR Plot"]
 
-            elif measure in ["Mean", "Median", "Mode", "Standard Deviation", "Coefficient of Variation", "Percentiles"]:
-            
-                return ["Vertical Bar Chart", "Horizontal Bar Chart", "Pie Chart"] # Removed Normal Dist curve here
+            if measure in ["Mean", "Median", "Mode", "Standard Deviation", "Coefficient of Variation", "Percentiles"]:
+                return ["Vertical Bar Chart", "Horizontal Bar Chart"]
+
+            elif measure == "Probability Distribution":
+                return ["Normal Distribution Curve"]
 
             elif measure in ["Chi Square", "Sign Test", "Rank Sum"]:
                 return ["Vertical Bar Chart", "Horizontal Bar Chart"]
 
             elif measure in ["Correlation", "Spearman Correlation", "Least Square Line"]:
-                return ["Scatter Plot"] # Grouped regression/correlation plots
+                return ["Scatter Plot"]
 
             elif measure == "Binomial Distribution":
                 return ["Bar Chart (Probability Mass)", "CDF Plot"]
 
             # --- Fallback ---
             else:
-                # Sensible default if measure not explicitly handled
+                # Sensible default if measure is not explicitly handled
                 return ["Vertical Bar Chart", "Horizontal Bar Chart"]
