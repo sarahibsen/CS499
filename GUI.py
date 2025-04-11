@@ -672,7 +672,6 @@ class DashboardPage(BasePage):
 
         # Set graph dropdown based on selected measure
         if selected_measure:
-            print(f"668 Selected Measure: {selected_measure}")
             graph_types = Controller.plots_for_measure(selected_measure)
             self.graph_dropdown["values"] = graph_types
             if graph_types:
@@ -844,8 +843,6 @@ class DashboardPage(BasePage):
         self.canvas_widget.draw_idle()  # Refresh the canvas
         plt.style.use('seaborn-v0_8-deep')
 
-        print(f"Grouped Data:\n{grouped_data}")  # Debugging output
-        print(f"Type Grouped Data:\n{type(grouped_data)}")  # Debugging output
         # Generate the selected graph
         if graph_type == "Horizontal Bar Chart":
             grouped_data.plot(kind="barh", ax=self.ax)
@@ -860,10 +857,26 @@ class DashboardPage(BasePage):
             for col in selected_columns:
                 sns.kdeplot(grouped_data[col], ax=self.ax, fill=True, label=col)
             self.ax.legend()
+
         elif graph_type == "Scatter Plot":  # X-Y Graph
-            for col in selected_columns:
-                self.ax.scatter(grouped_data.index, grouped_data[col], label=col)
+            if selected_measure == "Spearman Correlation":
+                x = grouped_data[selected_columns[0]]
+                y = grouped_data[selected_columns[1]]
+
+                self.ax.scatter(x, y, label=groupby_column)
+
+                self.ax.set_xlabel(selected_columns[0])
+                self.ax.set_ylabel(selected_columns[1])
+
+                coefficients = np.polyfit(x, y, 1)
+                trend = np.poly1d(coefficients)
+                self.ax.plot(x, trend(x), 'r--', label='Trend Line')
+            else:
+                for col in selected_columns:
+                    self.ax.scatter(grouped_data.index, grouped_data[col], label=col)
+            
             self.ax.legend()
+
         elif graph_type == "Skewness Plot":
             # Calculate skewness for each column
             skewness_data = grouped.skew()
@@ -892,8 +905,8 @@ class DashboardPage(BasePage):
 
         # Set labels and title
         self.ax.set_title(f"{selected_measure} by {groupby_column}")
-        self.ax.set_ylabel(selected_measure)
-        self.ax.set_xlabel(groupby_column)
+        #self.ax.set_ylabel(selected_measure)
+        #self.ax.set_xlabel(groupby_column)
 
         # Rotate x-axis labels for better readability (except for pie charts)
         if graph_type != "Pie Chart":

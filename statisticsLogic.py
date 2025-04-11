@@ -366,7 +366,7 @@ class statistic():
 
             result_str = f"Chi-Square Statistic: {chi_sq_stat:.4f}, P-value: {p_value:.4e}"
             #print(result_str)
-            return {"Chi-Squared Statistic": f"{chi_sq_stat:.4f}", "P-value": f"{p_value:.4e}"}
+            return {"Chi-Squared Statistic": f"{chi_sq_stat}", "P-value": f"{p_value}"}
 
         except Exception as e:
             messagebox.showerror("Error", f"Chi-square calculation error: {e}")
