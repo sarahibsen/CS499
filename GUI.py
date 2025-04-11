@@ -849,16 +849,18 @@ class DashboardPage(BasePage):
                 ax = self.figure.add_subplot(1, num_cols, i)
                 grouped_data[col].plot(kind="pie", ax=ax, autopct='%1.1f%%', title=col)
         elif graph_type == "Normal Distribution Curve":
-            for col in selected_columns:
-                sns.kdeplot(grouped_data[col], ax=self.ax, fill=True, label=col)
+            if isinstance(grouped_data, pd.Series):
+                sns.kdeplot(grouped_data, ax=self.ax, fill=True, label=selected_measure)
+            else:
+                for col in selected_columns:
+                    sns.kdeplot(grouped_data[col], ax=self.ax, fill=True, label=col)
             self.ax.legend()
+            self.ax.set_title(f"Probability Distribution of {groupby_column}")
         elif graph_type == "Scatter Plot":  # X-Y Graph
             for col in selected_columns:
                 self.ax.scatter(grouped_data.index, grouped_data[col], label=col)
             self.ax.legend()
  
-
-
         # Set labels and title
         self.ax.set_title(f"{selected_measure} by {groupby_column}")
         self.ax.set_ylabel(selected_measure)
