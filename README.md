@@ -17,14 +17,14 @@
 1.  **Download:**
     *   Go to the [Releases page](https://github.com/sarahibsen/CS499/releases/tag/v1.0.0-alpha).
     *   Download the correct file for your operating system:
-        *   **Windows:** Download `[GUI].exe`
+        *   **Windows:** Download `GUI.exe`
         *   **macOS:** Download `[GUI].dmg` or `[GUI].app.zip` (adjust as needed)
-        *   **Linux:** Download `[GUI]` (the executable file)
+        *   **Linux:** Download `GUI` (the executable file)
 
 2.  **Run the Program:**
 
     *   **Windows:**
-        *   Find the downloaded `[GUI].exe` file (likely in your 'Downloads' folder).
+        *   Find the downloaded `GUI.exe` file (likely in your 'Downloads' folder).
         *   **Double-click** the `.exe` file to start the program.
         *   **Note:** Windows Defender SmartScreen or other antivirus software might show a warning because the application is not signed.
             *   If you see a "Windows protected your PC" screen, click "**More info**" and then "**Run anyway**".
@@ -40,9 +40,10 @@
 
     *   **Linux:**
         *   Open your terminal.
+        *   **Make a virtual env** 
         *   Navigate to the directory where you downloaded the file (e.g., `cd ~/Downloads`).
-        *   Make the file executable: `chmod +x ./[GUI]`
-        *   Run the program: `./[GUI]`
+        *   Make the file executable: `chmod +x ./GUI`
+        *   Run the program: `./GUI`
 
 ## How to Use
 
