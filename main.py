@@ -170,7 +170,8 @@ class discreteStatistics:
         return self.perform_statistics(self.data, ['variance'], 'discrete')["Variance"]
     def probabilityDistribution(self):
         return self.perform_statistics(self.data, ['probability distribution'], 'discrete')["Probability Distribution"]
-
+    def chiSquare(self):
+            return self.perform_statistics(self.data, ['chi square'], 'continuous')["Chi Square"]
     def binomialDistribution(self):
         return self.perform_statistics(self.data, ['binomial distribution'], 'discrete')["Binomial Distribution"]
     def spearmanCorrelation(self, data2):

@@ -473,7 +473,7 @@ class MeasureSelectionPage(BasePage):
         selected_measures = [self.stat_measures_listbox.get(i) for i in self.stat_measures_listbox.curselection()]
 
         data_frame = self.controller.load_data_from_table(self.table.controller)
-        print(f"Final Data Before Validation:\n{data_frame}")  # Final confirmation
+        #print(f"Final Data Before Validation:\n{data_frame}")  # Final confirmation
 
         if data_frame.empty:
             messagebox.showerror("Error", "No data to analyze.")
@@ -603,6 +603,7 @@ class DashboardPage(BasePage):
 
     def on_measure_change(self, event=None):
         selected_measure = self.measure_dropdown.get()
+        print(f"Selected Measure: {selected_measure}")
         graph_types = Controller.plots_for_measure(selected_measure)
 
         self.graph_dropdown.set("")
@@ -670,11 +671,14 @@ class DashboardPage(BasePage):
             self.measure_dropdown["values"] = []
 
         # Set graph dropdown based on selected measure
-        if selected_measure:
+        if selected_measures:
             graph_types = Controller.plots_for_measure(selected_measure)
             self.graph_dropdown["values"] = graph_types
-            if graph_types:
-                self.graph_dropdown.set(graph_types[0])
+            self.graph_dropdown.set("")
+        else:
+            self.graph_dropdown.set("")  # Clear if no measures available
+            self.graph_dropdown["values"] = []
+
 
     def update_colors(self):
         """Updates colors for non-ttk widgets and Matplotlib elements."""
@@ -812,14 +816,17 @@ class DashboardPage(BasePage):
             # calculating the frequency of each group
             group_counts = grouped.size()  # Get counts for each group
             total_count = group_counts.sum()  # Total number of rows
-            grouped_data = group_counts / total_count  
+            grouped_data = group_counts / total_count
                
         elif selected_measure == "Binomial Distribution":
             grouped_data = None
         elif selected_measure == "Least Square Line":
             grouped_data = None
         elif selected_measure == "Chi Square":
-            grouped_data = None
+            grouped_data = grouped.apply(lambda x: x)
+            grouped_data.iloc[:,0] = pd.to_numeric(grouped_data.iloc[:,0], errors='coerce').dropna().astype(int).values
+            grouped_data.iloc[:,1] = pd.to_numeric(grouped_data.iloc[:,1], errors='coerce').dropna().astype(int).values
+
         elif selected_measure == "Correlation":
             grouped_data = grouped.corr()
         elif selected_measure == "Sign Test":
@@ -827,7 +834,7 @@ class DashboardPage(BasePage):
         elif selected_measure == "Rank Sum":
             grouped_data = None
         elif selected_measure == "Spearman Correlation":
-            grouped_data = None
+            grouped_data = grouped.apply(lambda x: x).reset_index()
         else:
             messagebox.showerror("Error", "Invalid measure selected.")
             return None
@@ -857,14 +864,29 @@ class DashboardPage(BasePage):
             self.ax.legend()
             self.ax.set_title(f"Probability Distribution of {groupby_column}")
         elif graph_type == "Scatter Plot":  # X-Y Graph
-            for col in selected_columns:
-                self.ax.scatter(grouped_data.index, grouped_data[col], label=col)
+            if selected_measure == "Spearman Correlation":
+                x = grouped_data[selected_columns[0]]
+                y = grouped_data[selected_columns[1]]
+
+                self.ax.scatter(x, y, label=groupby_column)
+
+                self.ax.set_xlabel(selected_columns[0])
+                self.ax.set_ylabel(selected_columns[1])
+
+                coefficients = np.polyfit(x, y, 1)
+                trend = np.poly1d(coefficients)
+                self.ax.plot(x, trend(x), 'r--', label='Trend Line')
+            else:
+                for col in selected_columns:
+                    self.ax.scatter(grouped_data.index, grouped_data[col], label=col)
+            
             self.ax.legend()
- 
+
+
         # Set labels and title
         self.ax.set_title(f"{selected_measure} by {groupby_column}")
-        self.ax.set_ylabel(selected_measure)
-        self.ax.set_xlabel(groupby_column)
+        #self.ax.set_ylabel(selected_measure)
+        #self.ax.set_xlabel(groupby_column)
 
         # Rotate x-axis labels for better readability (except for pie charts)
         if graph_type != "Pie Chart":
@@ -988,7 +1010,10 @@ class ResultsPage(BasePage):
         for key, value in results.items():
             if isinstance(value, dict):
                 for subkey, subvalue in value.items():
-                    row[subkey] = subvalue
+                    if isinstance(subvalue, np.ndarray):
+                        row[subkey] = ", ".join(map(str, subvalue.flatten()))
+                    else:
+                        row[subkey] = subvalue
             else:
                 row[key] = value
         return row

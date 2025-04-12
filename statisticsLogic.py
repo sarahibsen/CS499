@@ -188,7 +188,9 @@ class statistic():
         percentiles_df = pd.DataFrame(percentiles_array, columns=[f"Column {i+1}" for i in range(cleaned_data.shape[1])])
 
         percentiles_df.insert(0, "Percentiles", [f"{p}th" for p in psequence])  # Insert percentile column (Percentiles:, nth, n+1th)
+        
         return {"Percentiles": percentiles_df.to_numpy()}
+
     
 
     
@@ -364,7 +366,7 @@ class statistic():
 
             result_str = f"Chi-Square Statistic: {chi_sq_stat:.4f}, P-value: {p_value:.4e}"
             #print(result_str)
-            return {"Chi-Squared Statistic": f"{chi_sq_stat:.4f}", "P-value": f"{p_value:.4e}"}
+            return {"Chi-Squared Statistic": f"{chi_sq_stat}", "P-value": f"{p_value}"}
 
         except Exception as e:
             messagebox.showerror("Error", f"Chi-square calculation error: {e}")
