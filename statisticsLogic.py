@@ -420,10 +420,11 @@ class statistic():
         if cleaned_data.shape[1] == 1:
             x = cleaned_data.ravel()
             print(f"X: {x}")  # Debugging point
-            median = 0  #can change
+            median = np.median(x)
             signs = [xi - median for xi in x if xi != median]
             n = len(signs)
             n_positive = sum(1 for s in signs if s > 0)
+            n_negative = sum(1 for s in signs if s < 0)
 
         # PAIRED SAMPLE SIGN TEST
         elif cleaned_data.shape[1] == 2:
@@ -434,9 +435,10 @@ class statistic():
             x = x.ravel()
             y = y.ravel()
             print(f"X: {x}, Y: {y}")  # Debugging point
-            signs = [xi - yi for xi, yi in zip(x, y) if xi != yi]
-            n = len(signs)
-            n_positive = sum(1 for s in signs if s > 0)
+            diffs = [xi - yi for xi, yi in zip(x, y) if xi != yi]
+            n = len(diffs)
+            n_positive = sum(1 for d in diffs if d > 0)
+            n_negative = sum(1 for d in diffs if d < 0)
 
         else:
             messagebox.showerror("signTest Error", "Data must have either one or two columns.")
@@ -446,9 +448,12 @@ class statistic():
         if H_prompt not in ["two-sided", "less", "greater"]:
             tkinter.messagebox.showerror("signTest Error", "Invalid alternative hypothesis. Please choose 'two-sided', 'less', or 'greater'.")
             return None
-
+        
         result = stats.binomtest(n_positive, n, p=0.5, alternative=H_prompt)
-        sign = {"Sign Count": n, "P-Value": result.pvalue}
+        sign = {"Sign Count": n, 
+                "Positive Count": n_positive,
+                "Negative Count": n_negative,
+                "P-Value": result.pvalue}
         print(f"Sign Test: {sign}")
         return sign
 
