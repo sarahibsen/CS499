@@ -884,11 +884,22 @@ class DashboardPage(BasePage):
                 x = grouped_data[selected_columns[0]] # should be graphed on the horizontal
                 y = grouped_data[selected_columns[1]] # vertical 
 
-                self.ax.scatter(x,y, label=groupby_column)
-                self.ax.set_xlabel(selected_columns[0])
-                self.ax.set_ylabel(selected_columns[1])
+                # self.ax.scatter(x,y, label=groupby_column)
+                # self.ax.set_xlabel(selected_columns[0])
+                # self.ax.set_ylabel(selected_columns[1])
 
-                slope, y_int = np.ployfit(x,y,1) # trend line
+                coefficients = np.polyfit(x, y, 1)
+                slope = coefficients[0]
+                intercept = coefficients[1]
+
+                # Create the line of best fit
+                line = slope * x + intercept
+                # Plot the original data points
+                self.ax.scatter(x,y, label = 'Data Points')
+                # Plot the least squares line
+                self.ax.plot(x, line, color = 'red', label = 'Least Square Line')
+                #plt.plot(x, line, color='red', label='Least Squares Line')
+
 
             else:
                 for col in selected_columns:
