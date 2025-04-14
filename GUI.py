@@ -803,6 +803,7 @@ class DashboardPage(BasePage):
         elif selected_measure == "Mode":
             grouped_data = grouped.agg(lambda x: x.mode().iloc[0] if not x.mode().empty else None)
         elif selected_measure == "Standard Deviation":
+            # have to grab x and y values and then find the std deviation of those values 
             try:
                 # Extract X and Y values from the grouped data
                 grouped_data = grouped.apply(lambda x: x)
@@ -822,34 +823,11 @@ class DashboardPage(BasePage):
             except Exception as e:
                 messagebox.showerror("Error", f"An error occurred while calculating Standard Deviation: {e}")
 
-            
-        elif selected_measure == "Variance":
-            try:
-                grouped_data = grouped.apply(lambda x: x)
-
-                var_list = []
-                for index, row in grouped_data.iterrows(): # Get variance for each row in dataframe
-                    var_list.append({[index][0][0] : np.var(row)})
-
-                grouped_data = pd.DataFrame(var_list)
-            except Exception as e:
-                messagebox.showerror("Error", f"An error occurred while calculating Variance: {e}")
-
-
-        elif selected_measure == "Coefficient Of Variation":
-            try:
-                grouped_data = grouped.apply(lambda x: x)
-
-                var_list = []
-                for index, row in grouped_data.iterrows():
-                    var_std = np.std(row)
-                    var_mean = np.mean(row)
-                    var_list.append({[index][0][0] : var_std / var_mean})
-
-                grouped_data = pd.DataFrame(var_list)
-            except Exception as e:
-                messagebox.showerror("Error", f"An error occurred while calculating Coefficient of Variance: {e}")
-            
+           # print(grouped_data)
+        elif selected_measure == "Coefficient of Variation":
+            grouped_std = grouped.std()
+            grouped_mean = grouped.mean()
+            grouped_data = grouped_std / grouped_mean
         elif selected_measure == "Percentiles":
             #TODO: Either grouped.quantile needs the "psequence"
             # from user or grouped_data needs to pull percentiles_df (without default index)
@@ -921,11 +899,19 @@ class DashboardPage(BasePage):
 
         # Generate the selected graph
         if graph_type == "Horizontal Bar Chart":
-            grouped_data.plot(kind="barh", ax=self.ax).legend(loc='upper left', bbox_to_anchor=(1, 1))
-            
+            grouped_data.plot(kind="barh", ax=self.ax)
+            if selected_measure == "Standard Deviation":
+                # Add a horizontal line for the standard deviation
+                std_dev_value = grouped_data["Standard Deviation"].values[0]
+                self.ax.axvline(x=std_dev_value, color='r', linestyle='--', label='Std Dev')
+                self.ax.legend()
         elif graph_type == "Vertical Bar Chart":
-            grouped_data.plot(kind="bar", ax=self.ax).legend(loc='upper left', bbox_to_anchor=(1, 1))
-
+            grouped_data.plot(kind="bar", ax=self.ax)
+            if selected_measure == "Standard Deviation":
+                # Add a horizontal line for the standard deviation
+                std_dev_value = grouped_data["Standard Deviation"].values[0]
+                self.ax.axhline(y=std_dev_value, color='r', linestyle='--', label='Std Dev')
+                self.ax.legend()
         elif graph_type == "Pie Chart":
             num_cols = len(selected_columns)
             for i, col in enumerate(selected_columns, 1):
