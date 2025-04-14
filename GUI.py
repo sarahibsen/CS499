@@ -804,7 +804,27 @@ class DashboardPage(BasePage):
         elif selected_measure == "Mode":
             grouped_data = grouped.agg(lambda x: x.mode().iloc[0] if not x.mode().empty else None)
         elif selected_measure == "Standard Deviation":
-            grouped_data = grouped.std()
+            # have to grab x and y values and then find the std deviation of those values 
+            try:
+                # Extract X and Y values from the grouped data
+                grouped_data = grouped.apply(lambda x: x)
+                x = pd.to_numeric(grouped_data.iloc[:, 0], errors='coerce').dropna().astype(int).values
+                y = pd.to_numeric(grouped_data.iloc[:, 1], errors='coerce').dropna().astype(int).values
+                
+                # Calculate standard deviation
+                std_deviation = np.std(y)
+                
+                # Create a DataFrame for plotting
+                grouped_data = pd.DataFrame({
+                    "X": x,
+                    "Y": y
+                })
+                grouped_data["Standard Deviation"] = std_deviation  
+                #std_deviation_value = {"Standard Deviation": std_deviation}
+            except Exception as e:
+                messagebox.showerror("Error", f"An error occurred while calculating Standard Deviation: {e}")
+
+           # print(grouped_data)
         elif selected_measure == "Coefficient of Variation":
             grouped_std = grouped.std()
             grouped_mean = grouped.mean()
@@ -881,8 +901,18 @@ class DashboardPage(BasePage):
         # Generate the selected graph
         if graph_type == "Horizontal Bar Chart":
             grouped_data.plot(kind="barh", ax=self.ax)
+            if selected_measure == "Standard Deviation":
+                # Add a horizontal line for the standard deviation
+                std_dev_value = grouped_data["Standard Deviation"].values[0]
+                self.ax.axvline(x=std_dev_value, color='r', linestyle='--', label='Std Dev')
+                self.ax.legend()
         elif graph_type == "Vertical Bar Chart":
             grouped_data.plot(kind="bar", ax=self.ax)
+            if selected_measure == "Standard Deviation":
+                # Add a horizontal line for the standard deviation
+                std_dev_value = grouped_data["Standard Deviation"].values[0]
+                self.ax.axhline(y=std_dev_value, color='r', linestyle='--', label='Std Dev')
+                self.ax.legend()
         elif graph_type == "Pie Chart":
             num_cols = len(selected_columns)
             for i, col in enumerate(selected_columns, 1):
