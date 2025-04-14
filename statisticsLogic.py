@@ -49,7 +49,11 @@ class statistic():
         """
         Initializes the Statistics class with a dataset
         """
-        self.data = data 
+        self.data = data
+
+        # Binomial distribution values
+        self.n = None
+        self.p = None
 
     def _clean_data(self):
 
@@ -188,15 +192,9 @@ class statistic():
         percentiles_df = pd.DataFrame(percentiles_array, columns=[f"Column {i+1}" for i in range(cleaned_data.shape[1])])
 
         percentiles_df.insert(0, "Percentiles", [f"{p}th" for p in psequence])  # Insert percentile column (Percentiles:, nth, n+1th)
-
-        # POSSIBLE PULL FOR GRAPHING
-        #percentiles_plotting = percentiles_df.set_index("Percentiles")  # Set the first column as the index
         
         return {"Percentiles": percentiles_df.to_numpy()}
 
-    
-
-    
     def probabilityDistribution(self):
         """
         Automatically computes Probability Distribution using the loaded data.
@@ -246,26 +244,26 @@ class statistic():
             messagebox.showerror("Error", "Invalid distribution choice. Please select Normal, PDF, or CDF.")
             return None
 
-    
     def binomialDistribution(self, selected_data):
         """
         Return the binomial distribution of the selected data set.
         The sample size is automatically calculated based on the number of selected data points.
 
-        The binomial distribution is not taking the values that are selected in the data set but 
+        The binomial distribution is not taking the values that are selected in the data set but
         the number of cells that are selected in the data set.
         """
         # Ask for number of trials
-        n = tkinter.simpledialog.askinteger("Binomial Distribution", "Enter the number of trials:")
-        if n is None or n <= 0:
+        self.n = tkinter.simpledialog.askinteger("Binomial Distribution", "Enter the number of trials:")
+        if self.n is None or self.n <= 0:
             messagebox.showerror("Error", "Number of trials must be a positive integer.")
             return
 
         # Ask for probability with improved validation
         while True:
             try:
-                p = float(tkinter.simpledialog.askstring("Binomial Distribution", "Enter the probability of success (between 0 and 1):"))
-                if 0 <= p <= 1:
+                self.p = float(tkinter.simpledialog.askstring("Binomial Distribution",
+                                                              "Enter the probability of success (between 0 and 1):"))
+                if 0 <= self.p <= 1:
                     break
                 else:
                     messagebox.showerror("Error", "Probability must be between 0 and 1.")
@@ -279,9 +277,9 @@ class statistic():
             return
 
         # Perform binomial distribution calculation
-        return {"Binomial Distribution": np.random.binomial(n, p, sample_size)}
+        return {"Binomial Distribution": np.random.binomial(self.n, self.p, sample_size)}
 
-# ----------------------------------------------------------------------------------#
+    # ----------------------------------------------------------------------------------#
 # separating these statistical functions because these are the ones that I have to really hone on
 # they are all very specific and need to be tuned for the GUI 
     def leastSquareLine(self):
@@ -451,12 +449,14 @@ class statistic():
         if H_prompt not in ["two-sided", "less", "greater"]:
             tkinter.messagebox.showerror("signTest Error", "Invalid alternative hypothesis. Please choose 'two-sided', 'less', or 'greater'.")
             return None
-        
+
         result = stats.binomtest(n_positive, n, p=0.5, alternative=H_prompt)
-        sign = {"Sign Count": n, 
-                "Positive Count": n_positive,
-                "Negative Count": n_negative,
-                "P-Value": result.pvalue}
+
+        sign = {"Sign Count": n,
+            "Positive Count": n_positive,
+            "Negative Count": n_negative,
+            "P-Value": result.pvalue}
+
         print(f"Sign Test: {sign}")
         return sign
 
