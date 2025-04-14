@@ -98,6 +98,8 @@ class Controller:
         Returns:
             dict: Computed statistical results.
         """
+        print("Selected Measures:", selected_measures)  # Debugging
+        print("Data Type:", data_type)  # Debugging
         if data_frame is None or data_frame.empty:
             return None
 
@@ -125,7 +127,7 @@ class Controller:
             "Mode": stat_instance.mode,
             "Standard Deviation": stat_instance.standardDeviation,
             "Variance": lambda: stat_instance.variance(variance_type),
-            "Coefficient of Variation": stat_instance.coefficientOfVariation,
+            "Coefficient Of Variation": stat_instance.coefficientOfVariation,
             "Percentiles": stat_instance.percentiles,
             "Probability Distribution": stat_instance.probabilityDistribution,
             "Binomial Distribution": lambda: stat_instance.binomialDistribution(
@@ -237,9 +239,8 @@ class Controller:
     @staticmethod
     def plots_for_measure(measure):
             """Return appropriate plots/distribution types based on the selected measure."""
-            print(f"plots_for_measure called with: {measure}")  # Debugging
 
-            if measure in ["Mean", "Median", "Mode", "Standard Deviation", "Coefficient of Variation", "Percentiles"]:
+            if measure in ["Mean", "Median", "Mode", "Standard Deviation", "Variance", "Coefficient of Variation", "Percentiles"]:
                 return ["Vertical Bar Chart", "Horizontal Bar Chart"]
 
             elif measure == "Probability Distribution":

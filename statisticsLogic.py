@@ -163,7 +163,8 @@ class statistic():
         # Calculate and return the coefficent of variation
         mean = self.mean()
         std_dev = self.standardDeviation()
-        return {"Coefficient of Variation": std_dev / mean}
+
+        return {"Coefficient of Variation": std_dev['Standard Deviation'] / mean['Mean']}
     
     @validate_data
     def percentiles(self):
