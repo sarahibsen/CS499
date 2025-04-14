@@ -810,16 +810,21 @@ class DashboardPage(BasePage):
             grouped_mean = grouped.mean()
             grouped_data = grouped_std / grouped_mean
         elif selected_measure == "Percentiles":
-            #TODO: Pull percentile that user enters
+            #TODO: Either grouped.quantile needs the "psequence" from user or grouped_data needs to pull percentiles_df (without default index)
             grouped_data = grouped.quantile(0.25)
+
+
         elif selected_measure == "Probability Distribution":
             # calculating the frequency of each group
             group_counts = grouped.size()  # Get counts for each group
             total_count = group_counts.sum()  # Total number of rows
             grouped_data = group_counts / total_count
-               
         elif selected_measure == "Binomial Distribution":
             grouped_data = None
+            #TODO: Pull n and p from user input (integer & float respectively)
+            n_trials = None
+            prob = None
+
         elif selected_measure == "Least Square Line":
             grouped_data = None
         elif selected_measure == "Chi Square":
