@@ -10,6 +10,106 @@ import tkinter
 from scipy.stats import mode, norm
 from tkinter import simpledialog, messagebox
 
+"""
+Make a radio button class for the measures that need user input
+"""
+import tkinter
+from tkinter import Toplevel, Label, Radiobutton, Button, StringVar, W
+import sys # To check for existing root
+
+class RadioButton: # manages Tk/Toplevel internally
+    def __init__(self, title, prompt, options):
+        self.selected_option = None # Initialize before creating window
+
+        # Check if a Tk root window already exists
+        self.root = tkinter._get_default_root()
+        if self.root:
+            # Use Toplevel if a root exists
+            self.dialog = Toplevel(self.root)
+            self.dialog.title(title)
+            self.dialog.transient(self.root) # Keep dialog on top of parent
+            self.dialog.grab_set() # Make modal (block interaction with parent)
+            parent = self.dialog
+            self._is_toplevel = True
+        else:
+            # No root exists, create a new Tk instance (original behavior)
+            # This might be needed if run standalone
+            self.root = tkinter.Tk()
+            self.root.title(title)
+            # hide the empty root window if we create it just for this dialog
+            self.root.withdraw()
+            parent = self.root
+            self._is_toplevel = False
+
+
+        self.prompt = prompt
+        self.options = options
+
+
+        self.label = Label(parent, text=self.prompt)
+        self.label.pack(pady=5, padx=10)
+
+        self.var = StringVar(parent, value=options[0]) # Assign parent
+        for option in options:
+            # Assign parent to radiobuttons
+            radio = Radiobutton(parent, text=option, variable=self.var, value=option)
+            radio.pack(anchor=W, padx=20)
+
+        # Assign parent to button, update command
+        self.button = Button(parent, text="OK", command=self.on_ok)
+        self.button.pack(pady=10)
+
+        # Center the window (works for both Toplevel and Tk)
+        parent.update_idletasks() # Ensure dimensions are calculated
+        parent_width = parent.winfo_width()
+        parent_height = parent.winfo_height()
+        screen_width = parent.winfo_screenwidth()
+        screen_height = parent.winfo_screenheight()
+        x = (screen_width // 2) - (parent_width // 2)
+        y = (screen_height // 2) - (parent_height // 2)
+        parent.geometry(f'{parent_width}x{parent_height}+{x}+{y}')
+
+        # Handle closing the window via 'X' button
+        if self._is_toplevel:
+            self.dialog.protocol("WM_DELETE_WINDOW", self.on_cancel)
+        else:
+            # If we created the root, WM_DELETE_WINDOW applies to it
+             self.root.protocol("WM_DELETE_WINDOW", self.on_cancel)
+
+
+    def show(self):
+        """Shows the dialog and waits for it to close."""
+        # If using Toplevel, wait specifically for the Toplevel window
+        if self._is_toplevel:
+            # Make sure the window is visible if it was withdrawn
+            self.dialog.deiconify()
+            self.root.wait_window(self.dialog)
+        else:
+            # If using Tk root, make it visible and run its mainloop
+            self.root.deiconify()
+            self.root.mainloop()
+        # Return the selected option after the window is closed
+        return self.selected_option
+
+
+    def on_ok(self):
+        self.selected_option = self.var.get()
+        self._destroy_window()
+
+    def on_cancel(self):
+        """Handles closing the window without pressing OK."""
+        self.selected_option = None # Explicitly set to None on cancel/close
+        self._destroy_window()
+
+    def _destroy_window(self):
+        """Destroys the correct window (Toplevel or Tk root)."""
+        if self._is_toplevel and self.dialog:
+            self.dialog.destroy()
+        elif not self._is_toplevel and self.root:
+            self.root.destroy()
+        # Break potential wait_window or mainloop
+
+
 def validate_data(func):
     """Decorator to validate the data before executing a method.
     Changed to make it so where if the user does have characters or strings in their chosen data -- we will just take the
@@ -161,36 +261,84 @@ class statistic():
         std_dev = self.standardDeviation()
         return {"Coefficient of Variation": std_dev / mean}
     
-    @validate_data
     def percentiles(self):
         """
-        Method applies with ordinal, frequency, and interval
-        Parameters:
-            numpy.ndarray object, 
-            list of percentiles, 
-            axis = 0 (for reading columns)
+        Calculates specified percentiles using a RadioButton dialog for selection.
+        Method applies with ordinal, frequency, and interval data.
+
         Returns:
-            NumPy ndarray for further processing
+            dict: {"Percentiles": numpy.ndarray} containing the calculated percentiles,
+                  or None if the operation is cancelled or fails.
         """
         cleaned_data = self._clean_data()
-        user_input=simpledialog.askstring("Percentiles", "Enter the percentiles you would like to calculate (e.g. 25, 50, 75): ")
+        if cleaned_data is None:
+            print("Percentile calculation cancelled due to data cleaning issues.")
+            return None # Stop if cleaning failed
+
+        # --- Define Options for Radio Buttons ---
+        percentile_options_map = {
+            "Quartiles (25, 50, 75)": [25, 50, 75],
+            "Median (50)": [50],
+            "Deciles (10, 20, ..., 90)": list(range(10, 100, 10)),
+            "90th Percentile": [90],
+            "95th Percentile": [95],
+            "99th Percentile": [99],
+        }
+        option_labels = list(percentile_options_map.keys())
+
+        # --- Use RadioButton Dialog ---
         try:
-            psequence = list(map(int, user_input.split(",")))
-        except ValueError:
-            messagebox.showerror(
-                "Percentiles Input Error",
-                "Please enter only integers separated by commas (e.g. 25, 50, 75)."
+            dialog = RadioButton(
+                title="Select Percentiles",
+                prompt="Choose the percentile(s) to calculate:",
+                options=option_labels
             )
-            return None
+            selected_label = dialog.show() # Show dialog and wait for selection
+        except Exception as e:
+             messagebox.showerror("GUI Error", f"Failed to create selection dialog: {e}")
+             return None
 
-        percentiles_array = np.percentile(cleaned_data, psequence, axis=0)
 
-        percentiles_df = pd.DataFrame(percentiles_array, columns=[f"Column {i+1}" for i in range(cleaned_data.shape[1])])
+        if selected_label is None:
+            print("Percentile calculation cancelled by user.")
+            return None # User cancelled or closed the window
+        psequence = percentile_options_map.get(selected_label)
 
-        percentiles_df.insert(0, "Percentiles", [f"{p}th" for p in psequence])  # Insert percentile column (Percentiles:, nth, n+1th)
-        
-        return {"Percentiles": percentiles_df.to_numpy()}
+        if psequence is None:
+             # This shouldn't happen if dialog works correctly, but good practice
+             messagebox.showerror("Internal Error", f"Invalid selection '{selected_label}' received.")
+             return None
+        try:
+            # Ensure cleaned_data is not empty before calculation
+            if cleaned_data.shape[0] == 0:
+                 messagebox.showerror("Calculation Error", "Cannot calculate percentiles on empty data after cleaning.")
+                 return None
 
+            percentiles_array = np.percentile(cleaned_data, psequence, axis=0)
+
+            # Check if result is scalar (if only one column and one percentile)
+            if percentiles_array.ndim == 0:
+                 percentiles_array = np.array([[percentiles_array]]) # Make it 2D
+            elif percentiles_array.ndim == 1 and len(psequence) > 1:
+                 # Multiple percentiles, single column -> reshape to (n_percentiles, 1)
+                 percentiles_array = percentiles_array.reshape(-1, 1)
+            elif percentiles_array.ndim == 1 and len(psequence) == 1:
+                 # Single percentile, multiple columns -> reshape to (1, n_columns)
+                 percentiles_array = percentiles_array.reshape(1, -1)
+
+
+            # Format the output DataFrame (similar to before)
+            percentiles_df = pd.DataFrame(percentiles_array, columns=[f"Column {i+1}" for i in range(cleaned_data.shape[1])])
+            percentiles_df.insert(0, "Percentiles", [f"{p}th" for p in psequence])
+
+            return {"Percentiles": percentiles_df.to_numpy()}
+        # error messages for debugging <3
+        except ValueError as ve:
+             messagebox.showerror("Calculation Error", f"Error during percentile calculation: {ve}. Check data for issues.")
+             return None
+        except Exception as e:
+             messagebox.showerror("Calculation Error", f"An unexpected error occurred: {e}")
+             return None
     
 
     
