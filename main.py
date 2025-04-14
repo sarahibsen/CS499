@@ -214,4 +214,4 @@ class continuousStatistics:
     def spearmanCorrelation(self, data2):
         return self.perform_statistics(self.data, ['spearman correlation'], 'ordinal')["Spearman Correlation"]
     def coefficientOfVariation(self):
-        return self.perform_statistics(self.data, ['coefficient of variation'], 'continuous')["Coefficient of Variation"]
+        return self.perform_statistics(self.data, ['coefficient of variation'], 'continuous')["Coefficient Of Variation"]
