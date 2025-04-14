@@ -224,7 +224,12 @@ class TableController:
             else:
                 self.update_table(data = [df.columns.tolist()] + df.values.tolist())  # Table will keep default headings
 
-        self.log_operation(f"Imported file: {file_path}")
+        # Corrected log_operation call
+        self.log_operation(
+            selected_operations=f"Imported file: {file_path}",
+            dataType="CSV",  # Use a placeholder or infer from data if needed
+            results={"Rows": df.shape[0], "Columns": df.shape[1]}  # Example: provide metadata about the imported file
+        )
 
     def export_table(self):
         """ Export table to .csv (Comma delimited) or .tsv (Tab delimited) file """
