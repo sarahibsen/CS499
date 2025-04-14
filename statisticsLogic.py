@@ -110,32 +110,6 @@ class RadioButton: # manages Tk/Toplevel internally
         # Break potential wait_window or mainloop
 
 
-def validate_data(func):
-    """Decorator to validate the data before executing a method.
-    Changed to make it so where if the user does have characters or strings in their chosen data -- we will just take the
-    numerical values not the strings ! : ) 
-    """
-    def wrapper(self, *args, **kwargs):
-        if not isinstance(self.data, (list, np.ndarray, pd.DataFrame)):
-            raise TypeError("Data must be a list, NumPy array, or Pandas DataFrame of numbers.")
-
-        # Handle different data types
-        if isinstance(self.data, (list, np.ndarray)):
-            # Filter out non-numeric values
-            self.data = [x for x in self.data if isinstance(x, (int, float, np.integer, np.floating))]
-
-            if len(self.data) == 0:
-                raise ValueError("Data cannot be empty or contain only non-numeric values.")
-
-        elif isinstance(self.data, pd.DataFrame):
-            # Select only numeric columns
-            self.data = self.data.select_dtypes(include=[np.number]).to_numpy()
-            
-            if len(self.data) == 0:
-                raise ValueError("Data cannot be empty or contain only non-numeric values.")
-                
-        return func(self, *args, **kwargs)
-    return wrapper
 
 
 
@@ -261,6 +235,7 @@ class statistic():
         std_dev = self.standardDeviation()
         return {"Coefficient of Variation": std_dev / mean}
     
+
     def percentiles(self):
         """
         Calculates specified percentiles using a RadioButton dialog for selection.
@@ -342,54 +317,75 @@ class statistic():
     
 
     
+
     def probabilityDistribution(self):
         """
-        Automatically computes Probability Distribution using the loaded data.
-        Mean and standard deviation are calculated directly from the selected data.
-        Sample size matches the dataset size.
-
-        Decided to stray away from asking for the users input on this one / this should
-        take what the user chooses on the data table
-
-        The values will be needed when we implement plotting. The CDF and PDF will be mostly beneficial 
-        for the plot function 
+        Computes properties related to Normal, PDF, or CDF using the loaded data.
+        Mean and standard deviation are calculated from the cleaned data.
+        Uses RadioButton dialog for distribution type selection.
         """
         cleaned_data = self._clean_data()
+        if cleaned_data is None:
+            print("Probability distribution calculation cancelled due to data cleaning issues.")
+            return None # Stop if cleaning failed
+        if cleaned_data.size == 0:
+             messagebox.showerror("Data Error", "Cannot calculate distribution on empty data.")
+             return None
 
-        # Ask for distribution choice
-        distribution_choice = simpledialog.askstring("Distribution", "Choose one: Normal, CDF, PDF")
+        # --- Define Options for Radio Buttons ---
+        option_labels = ["Normal", "PDF", "CDF"] # Keep labels user-friendly
 
-        if not distribution_choice:
-            messagebox.showerror("Error", "Distribution choice is required.")
+        # --- Use RadioButton Dialog ---
+        try:
+            dialog = RadioButton(
+                title="Select Distribution Type",
+                prompt="Choose the distribution characteristic to calculate:",
+                options=option_labels
+            )
+            selected_label = dialog.show() # Show dialog and wait
+        except Exception as e:
+             messagebox.showerror("GUI Error", f"Failed to create selection dialog: {e}")
+             return None
+
+        if selected_label is None:
+            print("Probability distribution calculation cancelled by user.")
+            return None # User cancelled or closed the window
+
+        # --- Map Selection to Internal Choice ---
+        distribution_choice = selected_label.lower() # Convert "Normal" -> "normal", etc.
+
+        # --- Perform Calculations ---
+        try:
+            # Calculate mean and std dev ONCE, using the entire cleaned dataset
+            # np.mean/std on a 2D array calculates over the whole array by default
+            mean_val = np.mean(cleaned_data)
+            std_dev_val = np.std(cleaned_data)
+
+            # Check for zero standard deviation, which causes issues with norm functions
+            if std_dev_val <= 0:
+                messagebox.showerror("Calculation Error", "Standard deviation is zero or negative. Cannot calculate distribution.")
+                return None
+
+            if distribution_choice == 'normal':
+                # norm.pdf(x, mean_val, std_dev_val) # Example calculation if needed
+                return {"Distribution": "Normal", "Mean": mean_val, "Standard Deviation": std_dev_val}
+
+            elif distribution_choice == 'pdf':
+                # pdf_values = norm.pdf(x, mean_val, std_dev_val)
+                return {"Distribution": "PDF", "Mean": mean_val, "Standard Deviation": std_dev_val} # "Values": pdf_values.tolist()
+
+            elif distribution_choice == 'cdf':
+                # cdf_values = norm.cdf(x, mean_val, std_dev_val)
+                return {"Distribution": "CDF", "Mean": mean_val, "Standard Deviation": std_dev_val} # "Values": cdf_values.tolist()
+
+            else:
+                messagebox.showerror("Internal Error", f"Invalid distribution choice '{selected_label}' processed.")
+                return None
+
+        except Exception as e:
+            messagebox.showerror("Calculation Error", f"An error occurred during distribution calculation: {e}")
             return None
 
-        distribution_choice = distribution_choice.lower()
-        #x = np.linspace(min(cleaned_data), max(cleaned_data), 100)
-        # flatten the data -- because there is a 2D array being passed, there is no min or max values 
-        flat = cleaned_data.flatten()
-        x = np.linspace(np.min(flat), np.max(flat), 100)
-
-        if distribution_choice == 'normal':
-            mean = np.mean(cleaned_data)
-            std_dev = np.std(cleaned_data)
-            normal_values = norm.pdf(x, mean, std_dev)
-            return {"Distribution": "Normal", "Mean": mean, "Standard Deviation": std_dev} #"Values": normal_values.tolist()
-
-        elif distribution_choice == 'pdf':
-            mean = np.mean(cleaned_data)
-            std_dev = np.std(cleaned_data)
-            pdf_values = norm.pdf(x, mean, std_dev)
-            return {"Distribution": "PDF", "Mean": mean, "Standard Deviation": std_dev} #"Values": normal_values.tolist()
-
-        elif distribution_choice == 'cdf':
-            mean = np.mean(cleaned_data)
-            std_dev = np.std(cleaned_data)
-            cdf_values = norm.cdf(x, mean, std_dev)
-            return {"Distribution": "CDF", "Mean": mean, "Standard Deviation": std_dev} #"Values": normal_values.tolist()
-
-        else:
-            messagebox.showerror("Error", "Invalid distribution choice. Please select Normal, PDF, or CDF.")
-            return None
 
     
     def binomialDistribution(self, selected_data):
@@ -469,7 +465,7 @@ class statistic():
         
         return {"Slope": slope, "Y-Intercept": intercept}
 
-    @validate_data
+
     def chiSquared(self):
         """
         Performs Chi-Square Test using two valid columns of data.
@@ -520,7 +516,6 @@ class statistic():
             messagebox.showerror("Error", f"Chi-square calculation error: {e}")
             return None
 
-    @validate_data
     def correlationCoefficient(self):
         """
         Best for interval & frequency datasets
@@ -552,7 +547,7 @@ class statistic():
         correlation_coefficient = correlation[0, 1]  # Extract the correlation coefficient from the matrix
         return {"R Value (Correlation Coefficient)": correlation_coefficient}
     
-    @validate_data
+
     def signTest(self):
         """
         Parameters:
@@ -600,44 +595,86 @@ class statistic():
         print(f"Sign Test: {sign}")
         return sign
 
-    @validate_data
     def rankSum(self):
         '''
-        Best for ordinal datasets
-        Parameters: 
-            grabs two arrays (can be different lengths), 
-            user specified alternative hypothesis (H1), 
-            and default auto method (exact-to-approximate results)
-        Returns: 
-            two floats: the rank sum statistic & p-value.
+        Performs the Mann-Whitney U rank sum test on the first two numeric columns.
+        Ensures it works on a copy of the data to avoid side effects.
         '''
-        cleaned_data = self._clean_data()
-        
-        x, y = np.hsplit(cleaned_data, 2)
-        x = x.ravel()
-        y = y.ravel()
-        # Remove any NaN values from x and y separately
-        x = x[~np.isnan(x)]
-        y = y[~np.isnan(y)]
-        print(f"X: {x}, Y: {y}")  # Debugging point
+        # 1. Get the cleaned data (should be a copy/new array from _clean_data)
+        cleaned_data_result = self._clean_data() # Call the cleaning method
 
-        H_prompt = tkinter.simpledialog.askstring("Alternative Hypothesis", "Choose one: two-sided, less, greater")
-
-        if H_prompt not in ["two-sided", "less", "greater"]:
-            tkinter.messagebox.showerror("rankSum Error", "Invalid alternative hypothesis. Please choose 'two-sided', 'less', or 'greater'.")
+        # Check if cleaning failed or returned None
+        if cleaned_data_result is None:
+            print("Rank Sum test cancelled due to data cleaning issues or lack of suitable data.")
             return None
 
+        # ***** ADDED STEP: Explicitly make a copy *****
+        # Even if _clean_data returns a copy, this guarantees that subsequent
+        # slicing/splitting within *this* function won't affect the array
+        # potentially cached or used elsewhere.
+        cleaned_data = cleaned_data_result.copy()
+        # ************************************************
+
+        # 2. Split into two arrays (using first two columns of the COPY)
         try:
-            result = stats.mannwhitneyu(x, y, method='auto', alternative=H_prompt)
-            rank = {"Statistic": result.statistic, "P-Value": result.pvalue}
+            # Ensure we have at least 2 columns in the cleaned data
+            if cleaned_data.ndim != 2 or cleaned_data.shape[1] < 2:
+                messagebox.showerror("Rank Sum Error", "Cleaned data does not have at least two columns for Rank Sum test.")
+                return None
 
-            print(f"Rank Sum: {rank}")
-            return rank
+            data_to_split = cleaned_data[:, :2] # Slice the first two columns of the copy
+            x, y = np.hsplit(data_to_split, 2)
+            x = x.ravel()
+            y = y.ravel()
+
+            # Debugging point using the *local copy*
+            print(f"Cleaned X (size {x.size}): {x[:10]}...")
+            print(f"Cleaned Y (size {y.size}): {y[:10]}...")
+
+            if x.size == 0 or y.size == 0:
+                messagebox.showerror("Rank Sum Error", "One or both data columns became empty after cleaning/splitting.")
+                return None
+
         except Exception as e:
-            tkinter.messagebox.showerror("rankSum Error", f"An error occurred while performing the rank sum test: {e}")
+             messagebox.showerror("Data Error", f"An unexpected error occurred during data preparation for Rank Sum: {e}")
+             return None
+
+
+        # 3. Get Alternative Hypothesis using RadioButton Dialog
+        hypothesis_options = ["two-sided", "less", "greater"]
+        try:
+            dialog = RadioButton(
+                title="Alternative Hypothesis",
+                prompt="Choose the alternative hypothesis (H1):",
+                options=hypothesis_options
+            )
+            selected_hypothesis = dialog.show()
+        except Exception as e:
+             messagebox.showerror("GUI Error", f"Failed to create selection dialog: {e}")
+             return None
+
+        if selected_hypothesis is None:
+            print("Rank Sum test cancelled by user (hypothesis selection).")
             return None
 
-    @validate_data
+
+        # 4. Perform Mann-Whitney U Test using the local x, y copies
+        try:
+            result = stats.mannwhitneyu(x, y, method='auto', alternative=selected_hypothesis)
+            rank_results = {"Statistic": result.statistic, "P-Value": result.pvalue}
+
+            print(f"Rank Sum Test Results: {rank_results}")
+            # 5. Return the result. The original self.data remains untouched by rankSum's internal steps.
+            return rank_results
+
+        except ValueError as ve:
+             messagebox.showerror("Rank Sum Error", f"Calculation error during rank sum test: {ve}")
+             return None
+        except Exception as e:
+            messagebox.showerror("Rank Sum Error", f"An unexpected error occurred during the rank sum test: {e}")
+            return None
+
+
     def spearmanRankCorrelation(self):
         """
         Only works for ordinal datasets
