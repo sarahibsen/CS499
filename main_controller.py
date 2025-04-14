@@ -15,7 +15,9 @@ class Controller:
     """
     A lightweight component class responsible for handling statistical operations
     without storing data.
-    """ 
+    """
+
+    last_stat_instance = None
 
     @staticmethod
     def load_data_from_table(table_controller):
@@ -112,7 +114,7 @@ class Controller:
 
         logic = statistics_classes[data_type](data_frame)
         stat_instance = statistic(data_frame)
-
+        Controller.last_stat_instance = stat_instance  # Store the instance globally
 
         # Compute requested measures
         results = {}
@@ -256,3 +258,14 @@ class Controller:
             else:
                 # Sensible default if measure is not explicitly handled
                 return ["Vertical Bar Chart", "Horizontal Bar Chart"]
+
+    @staticmethod
+    def get_last_binomial_params():
+        """
+        Retrieve the last n and p values entered for binomial distribution.
+        """
+        instance = Controller.last_stat_instance
+        if instance and hasattr(instance, 'n') and hasattr(instance, 'p'):
+            return instance.n, instance.p
+        return None, None
+
