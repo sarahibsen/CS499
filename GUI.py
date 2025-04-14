@@ -821,7 +821,11 @@ class DashboardPage(BasePage):
         elif selected_measure == "Binomial Distribution":
             grouped_data = None
         elif selected_measure == "Least Square Line":
-            grouped_data = None
+           # slope, y_int = np.polyfit(x, y, 1)
+            grouped_data = grouped.mean()
+            # x values is on the horizontal and y-vlaues on the vertical. the slope and y int will be used as the regression line 
+                     
+
         elif selected_measure == "Chi Square":
             grouped_data = grouped.apply(lambda x: x)
             grouped_data.iloc[:,0] = pd.to_numeric(grouped_data.iloc[:,0], errors='coerce').dropna().astype(int).values
@@ -876,6 +880,27 @@ class DashboardPage(BasePage):
                 coefficients = np.polyfit(x, y, 1)
                 trend = np.poly1d(coefficients)
                 self.ax.plot(x, trend(x), 'r--', label='Trend Line')
+            if selected_measure == "Least Square Line":
+                x = grouped_data[selected_columns[0]] # should be graphed on the horizontal
+                y = grouped_data[selected_columns[1]] # vertical 
+
+                # self.ax.scatter(x,y, label=groupby_column)
+                # self.ax.set_xlabel(selected_columns[0])
+                # self.ax.set_ylabel(selected_columns[1])
+
+                coefficients = np.polyfit(x, y, 1)
+                slope = coefficients[0]
+                intercept = coefficients[1]
+
+                # Create the line of best fit
+                line = slope * x + intercept
+                # Plot the original data points
+                self.ax.scatter(x,y, label = 'Data Points')
+                # Plot the least squares line
+                self.ax.plot(x, line, color = 'red', label = 'Least Square Line')
+                #plt.plot(x, line, color='red', label='Least Squares Line')
+
+
             else:
                 for col in selected_columns:
                     self.ax.scatter(grouped_data.index, grouped_data[col], label=col)
