@@ -810,21 +810,21 @@ class DashboardPage(BasePage):
             grouped_mean = grouped.mean()
             grouped_data = grouped_std / grouped_mean
         elif selected_measure == "Percentiles":
-            #TODO: Either grouped.quantile needs the "psequence" from user or grouped_data needs to pull percentiles_df (without default index)
+            #TODO: Either grouped.quantile needs the "psequence"
+            # from user or grouped_data needs to pull percentiles_df (without default index)
             grouped_data = grouped.quantile(0.25)
-
-
         elif selected_measure == "Probability Distribution":
             # calculating the frequency of each group
             group_counts = grouped.size()  # Get counts for each group
             total_count = group_counts.sum()  # Total number of rows
             grouped_data = group_counts / total_count
+               
         elif selected_measure == "Binomial Distribution":
             grouped_data = None
-            #TODO: Pull n and p from user input (integer & float respectively)
-            n_trials = None
-            prob = None
-
+            #TODO: Pull n and p from user input (integer & float)
+            n_trails, prob = Controller.get_last_binomial_params()
+            print(n_trails)
+            print(prob)
         elif selected_measure == "Least Square Line":
             grouped_data = None
         elif selected_measure == "Chi Square":
@@ -834,7 +834,6 @@ class DashboardPage(BasePage):
 
         elif selected_measure == "Correlation":
             grouped_data = grouped.corr()
-
         elif selected_measure == "Sign Test":
             if len(selected_columns) == 1:
                 col = selected_columns[0]
@@ -844,16 +843,18 @@ class DashboardPage(BasePage):
                 data_frame[col1] = pd.to_numeric(data_frame[col1], errors='coerce')
                 data_frame[col2] = pd.to_numeric(data_frame[col2], errors='coerce')
                 data_frame['diff'] = data_frame[col1] - data_frame[col2]
+
             def sign_counts(series):
                 pos = (series > 0).sum()
                 neg = (series < 0).sum()
                 return pd.Series({'Positive Count': pos, 'Negative Count': neg})
-            grouped_data = data_frame.groupby(groupby_column)[ 'diff' if 'diff' in data_frame.columns else col ].apply(sign_counts).unstack().reset_index()
+
+            grouped_data = data_frame.groupby(groupby_column)['diff' if 'diff' in data_frame.columns
+                else col].apply(sign_counts).unstack().reset_index()
 
         elif selected_measure == "Rank Sum":
             grouped_data = grouped.mean()
             ranked_data = grouped_data.rank(numeric_only=True, method='average')
-            
         elif selected_measure == "Spearman Correlation":
             grouped_data = grouped.apply(lambda x: x).reset_index()
         else:
