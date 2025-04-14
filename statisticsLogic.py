@@ -123,7 +123,11 @@ class statistic():
         """
         Initializes the Statistics class with a dataset
         """
-        self.data = data 
+        self.data = data
+
+        # Binomial distribution values
+        self.n = None
+        self.p = None
 
     def _clean_data(self):
 
@@ -393,20 +397,21 @@ class statistic():
         Return the binomial distribution of the selected data set.
         The sample size is automatically calculated based on the number of selected data points.
 
-        The binomial distribution is not taking the values that are selected in the data set but 
+        The binomial distribution is not taking the values that are selected in the data set but
         the number of cells that are selected in the data set.
         """
         # Ask for number of trials
-        n = tkinter.simpledialog.askinteger("Binomial Distribution", "Enter the number of trials:")
-        if n is None or n <= 0:
+        self.n = tkinter.simpledialog.askinteger("Binomial Distribution", "Enter the number of trials:")
+        if self.n is None or self.n <= 0:
             messagebox.showerror("Error", "Number of trials must be a positive integer.")
             return
 
         # Ask for probability with improved validation
         while True:
             try:
-                p = float(tkinter.simpledialog.askstring("Binomial Distribution", "Enter the probability of success (between 0 and 1):"))
-                if 0 <= p <= 1:
+                self.p = float(tkinter.simpledialog.askstring("Binomial Distribution",
+                                                              "Enter the probability of success (between 0 and 1):"))
+                if 0 <= self.p <= 1:
                     break
                 else:
                     messagebox.showerror("Error", "Probability must be between 0 and 1.")
@@ -420,9 +425,9 @@ class statistic():
             return
 
         # Perform binomial distribution calculation
-        return {"Binomial Distribution": np.random.binomial(n, p, sample_size)}
+        return {"Binomial Distribution": np.random.binomial(self.n, self.p, sample_size)}
 
-# ----------------------------------------------------------------------------------#
+    # ----------------------------------------------------------------------------------#
 # separating these statistical functions because these are the ones that I have to really hone on
 # they are all very specific and need to be tuned for the GUI 
     def leastSquareLine(self):
@@ -563,10 +568,11 @@ class statistic():
         if cleaned_data.shape[1] == 1:
             x = cleaned_data.ravel()
             print(f"X: {x}")  # Debugging point
-            median = 0  #can change
+            median = np.median(x)
             signs = [xi - median for xi in x if xi != median]
             n = len(signs)
             n_positive = sum(1 for s in signs if s > 0)
+            n_negative = sum(1 for s in signs if s < 0)
 
         # PAIRED SAMPLE SIGN TEST
         elif cleaned_data.shape[1] == 2:
@@ -577,9 +583,10 @@ class statistic():
             x = x.ravel()
             y = y.ravel()
             print(f"X: {x}, Y: {y}")  # Debugging point
-            signs = [xi - yi for xi, yi in zip(x, y) if xi != yi]
-            n = len(signs)
-            n_positive = sum(1 for s in signs if s > 0)
+            diffs = [xi - yi for xi, yi in zip(x, y) if xi != yi]
+            n = len(diffs)
+            n_positive = sum(1 for d in diffs if d > 0)
+            n_negative = sum(1 for d in diffs if d < 0)
 
         else:
             messagebox.showerror("signTest Error", "Data must have either one or two columns.")
@@ -591,7 +598,12 @@ class statistic():
             return None
 
         result = stats.binomtest(n_positive, n, p=0.5, alternative=H_prompt)
-        sign = {"Sign Count": n, "P-Value": result.pvalue}
+
+        sign = {"Sign Count": n,
+            "Positive Count": n_positive,
+            "Negative Count": n_negative,
+            "P-Value": result.pvalue}
+
         print(f"Sign Test: {sign}")
         return sign
 

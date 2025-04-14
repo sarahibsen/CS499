@@ -830,8 +830,10 @@ class DashboardPage(BasePage):
             grouped_mean = grouped.mean()
             grouped_data = grouped_std / grouped_mean
         elif selected_measure == "Percentiles":
-            #TODO: Pull percentile that user enters
+            #TODO: Either grouped.quantile needs the "psequence"
+            # from user or grouped_data needs to pull percentiles_df (without default index)
             grouped_data = grouped.quantile(0.25)
+
         elif selected_measure == "Probability Distribution":
             # calculating the frequency of each group
             group_counts = grouped.size()  # Get counts for each group
@@ -839,9 +841,19 @@ class DashboardPage(BasePage):
             grouped_data = group_counts / total_count
                
         elif selected_measure == "Binomial Distribution":
-            grouped_data = None
+            n_trails, prob = Controller.get_last_binomial_params()
+            print(n_trails)
+            print(prob)
+            k = np.arange(0, n_trails + 1)
+            print("k:", k)
+            grouped_data = stats.binom.pmf(k, n_trails, prob)
+
         elif selected_measure == "Least Square Line":
-            grouped_data = None
+           # slope, y_int = np.polyfit(x, y, 1)
+            grouped_data = grouped.mean()
+            # x values is on the horizontal and y-vlaues on the vertical. the slope and y int will be used as the regression line 
+                     
+
         elif selected_measure == "Chi Square":
             grouped_data = grouped.apply(lambda x: x)
             grouped_data.iloc[:,0] = pd.to_numeric(grouped_data.iloc[:,0], errors='coerce').dropna().astype(int).values
@@ -849,10 +861,31 @@ class DashboardPage(BasePage):
 
         elif selected_measure == "Correlation":
             grouped_data = grouped.corr()
+
         elif selected_measure == "Sign Test":
-            grouped_data = None
+            if len(selected_columns) >= 2:
+                col1, col2 = selected_columns[:2]
+                data_frame[col1] = pd.to_numeric(data_frame[col1], errors='coerce')
+                data_frame[col2] = pd.to_numeric(data_frame[col2], errors='coerce')
+                data_frame['diff'] = data_frame[col1] - data_frame[col2]
+                value_col = 'diff'
+            elif len(selected_columns) == 1:
+                col = selected_columns[0]
+                data_frame[col] = pd.to_numeric(data_frame[col], errors='coerce')
+                value_col = col
+            else:
+                messagebox.showerror("Error", "Select at least one column for Sign Test.")
+                return
+            def sign_counts(series):
+                pos = (series > 0).sum()
+                neg = (series < 0).sum()
+                return pd.Series({'Positive Count': pos, 'Negative Count': neg})
+            grouped_data = data_frame.groupby(groupby_column)[value_col].apply(sign_counts).unstack().reset_index()
+
         elif selected_measure == "Rank Sum":
-            grouped_data = None
+            grouped_data = grouped.mean()
+            ranked_data = grouped_data.rank(numeric_only=True, method='average')
+
         elif selected_measure == "Spearman Correlation":
             grouped_data = grouped.apply(lambda x: x).reset_index()
         else:
@@ -906,6 +939,27 @@ class DashboardPage(BasePage):
                 coefficients = np.polyfit(x, y, 1)
                 trend = np.poly1d(coefficients)
                 self.ax.plot(x, trend(x), 'r--', label='Trend Line')
+            if selected_measure == "Least Square Line":
+                x = grouped_data[selected_columns[0]] # should be graphed on the horizontal
+                y = grouped_data[selected_columns[1]] # vertical 
+
+                # self.ax.scatter(x,y, label=groupby_column)
+                # self.ax.set_xlabel(selected_columns[0])
+                # self.ax.set_ylabel(selected_columns[1])
+
+                coefficients = np.polyfit(x, y, 1)
+                slope = coefficients[0]
+                intercept = coefficients[1]
+
+                # Create the line of best fit
+                line = slope * x + intercept
+                # Plot the original data points
+                self.ax.scatter(x,y, label = 'Data Points')
+                # Plot the least squares line
+                self.ax.plot(x, line, color = 'red', label = 'Least Square Line')
+                #plt.plot(x, line, color='red', label='Least Squares Line')
+
+
             else:
                 for col in selected_columns:
                     self.ax.scatter(grouped_data.index, grouped_data[col], label=col)

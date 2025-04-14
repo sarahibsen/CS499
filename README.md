@@ -52,3 +52,10 @@
 3.  Select your input file.
 4.  Choose the desired analysis from the drop down.
 5.  Click the export button located right of the table. (Export options: txt, csv, tsv)
+
+# FOR DEVELOPERS
+
+- Any time a change is implemented that wants to be deployed, this command must be envoked in the command line : 
+``` bash
+pyinstaller --clean --onefile --windowed --icon="assets/icon.ico" --add-data="assets;assets" GUI.py
+```
