@@ -110,9 +110,6 @@ class RadioButton: # manages Tk/Toplevel internally
         # Break potential wait_window or mainloop
 
 
-
-
-
 class statistic():
     """
     Equations for calculating statistics on a dataset 
@@ -128,6 +125,10 @@ class statistic():
         # Binomial distribution values
         self.n = None
         self.p = None
+
+        # Perctile values
+        self.selected_percentiles = None
+        self.selected_percentile_label = None
 
     def _clean_data(self):
 
@@ -278,11 +279,12 @@ class statistic():
              messagebox.showerror("GUI Error", f"Failed to create selection dialog: {e}")
              return None
 
-
         if selected_label is None:
             print("Percentile calculation cancelled by user.")
             return None # User cancelled or closed the window
         psequence = percentile_options_map.get(selected_label)
+        self.selected_percentile_label = selected_label
+        self.selected_percentiles = percentile_options_map.get(selected_label)
 
         if psequence is None:
              # This shouldn't happen if dialog works correctly, but good practice
