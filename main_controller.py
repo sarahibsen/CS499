@@ -240,11 +240,14 @@ class Controller:
     def plots_for_measure(measure):
             """Return appropriate plots/distribution types based on the selected measure."""
 
-            if measure in ["Mean", "Median", "Mode", "Standard Deviation", "Variance", "Coefficient of Variation", "Percentiles"]:
+            if measure in ["Mean", "Median", "Mode", "Standard Deviation", "Variance", "Coefficient of Variation"]:
                 return ["Vertical Bar Chart", "Horizontal Bar Chart"]
 
             elif measure == "Probability Distribution":
                 return ["Normal Distribution Curve"]
+
+            elif measure == "Percentiles":
+                return ["Normal Distribution Curve", "Vertical Bar Chart", "Horizontal Bar Chart"]
 
             elif measure in ["Chi Square", "Sign Test", "Rank Sum"]:
                 return ["Vertical Bar Chart", "Horizontal Bar Chart"]
@@ -269,4 +272,12 @@ class Controller:
         if instance and hasattr(instance, 'n') and hasattr(instance, 'p'):
             return instance.n, instance.p
         return None, None
+
+    @staticmethod
+    def get_last_selected_percentiles():
+        instance = Controller.last_stat_instance
+        if instance and hasattr(instance, 'selected_percentiles'):
+            return instance.selected_percentile_label, instance.selected_percentiles
+        return None, None
+
 
