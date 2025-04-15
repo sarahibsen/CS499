@@ -37,6 +37,7 @@ def resource_path(relative_path):
 
     return os.path.join(base_path, relative_path)
 
+
 # ----- Supplementary Functions ----- #
 def relative_to_assets(path: str) -> Path:
     """
@@ -113,23 +114,23 @@ class App(tk.Tk):
 
         # --- Creation of the menu bar here ---
         menubar = Menu(self)
-        self.config(menu=menubar) # Assign the menu to the window
+        self.config(menu=menubar)  # Assign the menu to the window
 
         # File Menu
         filemenu = Menu(menubar, tearoff=0)
         filemenu.add_separator()
-        filemenu.add_command(label="Exit", command=self.quit) # Use self.quit 
-        menubar.add_cascade(label="File", menu=filemenu) # Add the cascade to the menubar
+        filemenu.add_command(label="Exit", command=self.quit)  # Use self.quit
+        menubar.add_cascade(label="File", menu=filemenu)  # Add the cascade to the menubar
         # Help Menu
         helpmenu = Menu(menubar, tearoff=0)
-        helpmenu.add_command(label="About", command= about_the_app) 
-        helpmenu.add_command(label = "Help", command = show_help)
+        helpmenu.add_command(label="About", command=about_the_app)
+        helpmenu.add_command(label="Help", command=show_help)
         menubar.add_cascade(label="Help", menu=helpmenu)
         viewmenu = Menu(menubar, tearoff=0)
         viewmenu.add_command(label="Set Theme",
-                            command=lambda: set_theme(self)) 
+                             command=lambda: set_theme(self))
         menubar.add_cascade(label="View", menu=viewmenu)
-        #----
+        # ----
         # Create a container to hold pages
         self.container = tk.Frame(self, bg="white")
         self.container.grid(row=0, column=0, sticky="nsew")
@@ -181,15 +182,17 @@ class App(tk.Tk):
             self.container.configure(bg=new_bg)
 
         for page_name, page in self.pages.items():
-             # Check if page exists and has the update method
+            # Check if page exists and has the update method
             if page and hasattr(page, 'update_colors') and callable(page.update_colors):
                 try:
-                     page.update_colors()
+                    page.update_colors()
                 except Exception as e:
-                     print(f"Error updating colors for page {page_name}: {e}")
+                    print(f"Error updating colors for page {page_name}: {e}")
             else:
-                 print(f"Warning: Page {page_name} ({type(page).__name__}) has no update_colors method or doesn't exist.")
+                print(
+                    f"Warning: Page {page_name} ({type(page).__name__}) has no update_colors method or doesn't exist.")
         print("App finished updating UI colors.")
+
 
 class BasePage(tk.Frame):
     """Base class for all pages."""
@@ -197,6 +200,7 @@ class BasePage(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg="white")
         self.controller = controller
+
     def update_colors(self):
         """Updates the background of the base page frame."""
         # Check if controller and colors exist
@@ -209,12 +213,12 @@ class BasePage(tk.Frame):
         else:
             print(f"Warning: Cannot update colors for {type(self).__name__}, controller or colors missing.")
 
+
 class LaunchPage(BasePage):
     """Start page of the application."""
 
     def __init__(self, parent, controller):
         super().__init__(parent, controller)
-
 
         # ----- Initialize colors ----- #
         background_color = controller.colors.get_color("background")
@@ -256,7 +260,8 @@ class LaunchPage(BasePage):
         self.grid_columnconfigure(1, weight=2)
 
         # ----- Text Area ----- #
-        tk.Label(self, text="STAT", bg=background_color, fg=text_color,  font=("Arial", 40)).grid(column=0, row=1, sticky="nsew")
+        tk.Label(self, text="STAT", bg=background_color, fg=text_color, font=("Arial", 40)).grid(column=0, row=1,
+                                                                                                 sticky="nsew")
         tk.Label(self, text="Statistical Tracking and \n Analysis Toolkit", bg=background_color, fg=text_color,
                  font=("Arial", 25)).grid(column=0, row=2, sticky="nsew")
         # Continue Button
@@ -313,7 +318,7 @@ class MeasureSelectionPage(BasePage):
         self.dashboard_page_button.grid(row=1, column=0, padx=10, pady=10, sticky="ns")
 
         self.update_colors()
-        
+
         # ----- Data Table ----- #
         self.table_frame = tk.Frame(self)
 
@@ -327,7 +332,7 @@ class MeasureSelectionPage(BasePage):
         # ----- Measure Selection Area ----- #
         # Calculate Meaasures Button
         self.calculate_button = Button(self.measurement_frame, text="Calculate Measures", style="TButton",
-               command=self.calculate_statistics)
+                                       command=self.calculate_statistics)
         self.calculate_button.grid(row=4, column=1, padx=10, pady=10, sticky='w')
 
         ## TODO: change this to grab data types from main.py
@@ -350,8 +355,8 @@ class MeasureSelectionPage(BasePage):
         self.selected_stat_label = tk.Label(
             self.measurement_frame,
             text="Selected: None",
-            font=("Roboto", 12), 
-            # REMOVED: bg="#FFFFFF", 
+            font=("Roboto", 12),
+            # REMOVED: bg="#FFFFFF",
             wraplength=300,
             justify="left",
             anchor="nw"
@@ -382,11 +387,12 @@ class MeasureSelectionPage(BasePage):
         # Update the window inside the canvas
         self.canvas.coords(self.measurement_window, 100, 0)  # Ensure it starts at (100,0)
         self.canvas.itemconfig(self.measurement_window, width=new_width, height=canvas_height)
+
     def update_colors(self):
         """Updates colors for non-ttk widgets and specific configurations."""
         # If BasePage only sets its own bg, call it:
         if hasattr(super(), 'update_colors'):
-             super().update_colors()
+            super().update_colors()
 
         # Check if controller and colors palette exist
         if not (hasattr(self.controller, 'colors') and self.controller.colors):
@@ -398,16 +404,14 @@ class MeasureSelectionPage(BasePage):
         text_color = self.controller.colors.get_color("text")
         toolbar_bg_color = self.controller.colors.get_color("toolbar_bg")
 
-
-        # Update Frames 
+        # Update Frames
         if hasattr(self, 'toolbar_frame'): self.toolbar_frame.configure(bg=toolbar_bg_color)
         if hasattr(self, 'measurement_frame'): self.measurement_frame.configure(bg=background_color)
         if hasattr(self, 'table_frame'): self.table_frame.configure(bg=background_color)
         if hasattr(self, 'stat_measures_listbox'):
-             listbox_parent = self.stat_measures_listbox.master
-             if isinstance(listbox_parent, tk.Frame):
-                 listbox_parent.configure(bg=background_color) # Match measurement frame bg
-
+            listbox_parent = self.stat_measures_listbox.master
+            if isinstance(listbox_parent, tk.Frame):
+                listbox_parent.configure(bg=background_color)  # Match measurement frame bg
 
         if hasattr(self, 'label_data_type'): self.label_data_type.configure(bg=background_color, fg=text_color)
         if hasattr(self, 'label_measures'): self.label_measures.configure(bg=background_color, fg=text_color)
@@ -473,7 +477,7 @@ class MeasureSelectionPage(BasePage):
         selected_measures = [self.stat_measures_listbox.get(i) for i in self.stat_measures_listbox.curselection()]
 
         data_frame = self.controller.load_data_from_table(self.table.controller)
-        #print(f"Final Data Before Validation:\n{data_frame}")  # Final confirmation
+        # print(f"Final Data Before Validation:\n{data_frame}")  # Final confirmation
 
         if data_frame.empty:
             messagebox.showerror("Error", "No data to analyze.")
@@ -484,7 +488,7 @@ class MeasureSelectionPage(BasePage):
             return
 
         results = self.controller.perform_statistics(data_frame, selected_measures, selected_data_type)
-        # send the results, as well as the chosen selected measures to the table controller log_operation 
+        # send the results, as well as the chosen selected measures to the table controller log_operation
         self.table.controller.log_operation(selected_measures, selected_data_type, results)
 
         if results:
@@ -560,7 +564,8 @@ class DashboardPage(BasePage):
 
         # Column selection dropdown
         tk.Label(self.control_frame, text="Group By Column:", font=("Roboto", 18), bg="#FFFFFF").grid(row=3, column=0,
-                    sticky="w", pady=(0, 5))
+                                                                                                      sticky="w",
+                                                                                                      pady=(0, 5))
         self.column_dropdown = ttk.Combobox(self.control_frame, state="readonly", font=("Roboto", 14))
         self.column_dropdown.grid(row=4, column=0, sticky="ew", pady=(0, 10))
 
@@ -576,7 +581,7 @@ class DashboardPage(BasePage):
             self.control_frame,
             text="Graph it",
             style="TButton",
-            command=lambda: self.get_grouped_data() #self.plot_graph() #command=self.create_visualization
+            command=lambda: self.get_grouped_data()  # self.plot_graph() #command=self.create_visualization
         )
         self.create_viz_button.grid(row=7, column=0, sticky="ew", pady=100)
 
@@ -638,7 +643,7 @@ class DashboardPage(BasePage):
             print("Error: Table controller not found.")
             return
 
-         # Load data from the table
+        # Load data from the table
         data_frame = self.main_control.load_entire_table(table_controller)
         selected_table = self.main_control.load_data_from_table(table_controller)
 
@@ -657,9 +662,12 @@ class DashboardPage(BasePage):
         self.graph_dropdown.set("")
 
         # Set column dropdown
-        self.column_dropdown["values"] = available_columns
         if available_columns:
-            self.column_dropdown.set(available_columns[0])
+            self.column_dropdown["values"] = [" "] + available_columns
+            self.column_dropdown.set("")
+        else:
+            self.column_dropdown.set("")  # Clear if no columns available
+            self.column_dropdown["values"] = []
 
         # Set measure dropdown
         if selected_measures:
@@ -679,7 +687,6 @@ class DashboardPage(BasePage):
             self.graph_dropdown.set("")  # Clear if no measures available
             self.graph_dropdown["values"] = []
 
-
     def update_colors(self):
         """Updates colors for non-ttk widgets and Matplotlib elements."""
         if not (hasattr(self.controller, 'colors') and self.controller.colors):
@@ -692,7 +699,7 @@ class DashboardPage(BasePage):
         text_color = self.controller.colors.get_color("text")
         toolbar_bg_color = self.controller.colors.get_color("toolbar_bg")
         # Use a slightly different color for axes background? Or match primary/background??
-        plot_bg_color = background_color # Figure background matches window
+        plot_bg_color = background_color  # Figure background matches window
 
         # Update Frames
         if hasattr(self, 'toolbar_frame'): self.toolbar_frame.configure(bg=toolbar_bg_color)
@@ -725,13 +732,13 @@ class DashboardPage(BasePage):
 
             # Update the canvas widget background itself (the tk part)
             if hasattr(self, 'canvas_tk_widget'):
-                  self.canvas_tk_widget.configure(bg=plot_bg_color)
+                self.canvas_tk_widget.configure(bg=plot_bg_color)
 
             # Redraw the canvas
             self.canvas_widget.draw_idle()
 
         except Exception as e:
-             print(f"Error updating plot colors: {e}")
+            print(f"Error updating plot colors: {e}")
 
     def get_grouped_data(self):
         """Retrieve the selected measure and column, apply groupby() to the DataFrame, and create a plot."""
@@ -741,28 +748,6 @@ class DashboardPage(BasePage):
         if not table_controller:
             print("Error: Table controller not found.")
             return
-
-        # Load data from the table
-        data_frame = self.main_control.load_entire_table(table_controller)
-        if data_frame.empty:
-            messagebox.showerror("Error", "Table is empty.")
-            return None
-
-        # Load table selection
-        selected_table = self.main_control.load_data_from_table(table_controller)
-
-        # Get selected rows
-        selected_rows = table_controller.get_table_selection()
-        if not selected_rows.empty:
-            data_frame = data_frame.loc[selected_rows.index]
-
-        # Check if data was successfully retrieved
-        if selected_table.empty:
-            print("Error: Data frame is empty, cannot populate dropdown.")
-            return
-
-        # Get selected columns from table
-        selected_columns = list(selected_table.columns)
 
         # Get selected values from dropdowns
         selected_measure = self.measure_dropdown.get()
@@ -774,204 +759,286 @@ class DashboardPage(BasePage):
             messagebox.showerror("Error", "Please select a measure.")
             return None
 
-        if not groupby_column:
-            messagebox.showerror("Error", "Please select a column.")
-            return None
-
         if not graph_type:
             messagebox.showerror("Error", "Please select a graph.")
             return None
 
+        # Get all columns and selected columns
+        data_frame = self.main_control.load_entire_table(table_controller)
+        selected_columns = data_frame.select_dtypes(include='number').columns.tolist()
 
-        # Filter the dataframe to only include rows with indices from selected_rows
-        if not selected_rows.empty:
-            # Get the indices from the selected rows
-            selected_indices = selected_rows.index
-            # Filter the original dataframe
-            data_frame = data_frame.loc[selected_indices]
+        # Variable to hold dataframe to graph
+        graph_data = None
 
+        # Check if there is a group by column
+        if not groupby_column or groupby_column == ' ':
+            selected_table = self.main_control.load_data_from_table(table_controller)
+            if selected_table.empty:
+                messagebox.showerror("Error", "No data selected for visualization.")
+                return None
 
-        grouped = data_frame.groupby([groupby_column])[selected_columns]
-        # Get probability distribution plot type if applicable
-        prob_dist_plot_type = None
+            raw_data = selected_table.select_dtypes(include='number')
+            selected_columns = raw_data.columns.tolist()
 
-        # Perform statistical measure on grouped data and create dataframe
-        if selected_measure == "Mean":
-            grouped_data = grouped.mean()
-        elif selected_measure == "Median":
-            grouped_data = grouped.median()
-        elif selected_measure == "Mode":
-            grouped_data = grouped.agg(lambda x: x.mode().iloc[0] if not x.mode().empty else None)
-        elif selected_measure == "Standard Deviation":
-            # have to grab x and y values and then find the std deviation of those values 
-            try:
-                # Extract X and Y values from the grouped data
-                grouped_data = grouped.apply(lambda x: x)
-                x = pd.to_numeric(grouped_data.iloc[:, 0], errors='coerce').dropna().astype(int).values
-                y = pd.to_numeric(grouped_data.iloc[:, 1], errors='coerce').dropna().astype(int).values
-                
-                # Calculate standard deviation
-                std_deviation = np.std(y)
-                
-                # Create a DataFrame for plotting
-                grouped_data = pd.DataFrame({
-                    "X": x,
-                    "Y": y
-                })
-                grouped_data["Standard Deviation"] = std_deviation  
-                #std_deviation_value = {"Standard Deviation": std_deviation}
-            except Exception as e:
-                messagebox.showerror("Error", f"An error occurred while calculating Standard Deviation: {e}")
-
-           # print(grouped_data)
-        elif selected_measure == "Variance":
-            try:
-                grouped_data = grouped.apply(lambda x: x)
-
-                var_list = []
-                for index, row in grouped_data.iterrows(): # Get variance for each row in dataframe
-                    var_list.append({[index][0][0] : np.var(row)})
-
-                grouped_data = pd.DataFrame(var_list)
-            except Exception as e:
-                messagebox.showerror("Error", f"An error occurred while calculating Variance: {e}")
-
-        elif selected_measure == "Coefficient Of Variation":
-            try:
-                grouped_data = grouped.apply(lambda x: x)
-
-                var_list = []
-                for index, row in grouped_data.iterrows():
-                    var_std = np.std(row)
-                    var_mean = np.mean(row)
-                    var_list.append({[index][0][0] : var_std / var_mean})
-
-                grouped_data = pd.DataFrame(var_list)
-            except Exception as e:
-                messagebox.showerror("Error", f"An error occurred while calculating Coefficient of Variance: {e}")
-
-        elif selected_measure == "Percentiles":
-            #TODO: Either grouped.quantile needs the "psequence"
-            # from user or grouped_data needs to pull percentiles_df (without default index)
-            label, values = Controller.get_last_selected_percentiles()
-            values = [v / 100 for v in values] # convert selected psequence to decimals
-            grouped_data = grouped.quantile(values)
-
-        elif selected_measure == "Probability Distribution":
-            # calculating the frequency of each group
-            group_counts = grouped.size()  # Get counts for each group
-            total_count = group_counts.sum()  # Total number of rows
-            grouped_data = group_counts / total_count
-               
-        elif selected_measure == "Binomial Distribution":
-            n_trails, prob = Controller.get_last_binomial_params()
-            print(n_trails)
-            print(prob)
-            k = np.arange(0, n_trails + 1)
-            print("k:", k)
-            grouped_data = stats.binom.pmf(k, n_trails, prob)
-
-        elif selected_measure == "Least Square Line":
-           # slope, y_int = np.polyfit(x, y, 1)
-            grouped_data = grouped.mean()
-            # x values is on the horizontal and y-vlaues on the vertical. the slope and y int will be used as the regression line 
-                     
-
-        elif selected_measure == "Chi Square":
-            grouped_data = grouped.apply(lambda x: x)
-            grouped_data.iloc[:,0] = pd.to_numeric(grouped_data.iloc[:,0], errors='coerce').dropna().astype(int).values
-            grouped_data.iloc[:,1] = pd.to_numeric(grouped_data.iloc[:,1], errors='coerce').dropna().astype(int).values
-
-        elif selected_measure == "Correlation":
-            grouped_data = grouped.apply(lambda x: x).reset_index()
-
-        elif selected_measure == "Sign Test":
-            if len(selected_columns) >= 2:
-                col1, col2 = selected_columns[:2]
-                data_frame[col1] = pd.to_numeric(data_frame[col1], errors='coerce')
-                data_frame[col2] = pd.to_numeric(data_frame[col2], errors='coerce')
-                data_frame['diff'] = data_frame[col1] - data_frame[col2]
-                value_col = 'diff'
-            elif len(selected_columns) == 1:
-                col = selected_columns[0]
-                data_frame[col] = pd.to_numeric(data_frame[col], errors='coerce')
-                value_col = col
+            if selected_measure == "Mean":
+                graph_data = pd.DataFrame(raw_data.mean()).T
+            elif selected_measure == "Median":
+                graph_data = pd.DataFrame(raw_data.median()).T
+            elif selected_measure == "Mode":
+                graph_data = pd.DataFrame(raw_data.mode().iloc[0]).T
+            elif selected_measure == "Standard Deviation":
+                graph_data = pd.DataFrame(raw_data.std()).T
+            elif selected_measure == "Variance":
+                graph_data = pd.DataFrame(raw_data.var()).T
+            elif selected_measure == "Coefficient Of Variation":
+                graph_data = pd.DataFrame((raw_data.std() / raw_data.mean())).T
+            elif selected_measure == "Percentiles":
+                label, values = Controller.get_last_selected_percentiles()
+                values = [v / 100 for v in values]
+                percentiles_df = raw_data.quantile(values)
+                percentiles_df.index = [f"{int(v * 100)}th" for v in values]
+                graph_data = percentiles_df
+            elif selected_measure == "Probability Distribution":
+                freq = raw_data.apply(lambda col: col.value_counts(normalize=True))
+                graph_data = freq.fillna(0).T
+            elif selected_measure == "Binomial Distribution":
+                n_trials, prob = Controller.get_last_binomial_params()
+                if n_trials is None or prob is None:
+                    messagebox.showerror("Error",
+                                         "No binomial parameters found. Please run Binomial Distribution measure first.")
+                    return None
+                # Return sampled array (like the existing logic expects)
+                graph_data = statistic(raw_data).binomialDistribution(raw_data)
             else:
-                messagebox.showerror("Error", "Select at least one column for Sign Test.")
-                return
-            def sign_counts(series):
-                pos = (series > 0).sum()
-                neg = (series < 0).sum()
-                return pd.Series({'Positive Count': pos, 'Negative Count': neg})
-            grouped_data = data_frame.groupby(groupby_column)[value_col].apply(sign_counts).unstack().reset_index()
+                messagebox.showerror("Error", f"{selected_measure} is not supported without grouping.")
+                return None
 
-        elif selected_measure == "Rank Sum":
-            grouped_data = grouped.mean()
-            ranked_data = grouped_data.rank(numeric_only=True, method='average')
-
-        elif selected_measure == "Spearman Correlation":
-            grouped_data = grouped.apply(lambda x: x).reset_index()
         else:
-            messagebox.showerror("Error", "Invalid measure selected.")
-            return None
+            # Original groupby logic
+            data_frame = self.main_control.load_entire_table(table_controller)
+            grouped_data = None
+            if data_frame.empty:
+                messagebox.showerror("Error", "Table is empty.")
+                return None
 
-        # Clear previous plot and recreate axes to ensure clean state
-        self.figure.clear()
-        self.ax = self.figure.add_subplot(111)  # Recreate the main axes
-        self.canvas_widget.draw_idle()  # Refresh the canvas
+            selected_table = self.main_control.load_data_from_table(table_controller)
+            selected_rows = table_controller.get_table_selection()
+            if not selected_rows.empty:
+                data_frame = data_frame.loc[selected_rows.index]
+
+            if selected_table.empty:
+                print("Error: Data frame is empty, cannot populate dropdown.")
+                return
+
+            selected_columns = list(selected_table.columns)
+
+            # Filter the dataframe to only include rows with indices from selected_rows
+            if not selected_rows.empty:
+                selected_indices = selected_rows.index
+                data_frame = data_frame.loc[selected_indices]
+
+            # Group the data
+            grouped = data_frame.groupby([groupby_column])[selected_columns]
+
+            # Perform statistical measure on grouped data and create dataframe
+            if selected_measure == "Mean":
+                grouped_data = grouped.mean()
+            elif selected_measure == "Median":
+                grouped_data = grouped.median()
+            elif selected_measure == "Mode":
+                grouped_data = grouped.agg(lambda x: x.mode().iloc[0] if not x.mode().empty else None)
+            elif selected_measure == "Standard Deviation":
+                # have to grab x and y values and then find the std deviation of those values
+                try:
+                    # Extract X and Y values from the grouped data
+                    grouped_data = grouped.apply(lambda x: x)
+                    x = pd.to_numeric(grouped_data.iloc[:, 0], errors='coerce').dropna().astype(int).values
+                    y = pd.to_numeric(grouped_data.iloc[:, 1], errors='coerce').dropna().astype(int).values
+
+                    # Calculate standard deviation
+                    std_deviation = np.std(y)
+
+                    # Create a DataFrame for plotting
+                    grouped_data = pd.DataFrame({
+                        "X": x,
+                        "Y": y
+                    })
+                    grouped_data["Standard Deviation"] = std_deviation
+                    # std_deviation_value = {"Standard Deviation": std_deviation}
+                except Exception as e:
+                    messagebox.showerror("Error", f"An error occurred while calculating Standard Deviation: {e}")
+            elif selected_measure == "Variance":
+                try:
+                    grouped_data = grouped.apply(lambda x: x)
+
+                    var_list = []
+                    for index, row in grouped_data.iterrows():  # Get variance for each row in dataframe
+                        var_list.append({[index][0][0]: np.var(row)})
+
+                    grouped_data = pd.DataFrame(var_list)
+                except Exception as e:
+                    messagebox.showerror("Error", f"An error occurred while calculating Variance: {e}")
+            elif selected_measure == "Coefficient Of Variation":
+                try:
+                    grouped_data = grouped.apply(lambda x: x)
+
+                    var_list = []
+                    for index, row in grouped_data.iterrows():
+                        var_std = np.std(row)
+                        var_mean = np.mean(row)
+                        var_list.append({[index][0][0]: var_std / var_mean})
+
+                    grouped_data = pd.DataFrame(var_list)
+                except Exception as e:
+                    messagebox.showerror("Error", f"An error occurred while calculating Coefficient of Variance: {e}")
+            elif selected_measure == "Percentiles":
+                # from user or grouped_data needs to pull percentiles_df (without default index)
+                label, values = Controller.get_last_selected_percentiles()
+                values = [v / 100 for v in values]  # convert selected psequence to decimals
+                grouped_data = grouped.quantile(values)
+                grouped_data.index = [f"{group} - {int(q * 100)}th" for group, q in grouped_data.index]
+                grouped_data.reset_index(drop=False, inplace=True)
+            elif selected_measure == "Probability Distribution":
+                # calculating the frequency of each group
+                group_counts = grouped.size()  # Get counts for each group
+                total_count = group_counts.sum()  # Total number of rows
+                grouped_data = group_counts / total_count
+            elif selected_measure == "Binomial Distribution":
+                n_trails, prob = Controller.get_last_binomial_params()
+                k = np.arange(0, n_trails + 1)
+                grouped_data = stats.binom.pmf(k, n_trails, prob)
+            elif selected_measure == "Least Square Line":
+                # slope, y_int = np.polyfit(x, y, 1)
+                grouped_data = grouped.mean()
+                # x values is on the horizontal and y-vlaues on the vertical. the slope and y int will be used as the regression line
+            elif selected_measure == "Chi Square":
+                grouped_data = grouped.apply(lambda x: x)
+                grouped_data.iloc[:, 0] = pd.to_numeric(grouped_data.iloc[:, 0], errors='coerce').dropna().astype(
+                    int).values
+                grouped_data.iloc[:, 1] = pd.to_numeric(grouped_data.iloc[:, 1], errors='coerce').dropna().astype(
+                    int).values
+            elif selected_measure == "Correlation":
+                grouped_data = grouped.apply(lambda x: x).reset_index()
+            elif selected_measure == "Sign Test":
+                if len(selected_columns) >= 2:
+                    col1, col2 = selected_columns[:2]
+                    data_frame[col1] = pd.to_numeric(data_frame[col1], errors='coerce')
+                    data_frame[col2] = pd.to_numeric(data_frame[col2], errors='coerce')
+                    data_frame['diff'] = data_frame[col1] - data_frame[col2]
+                    value_col = 'diff'
+                elif len(selected_columns) == 1:
+                    col = selected_columns[0]
+                    data_frame[col] = pd.to_numeric(data_frame[col], errors='coerce')
+                    value_col = col
+                else:
+                    messagebox.showerror("Error", "Select at least one column for Sign Test.")
+                    return
+
+                def sign_counts(series):
+                    pos = (series > 0).sum()
+                    neg = (series < 0).sum()
+                    return pd.Series({'Positive Count': pos, 'Negative Count': neg})
+
+                grouped_data = data_frame.groupby(groupby_column)[value_col].apply(sign_counts).unstack().reset_index()
+            elif selected_measure == "Rank Sum":
+                grouped_data = grouped.mean()
+                ranked_data = grouped_data.rank(numeric_only=True, method='average')
+            elif selected_measure == "Spearman Correlation":
+                grouped_data = grouped.apply(lambda x: x).reset_index()
+            else:
+                messagebox.showerror("Error", "Invalid measure selected.")
+                return None
+
+            graph_data = grouped_data
+
+        # Fully clear the figure and remove all subplots
+        self.figure.clf()
+        self.ax = self.figure.add_subplot(111)
         plt.style.use('seaborn-v0_8-deep')
 
         # Generate the selected graph
         if graph_type == "Horizontal Bar Chart":
-            grouped_data.plot(kind="barh", ax=self.ax).legend(loc='upper left', bbox_to_anchor=(1, 1))
-            if selected_measure == "Standard Deviation":
-                # Add a horizontal line for the standard deviation
-                std_dev_value = grouped_data["Standard Deviation"].values[0]
-                self.ax.axvline(x=std_dev_value, color='r', linestyle='--', label='Std Dev')
-                self.ax.legend()
+            graph_data.plot(kind="barh", ax=self.ax).legend(loc='upper left', bbox_to_anchor=(1, 1))
+            self.ax.set_ylabel(f'{selected_measure} Value')
 
         elif graph_type == "Vertical Bar Chart":
-            grouped_data.plot(kind="bar", ax=self.ax).legend(loc='upper left', bbox_to_anchor=(1, 1))
-            if selected_measure == "Standard Deviation":
-                # Add a horizontal line for the standard deviation
-                std_dev_value = grouped_data["Standard Deviation"].values[0]
-                self.ax.axhline(y=std_dev_value, color='r', linestyle='--', label='Std Dev')
-                self.ax.legend()
+            graph_data.plot(kind="bar", ax=self.ax).legend(loc='upper left', bbox_to_anchor=(1, 1))
+            self.ax.set_ylabel(f'{selected_measure} Value')
 
         elif graph_type == "Pie Chart":
+            self.figure.clf()  # Make sure to fully clear everything again here too
             num_cols = len(selected_columns)
             for i, col in enumerate(selected_columns, 1):
                 ax = self.figure.add_subplot(1, num_cols, i)
-                grouped_data[col].plot(kind="pie", ax=ax, autopct='%1.1f%%', title=col)
+                graph_data[col].plot(kind="pie", ax=ax, autopct='%1.1f%%', title=col)
+                ax.set_ylabel('')  # Remove Y-axis label
+            self.canvas_widget.draw()
+
         elif graph_type == "Normal Distribution Curve":
-            if selected_measure == "Percentiles":
-                self.plot_normal_distribution_with_percentiles(grouped_data, data_frame, selected_columns)
-            elif isinstance(grouped_data, pd.Series):
-                sns.kdeplot(grouped_data, ax=self.ax, fill=True, label=selected_measure)
+            if selected_measure == "Binomial Distribution":
+                n_trails, prob = Controller.get_last_binomial_params()
+                k = np.arange(0, n_trails + 1)
+                y = stats.binom.pmf(k, n_trails, prob)
+                self.ax.bar(k, y, color='skyblue', edgecolor='black', label=f"Binomial PMF (n={n_trails}, p={prob})")
+                self.ax.set_xlabel("Number of Successes (k)")
+                self.ax.set_ylabel("Probability")
+
+            elif selected_measure == "Percentiles":
+                self.plot_normal_distribution_with_percentiles(graph_data, data_frame, selected_columns)
+
+            elif selected_measure == "Standard Deviation":
+
+                # Calculate the standard deviation
+                std_dev_value = graph_data.std()
+
+                sns.kdeplot(graph_data, ax=self.ax, fill=True, label=f"Standard Deviation Curve ({selected_columns[0]})")
+                #self.ax.legend([f"Standard Deviation ({selected_columns[0]})"])
+                # Add a vertical line for the standard deviation
+                self.ax.axvline(x=std_dev_value, color='r', linestyle='--', label='Std Dev')
+
+                # Add the legend
+                self.ax.legend()
+
+            elif selected_measure == "Variance":
+                # Plot a KDE (Kernel Density Estimate) for the variance measure
+                sns.kdeplot(graph_data, ax=self.ax, fill=True, label=f"Variance ({selected_measure})")
+                self.ax.legend([f"Variance ({selected_columns[0]})"])
+
+            elif selected_measure == "Coefficient Of Variation":
+                # Plot a KDE (Kernel Density Estimate) for the coefficient of variation measure
+                sns.kdeplot(graph_data, ax=self.ax, fill=True, label=f"Coefficient of Variation ({selected_measure})")
+                self.ax.legend([f"Coefficient of Variation ({selected_columns[0]})"])
+
+            elif isinstance(graph_data, pd.Series):
+                sns.kdeplot(graph_data, ax=self.ax, fill=True, label=selected_measure)
+
             else:
                 for col in selected_columns:
-                    sns.kdeplot(grouped_data[col], ax=self.ax, fill=True, label=col)
-            self.ax.legend()
-            self.ax.set_title(f"Probability Distribution of {groupby_column}")
+                    if col in data_frame.columns:
+                        col_data = pd.to_numeric(data_frame[col], errors='coerce').dropna()
+                        if not col_data.empty:
+                            sns.kdeplot(col_data, ax=self.ax, fill=True, label=col)
+                            self.ax.legend([f"{col}"])
+
+            #self.ax.legend()
+
         elif graph_type == "Scatter Plot":  # X-Y Graph
             if selected_measure == "Correlation":
-                 x = grouped_data[selected_columns[0]]
-                 y = grouped_data[selected_columns[1]]
- 
-                 self.ax.scatter(x, y, label=groupby_column)
- 
-                 self.ax.set_xlabel(selected_columns[0])
-                 self.ax.set_ylabel(selected_columns[1])
- 
-                 coefficients = np.polyfit(x, y, 1)
-                 trend = np.poly1d(coefficients)
-                 self.ax.plot(x, trend(x), 'r--', label='Trend Line')
-            if selected_measure == "Spearman Correlation":
-                x = grouped_data[selected_columns[0]]
-                y = grouped_data[selected_columns[1]]
+                x = graph_data[selected_columns[0]]
+                y = graph_data[selected_columns[1]]
 
                 self.ax.scatter(x, y, label=groupby_column)
+                self.ax.set_xlabel(selected_columns[0])
+                self.ax.set_ylabel(selected_columns[1])
 
+                coefficients = np.polyfit(x, y, 1)
+                trend = np.poly1d(coefficients)
+                self.ax.plot(x, trend(x), 'r--', label='Trend Line')
+            if selected_measure == "Spearman Correlation":
+                x = graph_data[selected_columns[0]]
+                y = graph_data[selected_columns[1]]
+
+                self.ax.scatter(x, y, label=groupby_column)
                 self.ax.set_xlabel(selected_columns[0])
                 self.ax.set_ylabel(selected_columns[1])
 
@@ -979,12 +1046,8 @@ class DashboardPage(BasePage):
                 trend = np.poly1d(coefficients)
                 self.ax.plot(x, trend(x), 'r--', label='Trend Line')
             if selected_measure == "Least Square Line":
-                x = grouped_data[selected_columns[0]] # should be graphed on the horizontal
-                y = grouped_data[selected_columns[1]] # vertical 
-
-                # self.ax.scatter(x,y, label=groupby_column)
-                # self.ax.set_xlabel(selected_columns[0])
-                # self.ax.set_ylabel(selected_columns[1])
+                x = graph_data[selected_columns[0]]  # should be graphed on the horizontal
+                y = graph_data[selected_columns[1]]  # vertical
 
                 coefficients = np.polyfit(x, y, 1)
                 slope = coefficients[0]
@@ -993,25 +1056,22 @@ class DashboardPage(BasePage):
                 # Create the line of best fit
                 line = slope * x + intercept
                 # Plot the original data points
-                self.ax.scatter(x,y, label = 'Data Points')
+                self.ax.scatter(x, y, label='Data Points')
                 # Plot the least squares line
-                self.ax.plot(x, line, color = 'red', label = 'Least Square Line')
-                #plt.plot(x, line, color='red', label='Least Squares Line')
-
+                self.ax.plot(x, line, color='red', label='Least Square Line')
 
             else:
                 for col in selected_columns:
-                    self.ax.scatter(grouped_data.index, grouped_data[col], label=col)
-            
+                    self.ax.scatter(graph_data.index, graph_data[col], label=col)
+
             self.ax.legend()
 
-
         # Set labels and title
-        self.ax.set_title(f"{selected_measure} by {groupby_column}")
-        #self.ax.set_ylabel(selected_measure)
-        #self.ax.set_xlabel(groupby_column)
+        if not groupby_column or groupby_column.strip() == "":
+            self.ax.set_title(f"{selected_measure} of {selected_columns[0]}")
+        else:
+            self.ax.set_title(f"{selected_measure} of {selected_columns[0]} by {groupby_column}")
 
-        # Rotate x-axis labels for better readability (except for pie charts)
         if graph_type != "Pie Chart":
             self.ax.tick_params(axis='x', rotation=45)
 
@@ -1072,7 +1132,8 @@ class ResultsPage(BasePage):
         self.canvas = Canvas(self, bg="#FFFFFF", bd=0, highlightthickness=0, relief="ridge")
         self.canvas.grid(row=0, column=0, sticky="nsew")
 
-        self.toolbarBackground = self.canvas.create_rectangle(0, 0, 100, self.winfo_height(), fill="#D9D9D9", outline="")
+        self.toolbarBackground = self.canvas.create_rectangle(0, 0, 100, self.winfo_height(), fill="#D9D9D9",
+                                                              outline="")
         self.canvas.bind("<Configure>", self.resize_toolbar)  # Bind the resize event
 
         self.data_page_button = add_button(
@@ -1131,17 +1192,16 @@ class ResultsPage(BasePage):
         background_color = self.controller.colors.get_color("background")
         text_color = self.controller.colors.get_color("text")
         toolbar_bg_color = self.controller.colors.get_color("toolbar_bg")
-        results_bg_color = self.controller.colors.get_color("results_bg") # Specific results area color
+        results_bg_color = self.controller.colors.get_color("results_bg")  # Specific results area color
 
         # Update Frames
         if hasattr(self, 'toolbar_frame'): self.toolbar_frame.configure(bg=toolbar_bg_color)
         if hasattr(self, 'main_frame'): self.main_frame.configure(bg=background_color)
-        if hasattr(self, 'button_frame'): self.button_frame.configure(bg=background_color) # Button is ttk
+        if hasattr(self, 'button_frame'): self.button_frame.configure(bg=background_color)  # Button is ttk
         if hasattr(self, 'results_display_frame'): self.results_display_frame.configure(bg=results_bg_color)
 
         if hasattr(self, 'placeholder_label') and self.placeholder_label.winfo_exists():
             self.placeholder_label.configure(bg=results_bg_color, fg=text_color)
-
 
     def resize_toolbar(self, event):
         """Resize the rectangle dynamically when the window changes size."""
