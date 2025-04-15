@@ -659,13 +659,13 @@ class DashboardPage(BasePage):
         self.measure_dropdown.set("")
         self.graph_dropdown.set("")
 
-        # Set column dropdown
+        # Set column dropdown - add "No Grouping" as first option
         if available_columns:
-            self.column_dropdown["values"] = [" "] + available_columns
-            self.column_dropdown.set("")
+            self.column_dropdown["values"] = ["No Grouping"] + available_columns
+            self.column_dropdown.set("No Grouping")  # Default to no grouping
         else:
-            self.column_dropdown.set("")  # Clear if no columns available
-            self.column_dropdown["values"] = []
+            self.column_dropdown.set("No Grouping")
+            self.column_dropdown["values"] = ["No Grouping"]
 
         # Set measure dropdown
         if selected_measures:
@@ -769,7 +769,7 @@ class DashboardPage(BasePage):
         graph_data = None
 
         # Check if there is a group by column
-        if not groupby_column or groupby_column == ' ':
+        if not groupby_column or groupby_column == 'No Grouping':
             selected_table = self.main_control.load_data_from_table(table_controller)
             if selected_table.empty:
                 messagebox.showerror("Error", "No data selected for visualization.")
@@ -855,19 +855,19 @@ class DashboardPage(BasePage):
                 grouped_data = grouped.agg(lambda x: x.mode().iloc[0] if not x.mode().empty else None)
             elif selected_measure == "Standard Deviation":
                 messagebox.showerror("Error", f"{selected_measure} is not supported with grouping.\n"
-                                              f"Please deselect the Group By Column.")
+                                              f"Please select No Grouping for Group By Column.")
                 return None
             elif selected_measure == "Variance":
                 messagebox.showerror("Error", f"{selected_measure} is not supported with grouping.\n"
-                                              f"Please deselect the Group By Column.")
+                                              f"Please select No Grouping for Group By Column.")
                 return None
             elif selected_measure == "Coefficient Of Variation":
                 messagebox.showerror("Error", f"{selected_measure} is not supported with grouping.\n"
-                                              f"Please deselect the Group By Column.")
+                                              f"Please select No Grouping for Group By Column.")
                 return None
             elif selected_measure == "Percentiles":
                 messagebox.showerror("Error", f"{selected_measure} is not supported with grouping.\n"
-                                              f"Please deselect the Group By Column.")
+                                              f"Please select No Grouping for Group By Column.")
                 return None
             elif selected_measure == "Probability Distribution":
                 # calculating the frequency of each group
@@ -876,7 +876,7 @@ class DashboardPage(BasePage):
                 grouped_data = group_counts / total_count
             elif selected_measure == "Binomial Distribution":
                 messagebox.showerror("Error", f"{selected_measure} is not supported with grouping.\n"
-                                              f"Please deselect the grouping column.")
+                                              f"Please select No Grouping for Group By Column.")
                 return None
             elif selected_measure == "Least Square Line":
                 # slope, y_int = np.polyfit(x, y, 1)
@@ -1270,7 +1270,7 @@ class DashboardPage(BasePage):
 
         # Set labels and title
         column_names = ", ".join(selected_columns)
-        if not groupby_column or groupby_column.strip() == "":
+        if groupby_column == "No Grouping":
             self.ax.set_title(f"{selected_measure} of {column_names}")
         else:
             self.ax.set_title(f"{selected_measure} of {column_names} by {groupby_column}")
