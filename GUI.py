@@ -853,7 +853,9 @@ class DashboardPage(BasePage):
         elif selected_measure == "Percentiles":
             #TODO: Either grouped.quantile needs the "psequence"
             # from user or grouped_data needs to pull percentiles_df (without default index)
-            grouped_data = grouped.quantile(0.25)
+            label, values = Controller.get_last_selected_percentiles()
+            values = [v / 100 for v in values] # convert selected psequence to decimals
+            grouped_data = grouped.quantile(values)
 
         elif selected_measure == "Probability Distribution":
             # calculating the frequency of each group
@@ -927,6 +929,7 @@ class DashboardPage(BasePage):
                 std_dev_value = grouped_data["Standard Deviation"].values[0]
                 self.ax.axvline(x=std_dev_value, color='r', linestyle='--', label='Std Dev')
                 self.ax.legend()
+
         elif graph_type == "Vertical Bar Chart":
             grouped_data.plot(kind="bar", ax=self.ax).legend(loc='upper left', bbox_to_anchor=(1, 1))
             if selected_measure == "Standard Deviation":
@@ -934,13 +937,16 @@ class DashboardPage(BasePage):
                 std_dev_value = grouped_data["Standard Deviation"].values[0]
                 self.ax.axhline(y=std_dev_value, color='r', linestyle='--', label='Std Dev')
                 self.ax.legend()
+
         elif graph_type == "Pie Chart":
             num_cols = len(selected_columns)
             for i, col in enumerate(selected_columns, 1):
                 ax = self.figure.add_subplot(1, num_cols, i)
                 grouped_data[col].plot(kind="pie", ax=ax, autopct='%1.1f%%', title=col)
         elif graph_type == "Normal Distribution Curve":
-            if isinstance(grouped_data, pd.Series):
+            if selected_measure == "Percentiles":
+                self.plot_normal_distribution_with_percentiles(grouped_data, data_frame, selected_columns)
+            elif isinstance(grouped_data, pd.Series):
                 sns.kdeplot(grouped_data, ax=self.ax, fill=True, label=selected_measure)
             else:
                 for col in selected_columns:
@@ -999,6 +1005,37 @@ class DashboardPage(BasePage):
 
         # Redraw the canvas
         self.canvas_widget.draw()
+
+    def plot_normal_distribution_with_percentiles(self, grouped_data, data_frame, selected_columns):
+        """
+        Plot a KDE (normal distribution-like) curve and overlay vertical percentile lines.
+        """
+        from main_controller import Controller
+
+        for col in selected_columns:
+            col_series = pd.to_numeric(data_frame[col], errors='coerce').dropna()
+            if not col_series.empty:
+                sns.kdeplot(col_series, ax=self.ax, fill=True, label=col)
+
+                # Overlay percentiles if available
+                label, percentiles = Controller.get_last_selected_percentiles()
+                if percentiles:
+                    quantiles = [v / 100 for v in percentiles]
+                    for q in quantiles:
+                        perc_val = col_series.quantile(q)
+                        self.ax.axvline(perc_val, color='red', linestyle='--', alpha=0.7)
+                        x_offset = (self.ax.get_xlim()[1] - self.ax.get_xlim()[0]) * 0.01  # ~1% of axis width
+
+                        self.ax.text(
+                            perc_val + x_offset,
+                            self.ax.get_ylim()[1] * 0.9,
+                            f"{int(q * 100)}th",
+                            rotation=90,
+                            verticalalignment='center',
+                            horizontalalignment='left',
+                            color='red',
+                            fontsize=8
+                        )
 
 
 class ResultsPage(BasePage):
