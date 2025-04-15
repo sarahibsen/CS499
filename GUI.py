@@ -881,7 +881,7 @@ class DashboardPage(BasePage):
             grouped_data.iloc[:,1] = pd.to_numeric(grouped_data.iloc[:,1], errors='coerce').dropna().astype(int).values
 
         elif selected_measure == "Correlation":
-            grouped_data = grouped.corr()
+            grouped_data = grouped.apply(lambda x: x).reset_index()
 
         elif selected_measure == "Sign Test":
             if len(selected_columns) >= 2:
@@ -948,6 +948,18 @@ class DashboardPage(BasePage):
             self.ax.legend()
             self.ax.set_title(f"Probability Distribution of {groupby_column}")
         elif graph_type == "Scatter Plot":  # X-Y Graph
+            if selected_measure == "Correlation":
+                x = grouped_data[selected_columns[0]]
+                y = grouped_data[selected_columns[1]]
+
+                self.ax.scatter(x, y, label=groupby_column)
+
+                self.ax.set_xlabel(selected_columns[0])
+                self.ax.set_ylabel(selected_columns[1])
+
+                coefficients = np.polyfit(x, y, 1)
+                trend = np.poly1d(coefficients)
+                self.ax.plot(x, trend(x), 'r--', label='Trend Line')
             if selected_measure == "Spearman Correlation":
                 x = grouped_data[selected_columns[0]]
                 y = grouped_data[selected_columns[1]]
