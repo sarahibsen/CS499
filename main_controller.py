@@ -258,10 +258,8 @@ class Controller:
             elif measure == "Binomial Distribution":
                 return ["Vertical Bar Chart", "Normal Distribution Curve"]
 
-            # --- Fallback ---
             else:
-                # Sensible default if measure is not explicitly handled
-                return ["Vertical Bar Chart", "Horizontal Bar Chart"]
+                return [" "]
 
     @staticmethod
     def get_last_binomial_params():
