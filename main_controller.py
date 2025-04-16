@@ -1,11 +1,12 @@
 # Refactored Controller as a lightweight Component
 import pandas as pd
-from Table import TableController
+from Table import TableController, TableModel
 from statisticsLogic import statistic
 from main import DataIntegrity, nominalStatistics, ordinalStatistics, discreteStatistics, continuousStatistics
 import datetime
 from tkinter import filedialog
 import numpy as np
+from tkinter import messagebox
 
 # adding warning diflection from pandas 
 pd.set_option('future.no_silent_downcasting', True)
@@ -277,4 +278,50 @@ class Controller:
         if instance and hasattr(instance, 'selected_percentiles'):
             return instance.selected_percentile_label, instance.selected_percentiles
         return None, None
+
+    @staticmethod
+    def get_compatible_measures(df):
+        type_map = TableModel().detect_data_type(df)
+        present_types = set(type_map.values())
+
+        compatible_measures = []
+        for measure, valid_types in statistic.measure_name_map.items():
+            if any(t in valid_types for t in present_types):
+                compatible_measures.append(measure)
+
+        return compatible_measures
+
+    
+    @staticmethod
+    def calculate_statistics(data_frame, selected_measures):
+        """
+        Computes only compatible statistics and returns:
+        - results: dict of measure -> result
+        - incompatible: list of measures skipped due to type mismatch
+        """
+        if data_frame.empty:
+            return {}, selected_measures  # everything is "incompatible"
+        data_frame = data_frame.apply(pd.to_numeric, errors='coerce')
+        data_frame = data_frame.dropna()
+        print("Cleaned numeric data:", data_frame.head())
+
+
+
+        compatible = Controller.get_compatible_measures(data_frame)
+        incompatible = [m for m in selected_measures if m not in compatible]
+        valid = [m for m in selected_measures if m in compatible]
+
+        results = {}
+        stat_instance = statistic(data_frame)
+        Controller.last_stat_instance = stat_instance
+
+        for m in valid:
+            try:
+                results.update(stat_instance.calculate(m))
+            except Exception as e:
+                print(f"Error computing {m}: {e}")
+
+        return results, incompatible
+
+
 

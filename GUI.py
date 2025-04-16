@@ -366,19 +366,33 @@ class MeasureSelectionPage(BasePage):
         self.selected_stat_label.config(text=display_text)
 
     def calculate_statistics(self):
-        """Calculates statistics based on selected measures."""
         selected_measures = self.get_selected_measures()
+        data_frame = self.table.controller.get_table_selection()
 
-        if not selected_measures:
-            messagebox.showerror("Input Error", "Please select at least one statistical measure.")
+        # we are wanting to get the selected values from the user 
+        if data_frame.empty:
+            messagebox.showerror("Error", "No data selected.")
             return
 
-        # TODO: add the calculation for our statistical measures here <3 
-        # create an instance of the statistic class and call the calculate method
-        stat_instance = statistic(self.table.get_data_frame(), selected_measures)
-        stat_instance.calculate()
-        # Display the results in the table
-        self.table.update_table(stat_instance.get_results())
+        results, skipped = Controller.calculate_statistics(data_frame, selected_measures)
+
+        if skipped:
+            messagebox.showwarning("Skipped Measures", f"These measures were not compatible:\n{', '.join(skipped)}")
+
+
+        if results:
+            result_str = "\n".join([f"{key}: {value}" for key, value in results.items()])
+            messagebox.showinfo("Calculated Statistics", result_str)
+            self.table.controller.log_operation(selected_measures, results, dataType= "Detected")
+            # self.controller.export_results(results)
+
+            self.gui_controller.pages["ResultsPage"].display_results(results)
+            self.gui_controller.show_page("ResultsPage")
+
+            # Notify Dashboard Page to update measure dropdown
+            dashboard_page = self.gui_controller.get_page("DashboardPage")
+            # TODO: allow for the user to graph any type of measure, regardless of if it has been used or not (?) maybe idk 
+            dashboard_page.update_dropdowns(selected_measures)
 
 
 

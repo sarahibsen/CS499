@@ -22,22 +22,25 @@ class statistic():
     """
     Equations for calculating statistics on a dataset 
     Parameters: 
-
+        - The name of the measure 
+        - The data type that the measure can calculate on
     """
     measure_name_map = {
-        "Mean": ["Numerical"],
-        "Median": ["Numerical"],
-        "Mode": ["Numerical", "Categorical"],
-        "Standard Deviation": ["Numerical"],
-        "Variance": ["Numerical"],
-        "Coefficient of Variation": ["Numerical"],
-        "Percentiles": ["Numerical"]
+        "Mean": ["double", "int", "float"],
+        "Median": ["double", "int", "float"],
+        "Mode": ["any"],
+        "Standard Deviation": ["double", "int", "float"],
+        "Variance": ["double", "int", "float"],
+        "Coefficient of Variation": ["double", "int", "float"],
+        "Percentiles": ["double", "int", "float"]
     }
+
+
 
     measure_options_map = {
         "Variance": ["Population", "Sample"],
         "Percentiles": ["Quartiles (25, 50, 75)", "Median (50)", "Deciles (10, 20, ..., 90)", "90th Percentile", "95th Percentile", "99th Percentile"],
-        "Distribution": ["Normal", "PDF", "CDF"]
+        "Probability Distribution": ["Normal", "PDF", "CDF"]
     }
 
     def __init__(self, data):
@@ -104,8 +107,6 @@ class statistic():
         # add the others
 
         raise ValueError(f"Unsupported measure or option: {measure}, {option}")
-
-
 
     def mean(self):
         """
