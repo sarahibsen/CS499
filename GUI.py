@@ -412,6 +412,12 @@ class MeasureSelectionPage(BasePage):
             messagebox.showwarning("Skipped Measures", f"These measures were not compatible:\n{', '.join(skipped)}")
 
 
+        results = self.controller.perform_statistics(data_frame, selected_measures, selected_data_type)
+        # send the results, as well as the chosen selected measures to the table controller log_operation
+        self.table.controller.log_operation(selected_measures, selected_data_type, results)
+        self.table.controller.add_log_separator()
+
+
         if results:
             result_str = "\n".join([f"{key}: {value}" for key, value in results.items()])
             messagebox.showinfo("Calculated Statistics", result_str)
