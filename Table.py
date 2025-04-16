@@ -224,12 +224,11 @@ class TableController:
             else:
                 self.update_table(data = [df.columns.tolist()] + df.values.tolist())  # Table will keep default headings
 
-        # Corrected log_operation call
         self.log_operation(
-            selected_operations=f"Imported file: {file_path}",
-            dataType="CSV",  # Use a placeholder or infer from data if needed
-            results={"Rows": df.shape[0], "Columns": df.shape[1]}
-            # Example: provide metadata about the imported file
+            selected_operations=f"Imported file: {file_path}\n",
+            dataType="CSV\n",  # Use a placeholder or infer from data if needed
+            results={"Rows": df.shape[0], "Columns": df.shape[1]},
+                
         )
 
     def export_table(self):
@@ -261,9 +260,13 @@ class TableController:
 
     def log_operation(self, selected_operations, dataType, results):
         """ Log the operation performed. """
-        operation = f"Operation: {selected_operations}, Data Type: {dataType}, Results: {results}"
+        result_str = ", ".join([f"{k}: {v}" for k, v in results.items()])
+        operation = f"Operation: {selected_operations}, Data Type: {dataType}, Results: {result_str}"
         self.operations_log.append(operation)
-        #print(f"Operation logged: {operation}")
+
+    def add_log_separator(self, separator_char="-", length=50):
+        """Adds a separator line to the operations log."""
+        self.operations_log.append(separator_char * length)
 
     def export_txt_file(self):
         file_path = filedialog.asksaveasfilename(
