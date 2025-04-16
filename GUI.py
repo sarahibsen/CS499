@@ -298,14 +298,19 @@ class MeasureSelectionPage(BasePage):
         self.table = TableView(self.table_frame)
         self.table.grid(row=0, column=0, sticky='nsew')
 
+        style = ttk.Style()
+        style.configure("mystyle.Treeview", highlightthickness=0, bd=0,
+                        font=('Roboto', 15), rowheight=35)  # Modify the font of the body
+        style.configure("mystyle.Treeview.Heading", font=('Roboto', 18, 'bold'))  # Modify the font of the headings
+        style.layout("mystyle.Treeview", [('mystyle.Treeview.treearea', {'sticky': 'nswe'})])  # Remove the borders
 
         # Statistical Measures TreeView
         self.stat_treeview = ttk.Treeview(
-            self.measurement_frame, columns=("Measure"), show="headings", selectmode="extended"
+            self.measurement_frame, columns=("Measure"), show="headings", selectmode="extended", style="mystyle.Treeview"
         )
         self.stat_treeview.heading("Measure", text="Statistical Measures")
         self.stat_treeview.column("Measure", anchor="w")
-        self.stat_treeview.grid(row=2, column=1, padx=10, pady=10, sticky='nw')
+        self.stat_treeview.grid(row=2, column=1, padx=10, pady=10, sticky='nswe')
 
         # Populate TreeView immediately
         self.populate_treeview()
@@ -332,6 +337,33 @@ class MeasureSelectionPage(BasePage):
             command=self.calculate_statistics,
         )
         self.calculate_button.grid(row=4, column=1, padx=10, pady=10, sticky="w")
+
+        # ----- Toolbar ----- #
+        # Create a canvas to hold toolbar
+        self.canvas = Canvas(self, bg="#FFFFFF", bd=0, highlightthickness=0, relief="ridge")
+        self.canvas.grid(row=0, column=0, sticky="nsew")
+
+        self.toolbarBackground = self.canvas.create_rectangle(0, 0, 100, self.winfo_height(), fill="#D9D9D9",
+                                                              outline="")
+        self.canvas.bind("<Configure>", self.resize_toolbar)  # Bind the resize event
+
+        self.data_page_button = add_button(
+            self.canvas, 18, 50, 63, 63, "button_4.png", "button_hover_4.png",
+            "Data page button clicked!"
+        )
+        self.data_page_button.grid(row=0, column=0, padx=10, pady=10, sticky="ns")
+
+        self.dashboard_page_button = add_button(
+            self.canvas, 18, 163, 63, 63, "button_5.png", "button_hover_5.png",
+            "Dashboard page button clicked!", lambda: controller.show_page("ResultsPage")
+        )
+        self.dashboard_page_button.grid(row=1, column=0, padx=10, pady=10, sticky="ns")
+
+        self.update_colors()
+
+    def resize_toolbar(self, event):
+        """Resize the rectangle dynamically when the window changes size."""
+        self.canvas.coords(self.toolbarBackground, 0, 0, 100, event.height)  # Adjust height dynamically
 
     def populate_treeview(self):
         """Populate the treeview with statistical measures and options."""
