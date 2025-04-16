@@ -17,98 +17,6 @@ import tkinter
 from tkinter import Toplevel, Label, Radiobutton, Button, StringVar, W
 import sys # To check for existing root
 
-class RadioButton: # manages Tk/Toplevel internally
-    def __init__(self, title, prompt, options):
-        self.selected_option = None # Initialize before creating window
-
-        # Check if a Tk root window already exists
-        self.root = tkinter._get_default_root()
-        if self.root:
-            # Use Toplevel if a root exists
-            self.dialog = Toplevel(self.root)
-            self.dialog.title(title)
-            self.dialog.transient(self.root) # Keep dialog on top of parent
-            self.dialog.grab_set() # Make modal (block interaction with parent)
-            parent = self.dialog
-            self._is_toplevel = True
-        else:
-            # No root exists, create a new Tk instance (original behavior)
-            # This might be needed if run standalone
-            self.root = tkinter.Tk()
-            self.root.title(title)
-            # hide the empty root window if we create it just for this dialog
-            self.root.withdraw()
-            parent = self.root
-            self._is_toplevel = False
-
-
-        self.prompt = prompt
-        self.options = options
-
-
-        self.label = Label(parent, text=self.prompt)
-        self.label.pack(pady=5, padx=10)
-
-        self.var = StringVar(parent, value=options[0]) # Assign parent
-        for option in options:
-            # Assign parent to radiobuttons
-            radio = Radiobutton(parent, text=option, variable=self.var, value=option)
-            radio.pack(anchor=W, padx=20)
-
-        # Assign parent to button, update command
-        self.button = Button(parent, text="OK", command=self.on_ok)
-        self.button.pack(pady=10)
-
-        # Center the window (works for both Toplevel and Tk)
-        parent.update_idletasks() # Ensure dimensions are calculated
-        parent_width = parent.winfo_width()
-        parent_height = parent.winfo_height()
-        screen_width = parent.winfo_screenwidth()
-        screen_height = parent.winfo_screenheight()
-        x = (screen_width // 2) - (parent_width // 2)
-        y = (screen_height // 2) - (parent_height // 2)
-        parent.geometry(f'{parent_width}x{parent_height}+{x}+{y}')
-
-        # Handle closing the window via 'X' button
-        if self._is_toplevel:
-            self.dialog.protocol("WM_DELETE_WINDOW", self.on_cancel)
-        else:
-            # If we created the root, WM_DELETE_WINDOW applies to it
-             self.root.protocol("WM_DELETE_WINDOW", self.on_cancel)
-
-
-    def show(self):
-        """Shows the dialog and waits for it to close."""
-        # If using Toplevel, wait specifically for the Toplevel window
-        if self._is_toplevel:
-            # Make sure the window is visible if it was withdrawn
-            self.dialog.deiconify()
-            self.root.wait_window(self.dialog)
-        else:
-            # If using Tk root, make it visible and run its mainloop
-            self.root.deiconify()
-            self.root.mainloop()
-        # Return the selected option after the window is closed
-        return self.selected_option
-
-
-    def on_ok(self):
-        self.selected_option = self.var.get()
-        self._destroy_window()
-
-    def on_cancel(self):
-        """Handles closing the window without pressing OK."""
-        self.selected_option = None # Explicitly set to None on cancel/close
-        self._destroy_window()
-
-    def _destroy_window(self):
-        """Destroys the correct window (Toplevel or Tk root)."""
-        if self._is_toplevel and self.dialog:
-            self.dialog.destroy()
-        elif not self._is_toplevel and self.root:
-            self.root.destroy()
-        # Break potential wait_window or mainloop
-
 
 class statistic():
     """
@@ -116,22 +24,28 @@ class statistic():
     Parameters: 
 
     """
+    measure_name_map = {
+        "Mean": ["Numerical"],
+        "Median": ["Numerical"],
+        "Mode": ["Numerical", "Categorical"],
+        "Standard Deviation": ["Numerical"],
+        "Variance": ["Numerical"],
+        "Coefficient of Variation": ["Numerical"],
+        "Percentiles": ["Numerical"]
+    }
+
+    measure_options_map = {
+        "Variance": ["Population", "Sample"],
+        "Percentiles": ["Quartiles (25, 50, 75)", "Median (50)", "Deciles (10, 20, ..., 90)", "90th Percentile", "95th Percentile", "99th Percentile"],
+        "Distribution": ["Normal", "PDF", "CDF"]
+    }
+
     def __init__(self, data):
-        """
-        Initializes the Statistics class with a dataset
-        """
         self.data = data
-
-        # Binomial distribution values
-        self.n = None
-        self.p = None
-
-        # Perctile values
-        self.selected_percentiles = None
-        self.selected_percentile_label = None
+#TODO: change this so that we check if the data that was selected by the user
+# depending on the data types in the selected data, depends on what statistical functions they can actually use 
 
     def _clean_data(self):
-
         if isinstance(self.data, pd.DataFrame):
             cleaned_data = self.data.select_dtypes(include=[np.number]).to_numpy()
         elif isinstance(self.data, (list, np.ndarray)):
@@ -139,16 +53,58 @@ class statistic():
         else:
             return []
 
-        # For 1D array
         if cleaned_data.ndim == 1:
             cleaned_data = [x for x in cleaned_data if not pd.isnull(x) and x != 0]
-        # For 2D array
         elif cleaned_data.ndim == 2:
-            # Remove rows where all values are null or 0
             mask = ~(np.isnan(cleaned_data).all(axis=1) | (cleaned_data == 0).all(axis=1))
             cleaned_data = cleaned_data[mask]
 
         return cleaned_data if len(cleaned_data) > 0 else np.array([[0]])
+
+    def calculate(self, measure, option=None):
+        """
+        Perform the calculation for the specified measure.
+        """
+        cleaned_data = self._clean_data()
+
+        if measure == "Mean":
+            return {"Mean": np.mean(cleaned_data)}
+
+        elif measure == "Median":
+            return {"Median": np.median(cleaned_data)}
+
+        elif measure == "Mode":
+            return {"Mode": mode(cleaned_data, keepdims=False).mode[0]}
+
+        elif measure == "Standard Deviation":
+            return {"Standard Deviation": np.std(cleaned_data, ddof=1)}
+
+        elif measure == "Variance":
+            if option == "Sample":
+                return {"Sample Variance": np.var(cleaned_data, ddof=1)}
+            return {"Population Variance": np.var(cleaned_data, ddof=0)}
+
+        elif measure == "Coefficient of Variation":
+            mean = np.mean(cleaned_data)
+            std_dev = np.std(cleaned_data, ddof=1)
+            return {"Coefficient of Variation": std_dev / mean}
+
+        elif measure == "Percentiles" and option:
+            percentiles = {
+                "Quartiles (25, 50, 75)": [25, 50, 75],
+                "Median (50)": [50],
+                "Deciles (10, 20, ..., 90)": list(range(10, 100, 10)),
+                "90th Percentile": [90],
+                "95th Percentile": [95],
+                "99th Percentile": [99],
+            }
+            if option in percentiles:
+                return {"Percentiles": np.percentile(cleaned_data, percentiles[option], axis=0)}
+
+        # add the others
+
+        raise ValueError(f"Unsupported measure or option: {measure}, {option}")
+
 
 
     def mean(self):
@@ -255,73 +211,10 @@ class statistic():
         if cleaned_data is None:
             print("Percentile calculation cancelled due to data cleaning issues.")
             return None # Stop if cleaning failed
-
-        # --- Define Options for Radio Buttons ---
-        percentile_options_map = {
-            "Quartiles (25, 50, 75)": [25, 50, 75],
-            "Median (50)": [50],
-            "Deciles (10, 20, ..., 90)": list(range(10, 100, 10)),
-            "90th Percentile": [90],
-            "95th Percentile": [95],
-            "99th Percentile": [99],
-        }
-        option_labels = list(percentile_options_map.keys())
-
-        # --- Use RadioButton Dialog ---
-        try:
-            dialog = RadioButton(
-                title="Select Percentiles",
-                prompt="Choose the percentile(s) to calculate:",
-                options=option_labels
-            )
-            selected_label = dialog.show() # Show dialog and wait for selection
-        except Exception as e:
-             messagebox.showerror("GUI Error", f"Failed to create selection dialog: {e}")
-             return None
-
-        if selected_label is None:
-            print("Percentile calculation cancelled by user.")
-            return None # User cancelled or closed the window
-        psequence = percentile_options_map.get(selected_label)
-        self.selected_percentile_label = selected_label
-        self.selected_percentiles = percentile_options_map.get(selected_label)
-
-        if psequence is None:
-             # This shouldn't happen if dialog works correctly, but good practice
-             messagebox.showerror("Internal Error", f"Invalid selection '{selected_label}' received.")
-             return None
-        try:
-            # Ensure cleaned_data is not empty before calculation
-            if cleaned_data.shape[0] == 0:
-                 messagebox.showerror("Calculation Error", "Cannot calculate percentiles on empty data after cleaning.")
-                 return None
-
-            percentiles_array = np.percentile(cleaned_data, psequence, axis=0)
-
-            # Check if result is scalar (if only one column and one percentile)
-            if percentiles_array.ndim == 0:
-                 percentiles_array = np.array([[percentiles_array]]) # Make it 2D
-            elif percentiles_array.ndim == 1 and len(psequence) > 1:
-                 # Multiple percentiles, single column -> reshape to (n_percentiles, 1)
-                 percentiles_array = percentiles_array.reshape(-1, 1)
-            elif percentiles_array.ndim == 1 and len(psequence) == 1:
-                 # Single percentile, multiple columns -> reshape to (1, n_columns)
-                 percentiles_array = percentiles_array.reshape(1, -1)
+        
+        # whatever measure_option is selected will
 
 
-            # Format the output DataFrame (similar to before)
-            percentiles_df = pd.DataFrame(percentiles_array, columns=[f"Column {i+1}" for i in range(cleaned_data.shape[1])])
-            percentiles_df.insert(0, "Percentiles", [f"{p}th" for p in psequence])
-
-            return {"Percentiles": percentiles_df.to_numpy()}
-        # error messages for debugging <3
-        except ValueError as ve:
-             messagebox.showerror("Calculation Error", f"Error during percentile calculation: {ve}. Check data for issues.")
-             return None
-        except Exception as e:
-             messagebox.showerror("Calculation Error", f"An unexpected error occurred: {e}")
-             return None
-    
 
     
 
@@ -790,62 +683,8 @@ class plotCreation():
         plt.tight_layout()
         plt.show()
 
-    #TODO: revision, +pie, +curve
-    
-
-# # Function to extract numeric columns
-# # shouldn't need this function when jarrett implements the loading of csv and the extraction of numerical data from the file 
-# # if not, this function will be used to extract the numerical data from the file
-# def extract_numeric_data(dataframe):
-#     """
-#     Extract only numeric columns from a DataFrame and flatten the data.
-    
-#     Parameters:
-#         dataframe (pd.DataFrame): Input DataFrame with mixed data types.
-        
-#     Returns:
-#         np.ndarray: A 1D array of numeric data.
-#     """
-#     numeric_data = dataframe.select_dtypes(include=[np.number])
-#     return numeric_data.to_numpy().flatten()
-
-
 
 
 # if __name__ == "__main__":
 
-#     path = r"C:\Users\matte\Desktop\CS499 - copy\Test Data\IntervalDataTest.csv"
-#     try:
-#         data = pd.read_csv(path)
-#     except Exception as e:
-#         print(f"Error reading the file: {e}")
-#         exit()
-
-
-#     print("DataFrame content:\n", data)   
-#     numeric_data = data.select_dtypes(include=[np.number])
-#     print("Numeric data:\n", numeric_data)
-
-#     # Creating an instance of the Statistic class with the numeric data
-#     measure = statistic(numeric_data)
-
-#     standard_deviation = measure.standardDeviation()
-#     print("Standard Deviation:", standard_deviation)
-#     print("Variance:", measure.variance())
-#     print("Coefficient of Variation:", measure.coefficientOfVariation())
-
-#     #leastSquare = measure.leastSquareLine()
-#     #print("\n--- Least Square Line ---")
-#     #print(leastSquare)
-
-#     #chisquared = measure.chiSquared()
-#     #print("\n--- Chi-Squared ---")
-#     #print(chisquared)
-
-#     #percentiles_df = measure.percentiles()
-#     #print("\n--- Percentiles ---")
-#     #print(percentiles_df)
-
-#     #plot vertical bar graph percentiles of 1st column
-#     #plotter = plotCreation(percentiles_df)
-#     #percentilesbar = plotter.plot_barChart(percentiles_df)
+#     print(statistic.measure_name_map)
