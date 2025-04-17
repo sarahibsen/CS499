@@ -39,13 +39,7 @@ class TableModel:
                 data_types[column] = "any"  # fallback
 
         return data_types
-
-
-
-        
-            
-
-            
+  
 
     def celldType(self, value):
         """ Infers datatype (String, Float, Int, None) of each value in table.
@@ -86,6 +80,7 @@ class TableController:
         self.model = TableModel()
         self.parent = parent
         self.table = table
+        self.output_file_path = None
 
     def get_table_data(self):
         return self.model.get_data()
@@ -169,6 +164,8 @@ class TableController:
         selected_cells = self.table.get_selected_cells()
         all_data = []
         headers = self.table.headers()
+        if not headers:
+            headers = self.table.get_sheet_data(get_displayed=False, get_header=True, get_index=False, get_index_displayed=True, get_header_displayed=True)[0]
         
         # Create a dict to collect selected cell values by column
         data_dict = {header: [] for header in headers}
@@ -213,7 +210,7 @@ class TableController:
                 if str(cell_value):
                     max_width = max(max_width, len(str(cell_value)))
 
-            column_widths.append(max_width * 10)
+            column_widths.append(max_width * 8)
 
             # Set column width (multiply by a factor to account for font size)
             sheet.set_column_widths(column_widths)
@@ -230,6 +227,7 @@ class TableController:
         )
 
         if file_path:
+            self.output_file_path = file_path  # Store the file path of the imported CSV
             df = pd.read_csv(file_path)
 
             ask_headers = messagebox.askyesno("Headers", "Does your data have headers?")
