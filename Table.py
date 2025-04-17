@@ -4,6 +4,7 @@ from tksheet import Sheet
 from tkinter import ttk, PhotoImage
 import tkinter as tk
 from PIL import Image, ImageTk
+import numpy as np
 
 theme = "light blue" # Default theme for the table
 
@@ -14,23 +15,37 @@ class TableModel:
     def get_data(self):
         return self.data
 
-    def detect_data_type(self, df):  # Sarah's data validation check
+    # TODO: will need to flesh this out! Connect with the statistics logic 
+    def detect_data_type(self, df):
         data_types = {}
+
         for column in df.columns:
-            if pd.api.types.is_numeric_dtype(df[column]):
-                unique_values = df[column].nunique()
-                if unique_values < 10:  # Threshold to differentiate discrete vs continuous
-                    data_types[column] = "Discrete"
-                else:
-                    data_types[column] = "Continuous"
+            # Drop missing values to avoid misdetection
+            non_null_series = df[column].dropna()
+
+            if non_null_series.empty:
+                data_types[column] = "any"
+                continue
+
+            dtype = pd.api.types.infer_dtype(non_null_series)
+
+            if dtype in ["integer", "mixed-integer"]:
+                data_types[column] = "int"
+            elif dtype in ["floating", "mixed-integer-float", "decimal"]:
+                data_types[column] = "float"
+            elif dtype in ["string", "mixed", "mixed-integer", "mixed-integer-float"]:
+                data_types[column] = "any"
             else:
-                unique_values = df[column].nunique()
-                if unique_values / len(df) < 0.05:  # If few unique values relative to data size
-                    data_types[column] = "Nominal"
-                else:
-                    data_types[column] = "Ordinal"
+                data_types[column] = "any"  # fallback
 
         return data_types
+
+
+
+        
+            
+
+            
 
     def celldType(self, value):
         """ Infers datatype (String, Float, Int, None) of each value in table.
@@ -145,37 +160,37 @@ class TableController:
             Iterates over the entire table only updating the cells that are selected.
             Table selection is then matched with its header and converted to pandas df
         """
-        self.currently_selected = self.table.get_currently_selected()
+        currently_selected = self.table.get_currently_selected()
+        
+        # If nothing is selected, fall back to the full table
+        if not currently_selected or currently_selected == []:
+            return self.get_entire_table()
 
-        # Gets all headers regardless of selection or if header is default
-        self.column_headers = self.table[:].expand().options(table=False, header=True).data
+        selected_cells = self.table.get_selected_cells()
+        all_data = []
+        headers = self.table.headers()
+        
+        # Create a dict to collect selected cell values by column
+        data_dict = {header: [] for header in headers}
 
-        self.TwoDList = []
+        for row in range(self.table.total_rows()):
+            row_data = {}
+            row_selected = False
+            for col in range(self.table.total_columns()):
+                if self.table.cell_selected(r=row, c=col, rows=True, columns=True):
+                    cell_value = self.table.get_cell_data(r=row, c=col)
+                    col_name = headers[col]
+                    row_data[col_name] = cell_value
+                    row_selected = True
+            if row_selected:
+                all_data.append(row_data)
 
-        # Creates a 2D list filled with None. The idea is to just place values that are selected.
-        for c in range(0, self.table.total_columns()):
-            self.column_list = []
-            for r in range(0, self.table.total_rows()):
-                self.column_list.append(pd.NA)
+        if not all_data:
+            return pd.DataFrame()  # Empty selection
 
-            self.TwoDList.append(self.column_list)
-
-        for col in range(0, self.table.total_columns()):
-            for row in range(0, self.table.total_rows()):
-                if self.currently_selected:
-                    if self.table.cell_selected(r=row, c=col, rows=True,
-                                                columns=True):  # Only change the cells that are selected. Leave unselected cells as None
-                        self.TwoDList[col][row] = self.table.get_cell_data(r=row, c=col)
-                else:
-                    self.TwoDList[col][row] = self.table.get_cell_data(r=row, c=col)
-
-        self.table_dict = {}
-        for e, col in enumerate(self.TwoDList):
-            self.table_dict[self.column_headers[e]] = col  # Adds in the headers
-
-        df = pd.DataFrame(self.table_dict)
-        df.dropna(axis=0, how='all', inplace=True)  # Dropna axis 0 drops all NaN rows
-        df.dropna(axis=1, how="all", inplace=True)  # Dropna axis 1 drops all NaN columns
+        df = pd.DataFrame(all_data)
+        print("Raw selected data:")
+        print(df.head())
 
         return df
     
@@ -258,7 +273,7 @@ class TableController:
                 table_string = f"{header}\n{separator}\n{rows}"
                 file.write(table_string)
 
-    def log_operation(self, selected_operations, dataType, results):
+    def log_operation(self, selected_operations, results, dataType = "Detected"):
         """ Log the operation performed. """
         result_str = ", ".join([f"{k}: {v}" for k, v in results.items()])
         operation = f"Operation: {selected_operations}, Data Type: {dataType}, Results: {result_str}"
