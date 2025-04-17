@@ -220,65 +220,96 @@ def coefficientOfVariation(self):
     return {"Coefficient of Variation": std_dev['Standard Deviation'] / mean['Mean']}
     
 @statistic.register("Percentiles")
-def percentiles(self):
+def percentiles(self, option=None):
     """
-    Calculates specified percentiles using a RadioButton dialog for selection.
-    Method applies with ordinal, frequency, and interval data.
-
-    Returns:
-        dict: {"Percentiles": numpy.ndarray} containing the calculated percentiles,
-            or None if the operation is cancelled or fails.
+    Calculates specific percentiles based on user-chosen option from measure_options_map.
     """
     cleaned_data = self._clean_data()
-    if cleaned_data is None:
-        print("Percentile calculation cancelled due to data cleaning issues.")
-        return None # Stop if cleaning failed
+    if cleaned_data is None or cleaned_data.size == 0:
+        return None
+
+    # Default fallback
+    selected_percentiles = [25, 50, 75]
+
+    # Map UI options to actual percent values
+    option_map = {
+        "Quartiles (25, 50, 75)": [25, 50, 75],
+        "Median (50)": [50],
+        "Deciles (10, 20, ..., 90)": list(range(10, 100, 10)),
+        "90th Percentile": [90],
+        "95th Percentile": [95],
+        "99th Percentile": [99],
+    }
+
+    if option in option_map:
+        selected_percentiles = option_map[option]
+
+    self.selected_percentiles = selected_percentiles
+    self.selected_percentile_label = f"Selected: {', '.join(str(p) for p in selected_percentiles)}"
+
+    percentile_values = np.percentile(cleaned_data, selected_percentiles, axis=0)
+
+    return {
+        "Percentiles": percentile_values,
+        "Selected": self.selected_percentile_label
+    }
+
         
 @statistic.register("Probability Distribution")
-def probabilityDistribution(self):
-    """
-    Computes properties related to Normal, PDF, or CDF using the loaded data.
-    Mean and standard deviation are calculated from the cleaned data.
-    """
+def probabilityDistribution(self, option=None):
     cleaned_data = self._clean_data()
-    if cleaned_data is None:
-        print("Probability distribution calculation cancelled due to data cleaning issues.")
-        return None # Stop if cleaning failed
-    if cleaned_data.size == 0:
-        messagebox.showerror("Data Error", "Cannot calculate distribution on empty data.")
+    if cleaned_data is None or cleaned_data.size == 0:
+        messagebox.showerror("Data Error", "Cannot calculate distribution on empty or invalid data.")
         return None
 
-    try:
-        # Calculate mean and std dev ONCE, using the entire cleaned dataset
-        # np.mean/std on a 2D array calculates over the whole array by default
-        mean_val = np.mean(cleaned_data)
-        std_dev_val = np.std(cleaned_data)
-
-        # TODO : change distribution choice to the options map
-        # Check for zero standard deviation, which causes issues with norm functions
-        if std_dev_val <= 0:
-            messagebox.showerror("Calculation Error", "Standard deviation is zero or negative. Cannot calculate distribution.")
-            return None
-
-        if distribution_choice == 'normal':
-                # norm.pdf(x, mean_val, std_dev_val) # Example calculation if needed
-            return {"Distribution": "Normal", "Mean": mean_val, "Standard Deviation": std_dev_val}
-
-        elif distribution_choice == 'pdf':
-                # pdf_values = norm.pdf(x, mean_val, std_dev_val)
-            return {"Distribution": "PDF", "Mean": mean_val, "Standard Deviation": std_dev_val} # "Values": pdf_values.tolist()
-
-        elif distribution_choice == 'cdf':
-                # cdf_values = norm.cdf(x, mean_val, std_dev_val)
-            return {"Distribution": "CDF", "Mean": mean_val, "Standard Deviation": std_dev_val} # "Values": cdf_values.tolist()
-
-        else:
-            messagebox.showerror("Internal Error", f"Invalid distribution choice '{selected_label}' processed.")
-            return None
-
-    except Exception as e:
-        messagebox.showerror("Calculation Error", f"An error occurred during distribution calculation: {e}")
+    mean_val = np.mean(cleaned_data)
+    std_dev_val = np.std(cleaned_data)
+    if std_dev_val <= 0:
+        messagebox.showerror("Calculation Error", "Standard deviation is zero or negative.")
         return None
+
+    if not option:
+        option = "Normal"
+
+    choice = option.lower().strip()
+
+    # Flatten to 1D for simplicity
+    flat_data = cleaned_data.flatten()
+    flat_data = np.sort(flat_data)
+
+    if choice == 'normal':
+        return {
+            "Distribution": "Normal",
+            "Mean": mean_val,
+            "Standard Deviation": std_dev_val
+        }
+
+    elif choice == 'pdf':
+        pdf_values = norm.pdf(flat_data, mean_val, std_dev_val)
+        return {
+            "Distribution": "PDF",
+            "Mean": mean_val,
+            "Standard Deviation": std_dev_val,
+            "PDF Values": pdf_values.tolist(),
+            "X": flat_data.tolist()
+        }
+
+    elif choice == 'cdf':
+        cdf_values = norm.cdf(flat_data, mean_val, std_dev_val)
+        return {
+            "Distribution": "CDF",
+            "Mean": mean_val,
+            "Standard Deviation": std_dev_val,
+            "CDF Values": cdf_values.tolist(),
+            "X": flat_data.tolist()
+        }
+
+    else:
+        messagebox.showerror("Option Error", f"Invalid option '{option}' for Probability Distribution.")
+        return None
+
+
+
 
 
 @statistic.register("Binomial Distribution")

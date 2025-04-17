@@ -393,7 +393,7 @@ class MeasureSelectionPage(BasePage):
             if measure in statistic.measure_options_map:
                 for option in statistic.measure_options_map[measure]:
                     self.stat_treeview.insert(parent_id, tk.END, text=option, values=(option,))
-                    
+
     def on_stat_measure_selected(self, event):
         """Handles selection changes in the statistics treeview."""
         # Get the selected item IDs (iids) from the treeview
@@ -416,59 +416,75 @@ class MeasureSelectionPage(BasePage):
         self.selected_stat_label.config(text=display_text)
 
     def calculate_statistics(self):
-        selected_measures = self.get_selected_measures()
+        selected_measures = []
+        extra_params = {}
         data_frame = self.table.controller.get_table_selection()
 
-        # we are wanting to get the selected values from the user 
         if data_frame.empty:
             messagebox.showerror("Error", "No data selected.")
             return
-        
 
-        binomial_params = {}
+        selected_items_iids = self.stat_treeview.selection()
+
+        for iid in selected_items_iids:
+            val = self.stat_treeview.item(iid, "values")[0]
+            parent_iid = self.stat_treeview.parent(iid)
+
+            if parent_iid:  # It's a sub-option
+                main_measure = self.stat_treeview.item(parent_iid, "values")[0]
+
+                if main_measure not in selected_measures:
+                    selected_measures.append(main_measure)
+
+                if main_measure not in extra_params:
+                    extra_params[main_measure] = []
+                extra_params[main_measure].append(val)
+
+            else:  # Top-level measure
+                if val not in selected_measures:
+                    selected_measures.append(val)
+
+                if val not in extra_params:
+                    extra_params[val] = None  # Default will be used by logic if no sub-option
+
         if "Binomial Distribution" in selected_measures:
             try:
                 n_input = self.entry_n.get()
                 p_input = self.entry_p.get()
-                
-                # Set defaults if input is blank
+
                 n = int(n_input) if n_input.strip() != "" else 10
                 p = float(p_input) if p_input.strip() != "" else 0.5
 
                 if not (0 <= p <= 1):
                     raise ValueError("Probability must be between 0 and 1.")
 
-                binomial_params = {"n": n, "p": p}
+                extra_params["n"] = n
+                extra_params["p"] = p
             except Exception as e:
                 messagebox.showerror("Input Error", f"Invalid input for Binomial Distribution: {e}")
                 return
+        
 
-
-        results, skipped = Controller.calculate_statistics(data_frame, selected_measures, extra_params=binomial_params)
-
+        results, skipped = Controller.calculate_statistics(
+            data_frame, selected_measures, extra_params=extra_params
+        )
 
         if skipped:
             messagebox.showwarning("Skipped Measures", f"These measures were not compatible:\n{', '.join(skipped)}")
 
-        # send the results, as well as the chosen selected measures to the table controller log_operation
-        self.table.controller.log_operation(selected_measures, results, dataType= "Detected")
+        self.table.controller.log_operation(selected_measures, results, dataType="Detected")
         self.table.controller.add_log_separator()
-
 
         if results:
             result_str = "\n".join([f"{key}: {value}" for key, value in results.items()])
             messagebox.showinfo("Calculated Statistics", result_str)
-            self.table.controller.log_operation(selected_measures, results, dataType= "Detected")
-            # self.controller.export_results(results)
+            self.table.controller.log_operation(selected_measures, results, dataType="Detected")
 
             self.gui_controller.pages["ResultsPage"].display_results(results)
             self.gui_controller.show_page("ResultsPage")
 
-            # Notify Dashboard Page to update measure dropdown
             dashboard_page = self.gui_controller.get_page("DashboardPage")
-            # TODO: allow for the user to graph any type of measure, regardless of if it has been used or not (?) maybe idk 
             dashboard_page.update_dropdowns(selected_measures)
-
 
 
     def get_selected_measures(self):

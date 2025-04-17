@@ -146,13 +146,51 @@ class Controller:
         for m in valid:
             try:
                 func = statistic.registered_measures.get(m)
-                if func:
-                    result = func(stat_instance)
-                    results[m] = result if isinstance(result, dict) else {m: result}
-                else:
-                    print(f"Warning: Measure '{m}' is not registered.")
+
+                # Pull optional sub-option (if available)
+                options = extra_params.get(m) if extra_params else None
+
+                if m == "Binomial Distribution":
+                    n = extra_params.get("n", 10) if extra_params else 10
+                    p = extra_params.get("p", 0.5) if extra_params else 0.5
+                    result = func(stat_instance, n=n, p=p)
+
+                elif m == "Percentiles":
+                    # Combine multiple selected options into one percentile array
+                    all_percentile_values = []
+                    if options:
+                        for opt in options:
+                            partial_result = func(stat_instance, option=opt)
+                            if partial_result:
+                                all_percentile_values.append(partial_result)
+                        result = {"Percentiles": all_percentile_values}
+                    else:
+                        result = func(stat_instance)
+                elif m == "Probability Distribution":
+                    result = None
+                    if options:
+                        # If multiple distribution types were somehow selected, take the first (or handle them all if needed)
+                        result = func(stat_instance, option=options[0] if isinstance(options, list) else options)
+                    else:
+                        # No option selected, so use the default
+                        result = func(stat_instance, option=None)
+
+
+                elif m == "Variance":
+                    if options and isinstance(options, list):
+                        # Just use the first one (since Variance expects one option)
+                        result = func(stat_instance, variance_type=options[0])
+                    else:
+                        result = func(stat_instance)
+
+                
+                
+
+                results[m] = result if isinstance(result, dict) else {m: result}
+
             except Exception as e:
                 print(f"Error computing {m}: {e}")
+
 
 
         return results, incompatible
