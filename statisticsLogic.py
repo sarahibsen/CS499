@@ -32,7 +32,11 @@ class statistic():
         "Standard Deviation": ["double", "int", "float"],
         "Variance": ["double", "int", "float"],
         "Coefficient of Variation": ["double", "int", "float"],
-        "Percentiles": ["double", "int", "float"]
+        "Percentiles": ["double", "int", "float"],
+        "Sign Test": ["double ", "int", "float"],
+        "Rank Sum" : ["double ", "int", "float"],
+        "Spearman Rank Correlation": ["double ", "int", "float"],
+        "Variance": ["double ", "int", "float"]
     }
 
 
@@ -40,7 +44,10 @@ class statistic():
     measure_options_map = {
         "Variance": ["Population", "Sample"],
         "Percentiles": ["Quartiles (25, 50, 75)", "Median (50)", "Deciles (10, 20, ..., 90)", "90th Percentile", "95th Percentile", "99th Percentile"],
-        "Probability Distribution": ["Normal", "PDF", "CDF"]
+        "Probability Distribution": ["Normal", "PDF", "CDF"],
+        "Sign Test": ["two-sided", "less", "greater"],
+        "Rank Sum": ["two-sided", "less", "greater"]
+        #"Variance"
     }
 
     def __init__(self, data):
@@ -103,6 +110,12 @@ class statistic():
             }
             if option in percentiles:
                 return {"Percentiles": np.percentile(cleaned_data, percentiles[option], axis=0)}
+            
+        elif measure == "Sign Test":
+            return self._sign_test(cleaned_data, option)
+
+        elif measure == "Rank Sum":
+            return self._rank_sum(cleaned_data, option)
 
         # add the others
 
@@ -452,58 +465,59 @@ class statistic():
 
     def signTest(self):
         """
-        Parameters:
-            grabs either one array (for one-sample sign test) or two arrays of same length (for paired sample sign test),
-            user specified alternative hypothesis (H1),
-            and default auto method (exact-to-approximate results).
-        Returns:
-            two floats: the sign test statistic & p-value.
+        Perform a one-sample or paired-sample Sign Test using a GUI RadioButton to select the alternative hypothesis.
+        Returns a dictionary with counts and the p-value.
         """
         cleaned_data = self._clean_data()
 
-        # ONE-SAMPLE SIGN TEST
         if cleaned_data.shape[1] == 1:
             x = cleaned_data.ravel()
-            print(f"X: {x}")  # Debugging point
             median = np.median(x)
-            signs = [xi - median for xi in x if xi != median]
-            n = len(signs)
-            n_positive = sum(1 for s in signs if s > 0)
-            n_negative = sum(1 for s in signs if s < 0)
+            diffs = [xi - median for xi in x if xi != median]
+            n = len(diffs)
+            n_positive = sum(1 for d in diffs if d > 0)
+            n_negative = sum(1 for d in diffs if d < 0)
 
-        # PAIRED SAMPLE SIGN TEST
         elif cleaned_data.shape[1] == 2:
             if np.isnan(cleaned_data).any():
-                messagebox.showerror("Paired signTest Error", "Both columns must have the same row length.")
+                messagebox.showerror("Sign Test Error", "Both columns must have the same row length.")
                 raise ValueError("Both columns must have the same row length")
             x, y = np.hsplit(cleaned_data, 2)
             x = x.ravel()
             y = y.ravel()
-            print(f"X: {x}, Y: {y}")  # Debugging point
             diffs = [xi - yi for xi, yi in zip(x, y) if xi != yi]
             n = len(diffs)
             n_positive = sum(1 for d in diffs if d > 0)
             n_negative = sum(1 for d in diffs if d < 0)
 
         else:
-            messagebox.showerror("signTest Error", "Data must have either one or two columns.")
-            raise ValueError("Data must have either one or two columns.")
-        
-        H_prompt = tkinter.simpledialog.askstring("Alternative Hypothesis", "Choose one: two-sided, less, greater")
-        if H_prompt not in ["two-sided", "less", "greater"]:
-            tkinter.messagebox.showerror("signTest Error", "Invalid alternative hypothesis. Please choose 'two-sided', 'less', or 'greater'.")
+            messagebox.showerror("Sign Test Error", "Select one or two columns only.")
+            raise ValueError("Sign test requires one or two columns of numeric data.")
+
+        try:
+            dialog = RadioButton(
+                title="Alternative Hypothesis",
+                prompt="Choose the alternative hypothesis (H1):",
+                options=["two-sided", "less", "greater"]
+            )
+            selected_hypothesis = dialog.show()
+        except Exception as e:
+            messagebox.showerror("GUI Error", f"Failed to create hypothesis selection dialog: {e}")
             return None
 
-        result = stats.binomtest(n_positive, n, p=0.5, alternative=H_prompt)
+        if selected_hypothesis is None:
+            print("Sign Test cancelled by user.")
+            return None
 
-        sign = {"Sign Count": n,
+        result = stats.binomtest(n_positive, n, p=0.5, alternative=selected_hypothesis)
+
+        return {
+            "Sign Count": n,
             "Positive Count": n_positive,
             "Negative Count": n_negative,
-            "P-Value": result.pvalue}
-
-        print(f"Sign Test: {sign}")
-        return sign
-
+            "P-Value": result.pvalue
+        }
+    
     def rankSum(self):
         '''
         Performs the Mann-Whitney U rank sum test on the first two numeric columns.

@@ -1201,11 +1201,17 @@ class DashboardPage(BasePage):
 
         # Set labels and title
         column_names = ", ".join(selected_columns)
-        if groupby_column == "No Grouping":
-            self.ax.set_title(f"{selected_measure} of {column_names}")
+        if selected_measure == "Binomial Distribution":
+            n_trials, prob = Controller.get_last_binomial_params()
+            plot_title = f"Binomial Distribution of {column_names} (n={n_trials}, p={prob})"
+        elif groupby_column == "No Grouping":
+            plot_title = f"{selected_measure} of {column_names}"
         else:
             self.ax.set_title(f"{selected_measure} of {column_names} by {groupby_column}")
+            plot_title = f"{selected_measure} of {column_names} by {groupby_column}"
 
+        self.ax.set_title(plot_title)
+        
         if graph_type != "Pie Chart":
             self.ax.tick_params(axis='x', rotation=45)
 
