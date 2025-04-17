@@ -104,18 +104,8 @@ class Controller:
         if data_frame is None or data_frame.empty:
             return None
 
-        # Select the appropriate statistics class
-        statistics_classes = {
-            "Nominal": nominalStatistics,
-            "Ordinal": ordinalStatistics,
-            "Discrete": discreteStatistics,
-            "Continuous": continuousStatistics,
-        }
 
-        if data_type not in statistics_classes:
-            return None
-
-        logic = statistics_classes[data_type](data_frame)
+        #logic = statistics_classes[data_type](data_frame)
         stat_instance = statistic(data_frame)
         Controller.last_stat_instance = stat_instance  # Store the instance globally
 
