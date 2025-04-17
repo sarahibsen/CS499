@@ -338,6 +338,24 @@ class MeasureSelectionPage(BasePage):
         )
         self.calculate_button.grid(row=4, column=1, padx=10, pady=10, sticky="w")
 
+        # --- Binomial Input Fields (Initially Hidden) --- #
+        self.binomial_frame = tk.Frame(self.measurement_frame, bg="#FFFFFF")
+
+        self.label_n = tk.Label(self.binomial_frame, text="Number of Trials (n):", bg="#FFFFFF", font=("Roboto", 12))
+        self.entry_n = tk.Entry(self.binomial_frame, font=("Roboto", 12), width=10)
+
+        self.label_p = tk.Label(self.binomial_frame, text="Probability (p):", bg="#FFFFFF", font=("Roboto", 12))
+        self.entry_p = tk.Entry(self.binomial_frame, font=("Roboto", 12), width=10)
+
+        self.label_n.grid(row=0, column=0, padx=5, pady=2, sticky="w")
+        self.entry_n.grid(row=0, column=1, padx=5, pady=2)
+
+        self.label_p.grid(row=1, column=0, padx=5, pady=2, sticky="w")
+        self.entry_p.grid(row=1, column=1, padx=5, pady=2)
+
+        self.binomial_frame.grid(row=5, column=1, padx=10, pady=5, sticky="w")
+        self.binomial_frame.grid_remove()  # Hide initially
+
         # ----- Toolbar ----- #
         # Create a canvas to hold toolbar
         self.canvas = Canvas(self, bg="#FFFFFF", bd=0, highlightthickness=0, relief="ridge")
@@ -367,20 +385,15 @@ class MeasureSelectionPage(BasePage):
 
     def populate_treeview(self):
         """Populate the treeview with statistical measures and options."""
-        measure_map = statistic.measure_name_map
-        measure_options = statistic.measure_options_map
+        self.stat_treeview.delete(*self.stat_treeview.get_children())  # Clear existing items
 
-        # Add measures as parent nodes
-        for measure in measure_map.keys():
+        all_measures = statistic.registered_measures.keys()
+        for measure in sorted(all_measures):
             parent_id = self.stat_treeview.insert("", tk.END, text=measure, values=(measure,))
-
-            # Add options as child nodes, if any
-            if measure in measure_options:
-                for option in measure_options[measure]:
+            if measure in statistic.measure_options_map:
+                for option in statistic.measure_options_map[measure]:
                     self.stat_treeview.insert(parent_id, tk.END, text=option, values=(option,))
-
-      #  print("TreeView populated with measures and options.")
-
+                    
     def on_stat_measure_selected(self, event):
         """Handles selection changes in the statistics treeview."""
         # Get the selected item IDs (iids) from the treeview
@@ -390,7 +403,12 @@ class MeasureSelectionPage(BasePage):
         selected_measures = [self.stat_treeview.item(iid, "values")[0] for iid in selected_items_iids]
         self.selected_stats = sorted(selected_measures)  # Store unique, sorted measure names
 
-       
+        # toggle the visibility of the binomial input based if the user clicks on this measure
+        if "Binomial Distribution" in self.selected_stats:
+            self.binomial_frame.grid()  # Show the frame
+        else:
+            self.binomial_frame.grid_remove()  # Hide if not selected
+
         if self.selected_stats:
             display_text = "Selected: " + ", ".join(self.selected_stats)
         else:
@@ -405,8 +423,29 @@ class MeasureSelectionPage(BasePage):
         if data_frame.empty:
             messagebox.showerror("Error", "No data selected.")
             return
+        
 
-        results, skipped = Controller.calculate_statistics(data_frame, selected_measures)
+        binomial_params = {}
+        if "Binomial Distribution" in selected_measures:
+            try:
+                n_input = self.entry_n.get()
+                p_input = self.entry_p.get()
+                
+                # Set defaults if input is blank
+                n = int(n_input) if n_input.strip() != "" else 10
+                p = float(p_input) if p_input.strip() != "" else 0.5
+
+                if not (0 <= p <= 1):
+                    raise ValueError("Probability must be between 0 and 1.")
+
+                binomial_params = {"n": n, "p": p}
+            except Exception as e:
+                messagebox.showerror("Input Error", f"Invalid input for Binomial Distribution: {e}")
+                return
+
+
+        results, skipped = Controller.calculate_statistics(data_frame, selected_measures, extra_params=binomial_params)
+
 
         if skipped:
             messagebox.showwarning("Skipped Measures", f"These measures were not compatible:\n{', '.join(skipped)}")
