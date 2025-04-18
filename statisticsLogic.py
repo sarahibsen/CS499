@@ -34,22 +34,83 @@ class statistic():
             cls.registered_measures[name] = func
             return func
         return decorator
-    measure_name_map = {
-        "Mean": ["double", "int", "float"],
-        "Median": ["double", "int", "float"],
-        "Mode": ["any"],
-        "Standard Deviation": ["double", "int", "float"],
-        "Variance": ["double", "int", "float"],
-        "Coefficient of Variation": ["double", "int", "float"],
-        "Percentiles": ["double", "int", "float"],
-        "Coefficient of Variation": ["double", "int", "float"],
-        "Probability Distribution": ["double", "int", "float"],
-        "Binomial Distribution": ["int", "float"],
-        "Least Square Line": ["double", "int", "float"],
-        "Chi Square": ["int"],
+
+    measure_requirements = {
+        "Mean": {
+            "types": ["int", "float", "double"],
+            "min_columns": 1
+        },
+        "Median": {
+            "types": ["int", "float", "double"],
+            "min_columns": 1
+        },
+        "Mode": {
+            "types": ["int", "float", "double"],
+            "min_columns": 1
+        },
+        "Standard Deviation": {
+            "types": ["int", "float", "double"],
+            "min_columns": 1,
+            "min_length": 2
+        },
+        "Variance": {
+            "types": ["int", "float", "double"],
+            "min_columns": 1,
+            "min_length": 1
+        },
+        "Coefficient of Variation": {
+            "types": ["int", "float", "double"],
+            "min_columns": 1,
+            "min_length": 1
+        },
+        "Percentiles": {
+            "types": ["int", "float", "double"],
+            "min_columns": 1
+        },
+        "Probability Distribution": {
+            "types": ["int", "float", "double"],
+            "min_columns": 1,
+            "requires_std_dev": True
+        },
+        "Binomial Distribution": {
+            "types": ["int", "float"],
+            "min_columns": 1,
+            "min_length": 1
+        },
+        "Least Square Line": {
+            "types": ["int", "float", "double"],
+            "exact_columns": 2,
+            "requires_equal_length": True,
+            "min_length": 2
+        },
+        "Chi Square": {
+            "types": ["int"],
+            "exact_columns": 2,
+            "requires_equal_length": True,
+            "no_negatives": True
+        },
+        "Correlation Coefficient": {
+            "types": ["int", "float", "double"],
+            "exact_columns": 2,
+            "requires_equal_length": True,
+            "min_length": 2
+        },
+        "Sign Test": {
+            "types": ["int", "float", "double"],
+            "allowed_columns": [1, 2]
+        },
+        "Rank Sum": {
+            "types": ["int", "float", "double"],
+            "min_columns": 2,
+            "min_length": 1
+        },
+        "Spearman Rank Correlation": {
+            "types": ["int", "float", "double"],
+            "exact_columns": 2,
+            "requires_equal_length": True,
+            "min_length": 3
+        }
     }
-
-
 
     measure_options_map = {
         "Variance": ["Population", "Sample"],
@@ -309,9 +370,6 @@ def probabilityDistribution(self, option=None):
         return None
 
 
-
-
-
 @statistic.register("Binomial Distribution")
 def binomialDistribution(self, n=None, p=None):
     selected_data = self._clean_data()
@@ -379,15 +437,14 @@ def chiSquared(self):
     Returns: the Chi-Square statistic and p-value.
     """
     print(f"Incoming Data to Chi-Squared:\n{self.data}")  # Debugging point
-        
-        
+
     if isinstance(self.data, pd.DataFrame):
         if self.data.shape[1] >= 2:
             f_exp = pd.to_numeric(self.data.iloc[:, 0], errors='coerce').dropna().astype(int).values
             f_obs = pd.to_numeric(self.data.iloc[:, 1], errors='coerce').dropna().astype(int).values
         else:
             messagebox.showerror("Error", "Chi-square test requires two valid columns of data.")
-            return None
+            raise ValueError("Chi-square test requires two valid columns of data")
 
     elif isinstance(self.data, np.ndarray) and self.data.shape[1] >= 2:
             
@@ -396,20 +453,20 @@ def chiSquared(self):
             
     else:
         messagebox.showerror("Error", "Chi-square test requires two valid columns of data.")
-        return None
+        raise ValueError(f"Chi-square test requires two valid columns of data")
 
     print(f"Expected Frequencies: {f_exp}")
     print(f"Observed Frequencies: {f_obs}")
 
-        # Ensure both columns have the same length
+    # Ensure both columns have the same length
     if len(f_exp) != len(f_obs):
         messagebox.showerror("Error", "Chi-square test requires equal-length data in both columns.")
-        return None
+        raise ValueError("Chi-square test requires equal-length data in both columns")
 
-        # Ensure no negative values (chi-square requires non-negative integers)
+    # Ensure no negative values (chi-square requires non-negative integers)
     if np.any(f_exp < 0) or np.any(f_obs < 0):
         messagebox.showerror("Error", "Chi-square test cannot contain negative values.")
-        return None
+        raise ValueError("Chi-square test cannot contain negative values")
 
         # Perform chi-square test
     try:
@@ -421,7 +478,7 @@ def chiSquared(self):
 
     except Exception as e:
         messagebox.showerror("Error", f"Chi-square calculation error: {e}")
-        return None
+        raise ValueError("Chi-square calculation error: {e}")
 
 @statistic.register("Correlation Coefficient")
 def correlationCoefficient(self):
@@ -435,12 +492,12 @@ def correlationCoefficient(self):
 
     cleaned_data = self._clean_data()
 
-        # Rows will always have the same number due to the main_controller filling NA with 0's
+    # Rows will always have the same number due to the main_controller filling NA with 0's
     if np.isnan(cleaned_data).any():
         messagebox.showerror("Error", "Both columns must have the same row length.")
         raise ValueError("Both columns must have the same row length")
         
-        # Checks to ensure number of columns are equal
+    # Checks to ensure number of columns are equal
     if cleaned_data.shape[1] % 2 != 0:
         messagebox.showerror("Error", "The number of columns must be even.")
         raise ValueError("The number of columns must be even")
@@ -509,6 +566,7 @@ def signTest(self):
 
     print(f"Sign Test: {sign}")
     return sign
+
 @statistic.register("Rank Sum")
 def rankSum(self):
     '''
