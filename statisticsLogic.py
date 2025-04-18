@@ -37,7 +37,7 @@ class statistic():
     measure_name_map = {
         "Mean": ["double", "int", "float"],
         "Median": ["double", "int", "float"],
-        "Mode": ["any"],
+        "Mode": ["any", "double", "int", "float"],
         "Standard Deviation": ["double", "int", "float"],
         "Variance": ["double", "int", "float"],
         "Coefficient of Variation": ["double", "int", "float"],
@@ -138,31 +138,23 @@ def median(self):
     
 @statistic.register("Mode")
 def mode(self):
-    """
-    Return the mode for any data (numeric or non-numeric), per column.
-    If no true mode exists (i.e., no duplicates), return first row with a note.
-    """
     cleaned_data = self._clean_data(allow_any=True)
 
-    if not isinstance(cleaned_data, pd.DataFrame):
-        cleaned_data = pd.DataFrame(cleaned_data)
+    if isinstance(self.data, pd.DataFrame):
+        mode_result = self.data.mode(numeric_only=False, dropna=True)
+        if mode_result.empty:
+            return {"Mode": "No mode found"}
+        return {"Mode": mode_result.iloc[0].to_dict()}
 
-    mode_result = cleaned_data.mode(numeric_only=False, dropna=True)
-
-    if mode_result is None or mode_result.empty or len(mode_result.index) == 0:
+    elif isinstance(cleaned_data, np.ndarray):
+        # For 1D or 2D arrays
         try:
-            fallback = cleaned_data.iloc[0].to_dict()
-            return {
-                "Mode": fallback,
-                "Note": "No true mode found. Displaying first values from each column."
-            }
+            mode_stat = stats.mode(cleaned_data, nan_policy='omit', keepdims=False)
+            return {"Mode": mode_stat.mode}
         except Exception as e:
-            return {"Mode": "No mode found", "Error": str(e)}
+            return {"Mode": f"Error computing mode: {e}"}
 
-    # Mode(s) exist, return first row of modes
-    return {
-        "Mode": mode_result.iloc[0].to_dict()
-    }
+    return {"Mode": "Unsupported data format"}
 
     
 @statistic.register("Standard Deviation")
@@ -217,25 +209,18 @@ def variance(self, variance_type = "Population"):
 
 @statistic.register("Coefficient of Variation")
 def coefficientOfVariation(self):
-    """
-    Calculate and return the coefficient of variation of the given data set.
-    Returns:
-        float: The coefficient of variation of the data.
-    """
     cleaned_data = self._clean_data()
-    # Validate the data
     if not isinstance(cleaned_data, (list, np.ndarray)):
         raise TypeError("Data must be a list or NumPy array of numbers")
     if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in cleaned_data.flatten()):
         raise TypeError("All elements in the data must be numbers")
     if len(cleaned_data) == 0:
         raise ValueError("Data cannot be empty")
-        
-    # Calculate and return the coefficent of variation
-    mean = self.mean()
-    std_dev = self.standardDeviation()
 
-    return {"Coefficient of Variation": std_dev['Standard Deviation'] / mean['Mean']}
+    mean = statistic.registered_measures["Mean"](self)["Mean"]
+    std_dev = statistic.registered_measures["Standard Deviation"](self)["Standard Deviation"]
+    return {"Coefficient of Variation": std_dev / mean}
+
     
 @statistic.register("Percentiles")
 def percentiles(self, option=None):
