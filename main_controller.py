@@ -124,6 +124,7 @@ class Controller:
 
         compatible = Controller.get_compatible_measures(data_frame)
         incompatible = [m for m in selected_measures if m not in compatible]
+        print("\nIncompatible: {}\n".format(incompatible))
         valid = [m for m in selected_measures if m in compatible]
 
         stat_instance = statistic(data_frame)
@@ -162,7 +163,6 @@ class Controller:
                         # No option selected, so use the default
                         result = func(stat_instance, option=None)
 
-
                 elif m == "Variance":
                     if options and isinstance(options, list):
                         # Just use the first one (since Variance expects one option)
@@ -179,8 +179,6 @@ class Controller:
 
             except Exception as e:
                 print(f"Error computing {m}: {e}")
-
-
 
         return results, incompatible
 
@@ -255,10 +253,49 @@ class Controller:
 
     @staticmethod
     def get_compatible_measures(df):
+        from statisticsLogic import statistic  # Ensure this is accessible or imported properly
+
         type_map = TableModel().detect_data_type(df)
         present_types = set(type_map.values())
 
-        return [
-            measure for measure, valid_types in statistic.measure_name_map.items()
-            if any(t in valid_types for t in present_types)
-        ]
+        numeric_df = df.select_dtypes(include=[np.number]).dropna()
+        num_columns = numeric_df.shape[1]
+        num_rows = numeric_df.shape[0]
+
+        compatible = []
+
+        for measure, rules in statistic.measure_requirements.items():
+            # Check if any present type is valid for this measure
+            if not any(t in rules["types"] for t in present_types):
+                continue
+
+            # Check column count rules
+            if "exact_columns" in rules and num_columns != rules["exact_columns"]:
+                continue
+            if "min_columns" in rules and num_columns < rules["min_columns"]:
+                continue
+            if "allowed_columns" in rules and num_columns not in rules["allowed_columns"]:
+                continue
+
+            # Check minimum row count
+            if "min_length" in rules and num_rows < rules["min_length"]:
+                continue
+
+            # Additional checks
+            if rules.get("requires_equal_length", False):
+                if not df.apply(lambda col: col.dropna().shape[0], axis=0).nunique() == 1:
+                    continue
+
+            if rules.get("no_negatives", False):
+                if (numeric_df < 0).any().any():
+                    continue
+
+            if rules.get("requires_std_dev", False):
+                std_dev = numeric_df.std().mean()
+                if std_dev <= 0 or np.isnan(std_dev):
+                    continue
+
+            compatible.append(measure)
+
+        return compatible
+
