@@ -161,7 +161,11 @@ class Controller:
                     else:
                         # No option selected, so use the default
                         result = func(stat_instance, option=None)
-
+                elif m == "Chi Square":
+                    col_info = extra_params.get(m) if extra_params else {}
+                    expected_col = col_info.get("expected") if isinstance(col_info, dict) else None
+                    observed_col = col_info.get("observed") if isinstance(col_info, dict) else None
+                    result = func(stat_instance, expected=expected_col, observed=observed_col)
 
                 elif m == "Variance":
                     if options and isinstance(options, list):

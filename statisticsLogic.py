@@ -373,55 +373,38 @@ def leastSquareLine(self):
     return {"Slope": slope, "Y-Intercept": intercept}
 
 @statistic.register("Chi Square")
-def chiSquared(self):
-    """
-    Performs Chi-Square Test using two valid columns of data.
-    Returns: the Chi-Square statistic and p-value.
-    """
-    print(f"Incoming Data to Chi-Squared:\n{self.data}")  # Debugging point
-        
-        
+def chiSquared(self, expected=None, observed=None):
     if isinstance(self.data, pd.DataFrame):
-        if self.data.shape[1] >= 2:
-            f_exp = pd.to_numeric(self.data.iloc[:, 0], errors='coerce').dropna().astype(int).values
-            f_obs = pd.to_numeric(self.data.iloc[:, 1], errors='coerce').dropna().astype(int).values
-        else:
-            messagebox.showerror("Error", "Chi-square test requires two valid columns of data.")
+        cols = self.data.columns.tolist()
+        
+        expected_col = expected if expected in cols else cols[0]
+        observed_col = observed if observed in cols else cols[1] if len(cols) > 1 else None
+
+        if observed_col is None:
+            messagebox.showerror("Error", "Chi-square test requires at least two valid columns.")
             return None
 
-    elif isinstance(self.data, np.ndarray) and self.data.shape[1] >= 2:
-            
-        f_exp = self.data[:, 0].astype(int)
-        f_obs = self.data[:, 1].astype(int)
-            
+        f_exp = pd.to_numeric(self.data[expected_col], errors='coerce').dropna().astype(int).values
+        f_obs = pd.to_numeric(self.data[observed_col], errors='coerce').dropna().astype(int).values
     else:
-        messagebox.showerror("Error", "Chi-square test requires two valid columns of data.")
+        messagebox.showerror("Error", "Invalid data for Chi-Square.")
         return None
 
-    print(f"Expected Frequencies: {f_exp}")
-    print(f"Observed Frequencies: {f_obs}")
-
-        # Ensure both columns have the same length
     if len(f_exp) != len(f_obs):
         messagebox.showerror("Error", "Chi-square test requires equal-length data in both columns.")
         return None
 
-        # Ensure no negative values (chi-square requires non-negative integers)
     if np.any(f_exp < 0) or np.any(f_obs < 0):
         messagebox.showerror("Error", "Chi-square test cannot contain negative values.")
         return None
 
-        # Perform chi-square test
     try:
         chi_sq_stat, p_value = stats.chisquare(f_obs, f_exp)
-
-        result_str = f"Chi-Square Statistic: {chi_sq_stat:.4f}, P-value: {p_value:.4e}"
-        #print(result_str)
-        return {"Chi-Squared Statistic": f"{chi_sq_stat}", "P-value": f"{p_value}"}
-
+        return {"Chi-Squared Statistic": f"{chi_sq_stat:.4f}", "P-value": f"{p_value:.4e}"}
     except Exception as e:
         messagebox.showerror("Error", f"Chi-square calculation error: {e}")
         return None
+
 
 @statistic.register("Correlation Coefficient")
 def correlationCoefficient(self):
