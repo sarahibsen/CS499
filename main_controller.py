@@ -183,9 +183,11 @@ class Controller:
                     else:
                         result = func(stat_instance)
 
-                
-                
+                else:
+                    # For all other statistics that don't need specifications
+                    result = func(stat_instance)
 
+                # Save the result
                 results[m] = result if isinstance(result, dict) else {m: result}
 
             except Exception as e:

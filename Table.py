@@ -35,8 +35,10 @@ class TableModel:
                 data_types[column] = "float"
             elif dtype in ["string", "mixed", "mixed-integer", "mixed-integer-float"]:
                 data_types[column] = "any"
+            elif dtype in ["string"]:
+                data_types[column] = "string"  
             else:
-                data_types[column] = "any"  # fallback
+                data_types[column] = "any"
 
         return data_types
 
