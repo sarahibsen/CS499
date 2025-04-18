@@ -2,7 +2,6 @@
 import pandas as pd
 from Table import TableController, TableModel
 from statisticsLogic import statistic
-from main import DataIntegrity, nominalStatistics, ordinalStatistics, discreteStatistics, continuousStatistics
 import datetime
 from tkinter import filedialog
 import numpy as np
@@ -73,18 +72,6 @@ class Controller:
         return True
 
 
-    @staticmethod
-    def detect_data_type(data_frame):
-        """
-        Detects the type of data in the DataFrame.
-
-        Args:
-            data_frame (pd.DataFrame): The data to analyze.
-
-        Returns:
-            dict: Column-wise data type mapping.
-        """
-        return DataIntegrity.detect_data_type(data_frame) if data_frame is not None else None
     @staticmethod
     def perform_statistics(data_frame, selected_measures, data_type, variance_type=None, extra_params=None):
         if data_frame is None or data_frame.empty:
