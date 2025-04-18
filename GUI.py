@@ -549,17 +549,17 @@ class MeasureSelectionPage(BasePage):
 
         for measure in skipped_measures:
             if measure in ["Mean", "Median", "Mode", "Standard Deviation", "Variance", "Percentiles", "Coefficient of Variation"]:
-                explanations.append(f"❌ **{measure}** requires numeric data. Try selecting columns with numbers only.")
+                explanations.append(f"X **{measure}** requires numeric data. Try selecting columns with numbers only.")
             elif measure == "Chi Square":
-                explanations.append("❌ **Chi Square** requires two columns of equal length with non-negative integer values. You can select the columns manually once Chi Square is selected.")
+                explanations.append("X **Chi Square** requires two columns of equal length with non-negative integer values. You can select the columns manually once Chi Square is selected.")
             elif measure in ["Least Square Line", "Correlation", "Spearman Correlation"]:
-                explanations.append(f"❌ **{measure}** requires at least two numeric columns of equal length (x and y pairs).")
+                explanations.append(f"X **{measure}** requires at least two numeric columns of equal length (x and y pairs).")
             elif measure == "Binomial Distribution":
-                explanations.append("❌ **Binomial Distribution** needs numeric data and a number of trials and probability between 0 and 1.")
+                explanations.append("X **Binomial Distribution** needs numeric data and a number of trials and probability between 0 and 1.")
             elif measure == "Probability Distribution":
-                explanations.append("❌ **Probability Distribution** requires numeric data and may fail if the standard deviation is 0.")
+                explanations.append("X **Probability Distribution** requires numeric data and may fail if the standard deviation is 0.")
             else:
-                explanations.append(f"❌ **{measure}** couldn't be applied due to incompatible or missing data.")
+                explanations.append(f"X **{measure}** couldn't be applied due to incompatible or missing data.")
 
         return "Some measures could not be calculated:\n\n" + "\n".join(explanations)
 

@@ -63,19 +63,16 @@ class statistic():
 #TODO: change this so that we check if the data that was selected by the user
 # depending on the data types in the selected data, depends on what statistical functions they can actually use 
 
-    def _clean_data(self):
+    def _clean_data(self, allow_any = False):
         if isinstance(self.data, pd.DataFrame):
-            cleaned_data = self.data.select_dtypes(include=[np.number]).to_numpy()
+            if allow_any:
+                return self.data.dropna()  # Allow all types
+            else:
+                return self.data.select_dtypes(include=[np.number]).dropna().to_numpy()
         elif isinstance(self.data, (list, np.ndarray)):
-            cleaned_data = np.array(self.data)
-        else:
-            return []
+            return np.array(self.data)
+        return np.array([[0]])
 
-        if cleaned_data.ndim == 1:
-            cleaned_data = [x for x in cleaned_data if not pd.isnull(x) and x != 0]
-        elif cleaned_data.ndim == 2:
-            mask = ~(np.isnan(cleaned_data).all(axis=1) | (cleaned_data == 0).all(axis=1))
-            cleaned_data = cleaned_data[mask]
 
         return cleaned_data if len(cleaned_data) > 0 else np.array([[0]])
 
@@ -142,10 +139,31 @@ def median(self):
 @statistic.register("Mode")
 def mode(self):
     """
-    Return the mode of the data set
+    Return the mode for any data (numeric or non-numeric), per column.
+    If no true mode exists (i.e., no duplicates), return first row with a note.
     """
-    cleaned_data = self._clean_data()
-    return {"Mode": mode(cleaned_data, keepdims=False).mode[0]}
+    cleaned_data = self._clean_data(allow_any=True)
+
+    if not isinstance(cleaned_data, pd.DataFrame):
+        cleaned_data = pd.DataFrame(cleaned_data)
+
+    mode_result = cleaned_data.mode(numeric_only=False, dropna=True)
+
+    if mode_result is None or mode_result.empty or len(mode_result.index) == 0:
+        try:
+            fallback = cleaned_data.iloc[0].to_dict()
+            return {
+                "Mode": fallback,
+                "Note": "No true mode found. Displaying first values from each column."
+            }
+        except Exception as e:
+            return {"Mode": "No mode found", "Error": str(e)}
+
+    # Mode(s) exist, return first row of modes
+    return {
+        "Mode": mode_result.iloc[0].to_dict()
+    }
+
     
 @statistic.register("Standard Deviation")
 def standardDeviation(self):

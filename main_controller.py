@@ -119,7 +119,12 @@ class Controller:
         if data_frame.empty:
             return {}, selected_measures
 
-        data_frame = data_frame.apply(pd.to_numeric, errors='coerce').dropna()
+        # Only drop rows that are fully NaN in numeric columns
+        numeric_df = data_frame.select_dtypes(include='number')
+
+        # Filter rows where at least one numeric column is not null
+        data_frame = data_frame[numeric_df.notna().any(axis=1)]
+
         print("Cleaned numeric data:", data_frame.head())
 
         compatible = Controller.get_compatible_measures(data_frame)
