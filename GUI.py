@@ -497,7 +497,8 @@ class MeasureSelectionPage(BasePage):
             self.gui_controller.show_page("ResultsPage")
 
             dashboard_page = self.gui_controller.get_page("DashboardPage")
-            dashboard_page.update_dropdowns(selected_measures)
+            print(selected_measures)  # TODO: Delete, for debugging
+            dashboard_page.update_dropdowns(selected_measures, skipped)
 
 
     def get_selected_measures(self):
@@ -631,7 +632,7 @@ class DashboardPage(BasePage):
         """Resize the rectangle dynamically when the window changes size."""
         self.canvas.coords(self.toolbarBackground, 0, 0, 100, event.height)  # Adjust height dynamically
 
-    def update_dropdowns(self, selected_measures, selected_measure):
+    def update_dropdowns(self, selected_measures, skipped):
         """Update the measure and column dropdowns with available options while excluding selected columns."""
 
         # Ensure the table controller is available
@@ -666,9 +667,15 @@ class DashboardPage(BasePage):
             self.column_dropdown.set("No Grouping")
             self.column_dropdown["values"] = ["No Grouping"]
 
+        # Create list of valid measures for graphing
+        valid_measures = [measure for measure in selected_measures if measure not in skipped]
+
         # Set measure dropdown
-        if selected_measures:
-            measure_options = ["Select value"] + selected_measures
+        print(selected_measures)
+        print(skipped)
+        print(valid_measures)
+        if valid_measures:
+            measure_options = ["Select a measure"] + valid_measures
             self.measure_dropdown["values"] = measure_options
             self.measure_dropdown.set("Select value")
         else:
@@ -676,8 +683,8 @@ class DashboardPage(BasePage):
             self.measure_dropdown["values"] = []
 
         # Set graph dropdown based on selected measure
-        if selected_measures:
-            graph_types = Controller.plots_for_measure(selected_measure)
+        if valid_measures:
+            graph_types = Controller.plots_for_measure(valid_measures)
             self.graph_dropdown["values"] = graph_types
             self.graph_dropdown.set("")
         else:
