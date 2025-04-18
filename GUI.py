@@ -592,25 +592,25 @@ class DashboardPage(BasePage):
 
         # Measure selection dropdown
         tk.Label(self.control_frame, text="Select Measure:", font=("Roboto", 18), bg="#FFFFFF").grid(
-            row=1, column=0, sticky="w", pady=(10, 0)
-        )
+            row=1, column=0, sticky="w", padx=(10,0))
         self.measure_dropdown = ttk.Combobox(self.control_frame, state="readonly", font=("Roboto", 14))
         self.measure_dropdown.bind("<<ComboboxSelected>>", self.on_measure_change)
         self.measure_dropdown.grid(row=2, column=0, sticky="ew", pady=(0, 10))
 
-        # Column selection dropdown
-        tk.Label(self.control_frame, text="Group By Column:", font=("Roboto", 18), bg="#FFFFFF").grid(row=3, column=0,
-                                                                                                      sticky="w",
-                                                                                                      pady=(0, 5))
-        self.column_dropdown = ttk.Combobox(self.control_frame, state="readonly", font=("Roboto", 14))
-        self.column_dropdown.grid(row=4, column=0, sticky="ew", pady=(0, 10))
-
         # Graph selection dropdown
-        tk.Label(self.control_frame, text="Graph Type:", font=("Roboto", 18), bg="#FFFFFF").grid(row=5, column=0,
-                                                                                                 sticky="w",
-                                                                                                 pady=(0, 5))
+        tk.Label(self.control_frame, text="Graph Type:", font=("Roboto", 18), bg="#FFFFFF").grid(
+            row=3, column=0, sticky="w", padx=(10,0))
         self.graph_dropdown = ttk.Combobox(self.control_frame, state="readonly", font=("Roboto", 14))
-        self.graph_dropdown.grid(row=6, column=0, sticky="ew")
+        self.graph_dropdown.grid(row=4, column=0, sticky="ew", pady=(0, 10))
+
+        # Column selection dropdown
+        self.column_selection_label = tk.Label(self.control_frame, text="Group By Column:", font=("Roboto", 18), bg="#FFFFFF")
+        self.column_selection_label.grid(row=5, column=0, sticky="w", padx=(10,0))
+        self.column_selection_label.grid_remove()
+        self.column_dropdown = ttk.Combobox(self.control_frame, state="readonly", font=("Roboto", 14))
+        self.column_dropdown.grid(row=6, column=0, sticky="ew", pady=(0, 10))
+        self.column_dropdown.grid_remove()
+
 
         # Create button
         self.create_viz_button = Button(
@@ -651,6 +651,34 @@ class DashboardPage(BasePage):
         self.graph_dropdown["values"] = graph_types
         if graph_types:
             self.graph_dropdown.set(graph_types[0])
+
+        # Update column dropdown based on measure's grouping requirement
+        table_controller = self.get_table_controller()
+        if not table_controller:
+            return
+
+        data_frame = self.main_control.load_entire_table(table_controller)
+        selected_table = self.main_control.load_data_from_table(table_controller)
+
+        grouping_eligible = Controller.measure_supports_grouping(selected_measure)
+
+        # Show/hide column dropdown based on measure's eligibility
+        if grouping_eligible == "Both" or grouping_eligible == "Must group":
+            self.show_groupby_dropdown()
+        else:
+            self.hide_groupby_dropdown()
+            return
+
+        all_columns = list(data_frame.columns)
+        selected_columns = list(selected_table.columns)
+        available_columns = [col for col in all_columns if col not in selected_columns]
+
+        if grouping_eligible == "Must group":
+            self.column_dropdown["values"] = available_columns
+            self.column_dropdown.current(0)  # force user to pick a grouping column
+        else:
+            self.column_dropdown["values"] = ["No Grouping"] + available_columns
+            self.column_dropdown.set("No Grouping")  # default to no grouping
 
     def get_table_controller(self):
         """Retrieve the table controller from MeasureSelectionPage."""
@@ -697,14 +725,6 @@ class DashboardPage(BasePage):
         self.measure_dropdown.set("")
         self.graph_dropdown.set("")
 
-        # Set column dropdown - add "No Grouping" as first option
-        if available_columns:
-            self.column_dropdown["values"] = ["No Grouping"] + available_columns
-            self.column_dropdown.set("No Grouping")  # Default to no grouping
-        else:
-            self.column_dropdown.set("No Grouping")
-            self.column_dropdown["values"] = ["No Grouping"]
-
         # Create list of valid measures for graphing
         valid_measures = [measure for measure in selected_measures if measure not in skipped]
 
@@ -724,10 +744,15 @@ class DashboardPage(BasePage):
         if valid_measures:
             graph_types = Controller.plots_for_measure(valid_measures)
             self.graph_dropdown["values"] = graph_types
-            self.graph_dropdown.set("")
+            self.graph_dropdown.current(0)
         else:
-            self.graph_dropdown.set("")  # Clear if no measures available
+            self.graph_dropdown.set("")  # Clear if no graphs available
             self.graph_dropdown["values"] = []
+
+        # Set column dropdown as empty
+        self.column_dropdown.set("")
+        self.column_dropdown["values"] = []
+
 
     def update_colors(self):
         """Updates colors for non-ttk widgets and Matplotlib elements."""
@@ -1355,6 +1380,14 @@ class DashboardPage(BasePage):
                             color='red',
                             fontsize=8
                         )
+
+    def show_groupby_dropdown(self):
+        self.column_selection_label.grid()
+        self.column_dropdown.grid()  # Show dropdown
+
+    def hide_groupby_dropdown(self):
+        self.column_selection_label.grid_remove()
+        self.column_dropdown.grid_remove()
 
 
 class ResultsPage(BasePage):
