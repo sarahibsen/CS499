@@ -93,7 +93,6 @@ def add_button(canvas, x, y, w, h, normal_image, hover_image, message, callback=
 
     return button
 
-
 class App(tk.Tk):
     """
     Main application class to handle multiple pages.
@@ -296,6 +295,7 @@ class MeasureSelectionPage(BasePage):
         self.table_frame.grid_columnconfigure(0, weight=1)
 
         self.table = TableView(self.table_frame)
+
         self.table.grid(row=0, column=0, sticky='nsew')
 
         # --- Statistical Measures TreeView --- #
@@ -311,9 +311,6 @@ class MeasureSelectionPage(BasePage):
         self.stat_treeview.heading("Measure", text="Statistical Measures")
         self.stat_treeview.column("Measure", anchor="w")
         self.stat_treeview.grid(row=2, column=1, padx=10, pady=10, sticky='nswe')
-
-        # Populate TreeView immediately
-        self.populate_treeview()
 
         # Label to show selected measures
         self.selected_stat_label = tk.Label(
@@ -331,6 +328,22 @@ class MeasureSelectionPage(BasePage):
 
         # Bind TreeView selection event
         self.stat_treeview.bind("<<TreeviewSelect>>", self.on_stat_measure_selected)
+
+        # --- Buttons --- #
+        # Button to toggle show all or show only compatible measures
+        self.show_all_measures = tk.BooleanVar(value=False)
+        self.toggle_show_all = ttk.Checkbutton(
+            self.measurement_frame,
+            text="Show all measures",
+            variable=self.show_all_measures,
+            command=self.populate_treeview
+        )
+        self.toggle_show_all.grid(row=1, column=1, sticky="w", padx=10, pady=5)
+
+        self.table.controller.get_table_selection()
+
+        # Populate TreeView AFTER checking for compatible measures
+        self.populate_treeview()
 
         # Calculate Measures Button
         self.calculate_button = Button(
@@ -387,28 +400,54 @@ class MeasureSelectionPage(BasePage):
         self.canvas.coords(self.toolbarBackground, 0, 0, 100, event.height)  # Adjust height dynamically
 
     def populate_treeview(self):
-        """Populate the treeview with statistical measures and options."""
-        self.stat_treeview.delete(*self.stat_treeview.get_children())  # Clear existing items
+        """Populate the treeview based on compatibility toggle."""
+        print("Refreshing Treeview...")  # Debug print
+        self.stat_treeview.delete(*self.stat_treeview.get_children())
+
+        data_frame = self.table.controller.get_table_selection()
+        print("Data selected: ", data_frame.head())  # Debug
+        if data_frame.empty:
+            print("No data selected.")
+            return
 
         all_measures = statistic.registered_measures.keys()
+        compatible = Controller.get_compatible_measures(data_frame)
+        show_all = self.show_all_measures.get()
+
         for measure in sorted(all_measures):
-            parent_id = self.stat_treeview.insert("", tk.END, text=measure, values=(measure,))
+            is_compatible = measure in compatible
+
+            if not is_compatible and not show_all:
+                continue
+
+            tags = ("disabled",) if not is_compatible else ()
+            parent_id = self.stat_treeview.insert(
+                "", tk.END,
+                text=measure,
+                values=(measure,),
+                tags=tags
+            )
+
             if measure in statistic.measure_options_map:
                 for option in statistic.measure_options_map[measure]:
                     self.stat_treeview.insert(parent_id, tk.END, text=option, values=(option,))
 
+        self.stat_treeview.tag_configure("disabled", foreground="gray")
+
     def on_row_click(self, event):
-        """Allows multi-selection on treeview without Ctrl key"""
-        item = self.stat_treeview.identify_row(event.y)  # Get clicked row
-        if item:
+        """Allows multi-selection on treeview without Ctrl key, skips disabled rows."""
+        item = self.stat_treeview.identify_row(event.y)
+        if item and "disabled" not in self.stat_treeview.item(item, "tags"):
             if item in self.stat_treeview.selection():
-                self.stat_treeview.selection_remove(item)  # Deselect if already selected
+                self.stat_treeview.selection_remove(item)
             else:
-                self.stat_treeview.selection_add(item)  # Add row to selection
+                self.stat_treeview.selection_add(item)
         return "break"
 
-    def on_stat_measure_selected(self, event):
+    def on_stat_measure_selected(self, selected_item):
         """Handles selection changes in the statistics treeview."""
+
+        print("Item selected in the table:", selected_item)
 
         # Get the selected item IDs (iids) from the treeview
         selected_items_iids = self.stat_treeview.selection()
@@ -499,7 +538,6 @@ class MeasureSelectionPage(BasePage):
             dashboard_page = self.gui_controller.get_page("DashboardPage")
             print(selected_measures)  # TODO: Delete, for debugging
             dashboard_page.update_dropdowns(selected_measures, skipped)
-
 
     def get_selected_measures(self):
         """Return the selected measures (list of strings)."""
