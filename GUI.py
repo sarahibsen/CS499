@@ -298,13 +298,13 @@ class MeasureSelectionPage(BasePage):
         self.table = TableView(self.table_frame)
         self.table.grid(row=0, column=0, sticky='nsew')
 
+        # --- Statistical Measures TreeView --- #
         style = ttk.Style()
         style.configure("mystyle.Treeview", highlightthickness=0, bd=0,
                         font=('Roboto', 15), rowheight=35)  # Modify the font of the body
         style.configure("mystyle.Treeview.Heading", font=('Roboto', 18, 'bold'))  # Modify the font of the headings
         style.layout("mystyle.Treeview", [('mystyle.Treeview.treearea', {'sticky': 'nswe'})])  # Remove the borders
 
-        # Statistical Measures TreeView
         self.stat_treeview = ttk.Treeview(
             self.measurement_frame, columns=("Measure"), show="headings", selectmode="extended", style="mystyle.Treeview"
         )
@@ -325,6 +325,9 @@ class MeasureSelectionPage(BasePage):
             anchor="nw",
         )
         self.selected_stat_label.grid(row=3, column=1, padx=10, pady=10, sticky="nw")
+
+        # Bind click event to the Treeview
+        self.stat_treeview.bind("<Button-1>", self.on_row_click)
 
         # Bind TreeView selection event
         self.stat_treeview.bind("<<TreeviewSelect>>", self.on_stat_measure_selected)
@@ -394,12 +397,22 @@ class MeasureSelectionPage(BasePage):
                 for option in statistic.measure_options_map[measure]:
                     self.stat_treeview.insert(parent_id, tk.END, text=option, values=(option,))
 
+    def on_row_click(self, event):
+        """Allows multi-selection on treeview without Ctrl key"""
+        item = self.stat_treeview.identify_row(event.y)  # Get clicked row
+        if item:
+            if item in self.stat_treeview.selection():
+                self.stat_treeview.selection_remove(item)  # Deselect if already selected
+            else:
+                self.stat_treeview.selection_add(item)  # Add row to selection
+        return "break"
+
     def on_stat_measure_selected(self, event):
         """Handles selection changes in the statistics treeview."""
+
         # Get the selected item IDs (iids) from the treeview
         selected_items_iids = self.stat_treeview.selection()
 
-        
         selected_measures = [self.stat_treeview.item(iid, "values")[0] for iid in selected_items_iids]
         self.selected_stats = sorted(selected_measures)  # Store unique, sorted measure names
 
