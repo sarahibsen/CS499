@@ -236,6 +236,27 @@ class Controller:
             return ["Vertical Bar Chart", "Normal Distribution Curve"]
         return [" "]
 
+    @staticmethod
+    def measure_supports_grouping(measure):
+        """
+        Returns No grouping if the measure cannot be graphed with grouping, Must group if the measure can  only
+        be graphed with grouping, and Both if measure cna be grouped or not grouped
+        """
+        if measure in ["Standard Deviation", "Variance", "Coefficient Of Variation", "Percentiles",
+                       "Binomial Distribution"]:
+            return "No grouping"
+        elif measure in ["Chi Square", "Least Square Line", "Chi Square", "Correlation", "Sign Test",
+                         "Rank Sum", "Spearman Correlation"]:
+            return "Must group"
+        return "Both"
+
+    @staticmethod
+    def measure_requires_grouping(measure):
+        """Returns True if ."""
+        grouping_only_measures = [
+
+        ]
+        return measure in grouping_only_measures
 
     @staticmethod
     def get_last_binomial_params():
