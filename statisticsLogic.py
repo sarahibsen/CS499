@@ -141,20 +141,19 @@ def mode(self):
     cleaned_data = self._clean_data(allow_any=True)
 
     if isinstance(self.data, pd.DataFrame):
-        mode_result = self.data.mode(numeric_only=False, dropna=True)
-        if mode_result.empty:
-            return {"Mode": "No mode found"}
-        return {"Mode": mode_result.iloc[0].to_dict()}
+        result = {}
+        for col in self.data.columns:
+            counts = self.data[col].value_counts(dropna=True)
+            if counts.empty or counts.max() == 1:
+                messagebox.showerror("Data Error", "There is no mode in the selected data.")
+                return None
+            else:
+                modes = counts[counts == counts.max()].index.tolist()
+                result[col] = modes[0] if len(modes) == 1 else modes  # support multimodal
 
-    elif isinstance(cleaned_data, np.ndarray):
-        # For 1D or 2D arrays
-        try:
-            mode_stat = stats.mode(cleaned_data, nan_policy='omit', keepdims=False)
-            return {"Mode": mode_stat.mode}
-        except Exception as e:
-            return {"Mode": f"Error computing mode: {e}"}
+        return {"Mode": result}
 
-    return {"Mode": "Unsupported data format"}
+
 
     
 @statistic.register("Standard Deviation")

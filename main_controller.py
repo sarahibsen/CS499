@@ -183,8 +183,11 @@ class Controller:
                     # For all other statistics that don't need specifications
                     result = func(stat_instance)
 
-                # Save the result
-                results[m] = result if isinstance(result, dict) else {m: result}
+                if result is not None:
+                    results[m] = result if isinstance(result, dict) else {m: result}
+                else:
+                    print(f"{m} was not computed due to an error or invalid data.")
+
 
             except Exception as e:
                 print(f"Error computing {m}: {e}")
