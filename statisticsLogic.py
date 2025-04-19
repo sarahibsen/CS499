@@ -447,11 +447,12 @@ def correlationCoefficient(self):
 @statistic.register("Sign Test")
 def signTest(self, option=None):
     """
-    Performs a sign test (one-sample or paired) with an optional hypothesis direction.
+    Performs Sign Test for one-sample or paired-sample with optional multiple hypothesis types.
+    If multiple hypothesis options are passed, all are calculated and returned.
     """
     cleaned_data = self._clean_data()
 
-    # Determine one-sample or paired
+    # Determine sample type
     if cleaned_data.shape[1] == 1:
         x = cleaned_data.ravel()
         median = np.median(x)
@@ -462,25 +463,35 @@ def signTest(self, option=None):
         y = y.ravel()
         diffs = [xi - yi for xi, yi in zip(x, y) if xi != yi]
     else:
-        messagebox.showerror("Sign Test Error", "Data must have either one or two columns.")
+        messagebox.showerror("Sign Test Error", "Data must have one or two numeric columns.")
         return None
 
     n = len(diffs)
     n_positive = sum(d > 0 for d in diffs)
     n_negative = sum(d < 0 for d in diffs)
 
-    # Use default if option is not provided
-    hypothesis = option if option in ["two-sided", "less", "greater"] else "two-sided"
+    # Normalize options
+    if isinstance(option, str):
+        option = [option]
+    elif not option:
+        option = ["two-sided"]  # Default
 
-    result = stats.binomtest(n_positive, n, p=0.5, alternative=hypothesis)
+    valid_hypotheses = {"two-sided", "less", "greater"}
+    option = [opt for opt in option if opt in valid_hypotheses]
 
-    return {
-        "Sign Count": n,
-        "Positive Count": n_positive,
-        "Negative Count": n_negative,
-        "Hypothesis": hypothesis,
-        "P-Value": result.pvalue
-    }
+    results = {}
+    for hypo in option:
+        result = stats.binomtest(n_positive, n, p=0.5, alternative=hypo)
+        results[hypo] = {
+            "Sign Count": n,
+            "Positive Count": n_positive,
+            "Negative Count": n_negative,
+            "P-Value": result.pvalue,
+            "Alternative": hypo
+        }
+
+    return results if len(results) > 1 else list(results.values())[0]
+
 
 @statistic.register("Rank Sum")
 def rankSum(self):

@@ -509,9 +509,19 @@ class MeasureSelectionPage(BasePage):
         self.table.controller.add_log_separator()
 
         if results:
-            result_str = "\n".join([f"{key}: {value}" for key, value in results.items()])
+            def format_result(measure, value):
+                if isinstance(value, dict) and any(isinstance(v, dict) for v in value.values()):
+                    # This means it's a dictionary of dictionaries, like Sign Test with multiple options
+                    return f"{measure}:\n" + "\n".join(
+                        f"  ↳ {hypo}:\n    " + "\n    ".join(f"{k}: {v}" for k, v in stats.items())
+                        for hypo, stats in value.items()
+                    )
+                else:
+                    # Single-value or flat dict
+                    return f"{measure}: " + "\n".join(f"{k}: {v}" for k, v in value.items()) if isinstance(value, dict) else str(value)
+
+            result_str = "\n\n".join(format_result(k, v) for k, v in results.items())
             messagebox.showinfo("Calculated Statistics", result_str)
-            self.table.controller.log_operation(selected_measures, results, dataType="Detected")
 
             self.gui_controller.pages["ResultsPage"].display_results(results)
             self.gui_controller.show_page("ResultsPage")
