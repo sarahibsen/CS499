@@ -1370,6 +1370,7 @@ class ResultsPage(BasePage):
         # --- Initial Color Update ---
         self.update_colors()
 
+
     def get_table_controller(self):
         """
         Retrieves the table controller from the MeasureSelectionPage.
@@ -1444,11 +1445,6 @@ class ResultsPage(BasePage):
             self.placeholder_label.destroy()
             del self.placeholder_label
 
-        # Clear existing table if it exists
-        if hasattr(self, 'results_table_frame'):
-            self.results_table_frame.destroy()
-            del self.results_table_frame
-
         if "Date" not in self.result_headers:
             self.result_headers.append("Date")
         if "File Name" not in self.result_headers:
@@ -1457,16 +1453,6 @@ class ResultsPage(BasePage):
         # Process results
         self.display_headers(results)
         result_data = self.display_row_data(results)
-
-        # Create new table frame
-        self.results_table_frame = tk.Frame(self.results_display_frame)
-        self.results_table_frame.grid(row=0, column=0, sticky="nsew")
-        self.results_table_frame.grid_rowconfigure(0, weight=1)
-        self.results_table_frame.grid_columnconfigure(0, weight=1)
-
-        # Create and populate table
-        table = TableView(self.results_table_frame, output=True)
-        table.grid(row=0, column=0, sticky='nsew')
 
         table_controller = self.get_table_controller()
         file_name = None
@@ -1485,7 +1471,21 @@ class ResultsPage(BasePage):
 
         self.result_rows[len(self.result_rows) + 1] = row_data
 
-        table.controller.update_table(headers=self.result_headers, data=self.result_rows.values())
+        if hasattr(self, 'table'):
+            self.table.controller.update_table(headers=self.result_headers, data=list(self.result_rows.values()))
+
+        else:
+            # Create new table frame
+            self.results_table_frame = tk.Frame(self.results_display_frame)
+            self.results_table_frame.grid(row=0, column=0, sticky="nsew")
+            self.results_table_frame.grid_rowconfigure(0, weight=1)
+            self.results_table_frame.grid_columnconfigure(0, weight=1)
+
+            # Create and populate table
+            table = TableView(self.results_table_frame, output=True)
+            table.grid(row=0, column=0, sticky='nsew')
+            #table.sheet.popup_menu_add_command("Merge to Input Table", lambda: table.controller.merge_tksheet_tables(table_controller, table))
+            table.controller.update_table(headers=self.result_headers, data=list(self.result_rows.values()))
 
 
 # Run the application
