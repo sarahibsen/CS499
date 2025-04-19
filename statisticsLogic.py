@@ -47,7 +47,9 @@ class statistic():
         "Binomial Distribution": ["int", "float"],
         "Least Square Line": ["double", "int", "float"],
         "Chi Square": ["int"],
-        "Spearman Correlation": ["double", "int", "float"]
+        "Spearman Correlation": ["double", "int", "float"],
+        "Rank Sum": ["double", "int", "float"],
+        "Sign Test": ["double", "int", "float"],
     }
 
 
@@ -56,7 +58,8 @@ class statistic():
         "Variance": ["Population", "Sample"],
         "Percentiles": ["Quartiles (25, 50, 75)", "Median (50)", "Deciles (10, 20, ..., 90)", "90th Percentile", "95th Percentile", "99th Percentile"],
         "Probability Distribution": ["Normal", "PDF", "CDF"],
-        "Binomial Distribution": ["Trials and Probability Input"] 
+        "Binomial Distribution": ["Trials and Probability Input"],
+        "Sign Test": ["two-sided", "less", "greater"],
     }
 
     def __init__(self, data):
@@ -442,59 +445,43 @@ def correlationCoefficient(self):
     return {"R Value (Correlation Coefficient)": correlation_coefficient}
     
 @statistic.register("Sign Test")
-def signTest(self):
+def signTest(self, option=None):
     """
-    Parameters:
-        grabs either one array (for one-sample sign test) or two arrays of same length (for paired sample sign test),
-        user specified alternative hypothesis (H1),
-        and default auto method (exact-to-approximate results).
-    Returns:
-        two floats: the sign test statistic & p-value.
+    Performs a sign test (one-sample or paired) with an optional hypothesis direction.
     """
     cleaned_data = self._clean_data()
 
-        # ONE-SAMPLE SIGN TEST
+    # Determine one-sample or paired
     if cleaned_data.shape[1] == 1:
         x = cleaned_data.ravel()
-        print(f"X: {x}")  # Debugging point
         median = np.median(x)
-        signs = [xi - median for xi in x if xi != median]
-        n = len(signs)
-        n_positive = sum(1 for s in signs if s > 0)
-        n_negative = sum(1 for s in signs if s < 0)
-
-        # PAIRED SAMPLE SIGN TEST
+        diffs = [xi - median for xi in x if xi != median]
     elif cleaned_data.shape[1] == 2:
-        if np.isnan(cleaned_data).any():
-            messagebox.showerror("Paired signTest Error", "Both columns must have the same row length.")
-            raise ValueError("Both columns must have the same row length")
         x, y = np.hsplit(cleaned_data, 2)
         x = x.ravel()
         y = y.ravel()
-        print(f"X: {x}, Y: {y}")  # Debugging point
         diffs = [xi - yi for xi, yi in zip(x, y) if xi != yi]
-        n = len(diffs)
-        n_positive = sum(1 for d in diffs if d > 0)
-        n_negative = sum(1 for d in diffs if d < 0)
-
     else:
-        messagebox.showerror("signTest Error", "Data must have either one or two columns.")
-        raise ValueError("Data must have either one or two columns.")
-        
-    H_prompt = tkinter.simpledialog.askstring("Alternative Hypothesis", "Choose one: two-sided, less, greater")
-    if H_prompt not in ["two-sided", "less", "greater"]:
-        tkinter.messagebox.showerror("signTest Error", "Invalid alternative hypothesis. Please choose 'two-sided', 'less', or 'greater'.")
+        messagebox.showerror("Sign Test Error", "Data must have either one or two columns.")
         return None
 
-    result = stats.binomtest(n_positive, n, p=0.5, alternative=H_prompt)
+    n = len(diffs)
+    n_positive = sum(d > 0 for d in diffs)
+    n_negative = sum(d < 0 for d in diffs)
 
-    sign = {"Sign Count": n,
-            "Positive Count": n_positive,
-            "Negative Count": n_negative,
-            "P-Value": result.pvalue}
+    # Use default if option is not provided
+    hypothesis = option if option in ["two-sided", "less", "greater"] else "two-sided"
 
-    print(f"Sign Test: {sign}")
-    return sign
+    result = stats.binomtest(n_positive, n, p=0.5, alternative=hypothesis)
+
+    return {
+        "Sign Count": n,
+        "Positive Count": n_positive,
+        "Negative Count": n_negative,
+        "Hypothesis": hypothesis,
+        "P-Value": result.pvalue
+    }
+
 @statistic.register("Rank Sum")
 def rankSum(self):
     '''

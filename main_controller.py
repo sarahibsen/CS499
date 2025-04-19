@@ -178,6 +178,12 @@ class Controller:
                         result = func(stat_instance, variance_type=options[0])
                     else:
                         result = func(stat_instance, variance_type=(options[0] if options else "Population"))
+                elif m == "Sign Test":
+                    if options and isinstance(options, list):
+                        result = func(stat_instance, option=options[0])
+                    else:
+                        result = func(stat_instance, option="two-sided")
+
 
 
                 else:
