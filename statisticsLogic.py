@@ -42,11 +42,12 @@ class statistic():
         "Variance": ["double", "int", "float"],
         "Coefficient of Variation": ["double", "int", "float"],
         "Percentiles": ["double", "int", "float"],
-        "Coefficient of Variation": ["double", "int", "float"],
+        "Correlation Coefficient": ["double", "int", "float"],
         "Probability Distribution": ["double", "int", "float"],
         "Binomial Distribution": ["int", "float"],
         "Least Square Line": ["double", "int", "float"],
         "Chi Square": ["int"],
+        "Spearman Correlation": ["double", "int", "float"]
     }
 
 
@@ -419,6 +420,7 @@ def correlationCoefficient(self):
     """
 
     cleaned_data = self._clean_data()
+    print(cleaned_data)
 
         # Rows will always have the same number due to the main_controller filling NA with 0's
     if np.isnan(cleaned_data).any():
