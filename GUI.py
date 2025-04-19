@@ -93,6 +93,7 @@ def add_button(canvas, x, y, w, h, normal_image, hover_image, message, callback=
 
     return button
 
+
 class App(tk.Tk):
     """
     Main application class to handle multiple pages.
@@ -293,11 +294,12 @@ class MeasureSelectionPage(BasePage):
         self.table_frame.grid(row=0, column=2, padx=10, pady=10, sticky="nsew")
         self.table_frame.grid_rowconfigure(0, weight=1)
         self.table_frame.grid_columnconfigure(0, weight=1)
-
         self.table = TableView(self.table_frame)
-        self.table.sheet.extra_bindings([("all_select_events", self.populate_treeview)])
-        
 
+        # Add binding event for treeview refreshing
+        self.table.sheet.extra_bindings([("all_select_events", self.populate_treeview)])
+
+        # Place table
         self.table.grid(row=0, column=0, sticky='nsew')
 
         # --- Statistical Measures TreeView --- #
@@ -308,7 +310,8 @@ class MeasureSelectionPage(BasePage):
         style.layout("mystyle.Treeview", [('mystyle.Treeview.treearea', {'sticky': 'nswe'})])  # Remove the borders
 
         self.stat_treeview = ttk.Treeview(
-            self.measurement_frame, columns=("Measure"), show="headings", selectmode="extended", style="mystyle.Treeview"
+            self.measurement_frame, columns=("Measure"), show="headings", selectmode="extended",
+            style="mystyle.Treeview"
         )
         self.stat_treeview.heading("Measure", text="Statistical Measures")
         self.stat_treeview.column("Measure", anchor="w")
@@ -373,6 +376,25 @@ class MeasureSelectionPage(BasePage):
 
         self.binomial_frame.grid(row=5, column=1, padx=10, pady=5, sticky="w")
         self.binomial_frame.grid_remove()  # Hide initially
+
+        # --- Chi-Square Column Selector --- #
+        self.chi_square_frame = tk.Frame(self.measurement_frame, bg="#FFFFFF")
+
+        self.label_expected = tk.Label(self.chi_square_frame, text="Expected Column:", bg="#FFFFFF", font=("Roboto", 12))
+        self.expected_dropdown = ttk.Combobox(self.chi_square_frame, state="readonly", font=("Roboto", 12))
+
+        self.label_observed = tk.Label(self.chi_square_frame, text="Observed Column:", bg="#FFFFFF", font=("Roboto", 12))
+        self.observed_dropdown = ttk.Combobox(self.chi_square_frame, state="readonly", font=("Roboto", 12))
+
+        self.label_expected.grid(row=0, column=0, padx=5, pady=2, sticky="w")
+        self.expected_dropdown.grid(row=0, column=1, padx=5, pady=2)
+
+        self.label_observed.grid(row=1, column=0, padx=5, pady=2, sticky="w")
+        self.observed_dropdown.grid(row=1, column=1, padx=5, pady=2)
+
+        self.chi_square_frame.grid(row=6, column=1, padx=10, pady=5, sticky="w")
+        self.chi_square_frame.grid_remove()  # Hidden initially
+
 
         # ----- Toolbar ----- #
         # Create a canvas to hold toolbar
@@ -448,11 +470,10 @@ class MeasureSelectionPage(BasePage):
 
     def on_stat_measure_selected(self, selected_item):
         """Handles selection changes in the statistics treeview."""
-
-        print("Item selected in the table:", selected_item)
-
         # Get the selected item IDs (iids) from the treeview
         selected_items_iids = self.stat_treeview.selection()
+
+        print("Item selected in the table:", selected_item) # Debugging
 
         selected_measures = [self.stat_treeview.item(iid, "values")[0] for iid in selected_items_iids]
         self.selected_stats = sorted(selected_measures)  # Store unique, sorted measure names
@@ -462,6 +483,11 @@ class MeasureSelectionPage(BasePage):
             self.binomial_frame.grid()  # Show the frame
         else:
             self.binomial_frame.grid_remove()  # Hide if not selected
+        if "Chi Square" in self.selected_stats:
+            self.update_chi_square_dropdowns()
+            self.chi_square_frame.grid()
+        else:
+            self.chi_square_frame.grid_remove()
 
         if self.selected_stats:
             display_text = "Selected: " + ", ".join(self.selected_stats)
@@ -518,32 +544,93 @@ class MeasureSelectionPage(BasePage):
                 messagebox.showerror("Input Error", f"Invalid input for Binomial Distribution: {e}")
                 return
         
+        if "Chi Square" in selected_measures:
+            selected_expected = self.expected_dropdown.get()
+            selected_observed = self.observed_dropdown.get()
+
+            # If user didn’t change dropdowns or values are empty, fallback
+            if selected_expected and selected_observed:
+                extra_params["Chi Square"] = {"expected": selected_expected, "observed": selected_observed}
 
         results, skipped = Controller.calculate_statistics(
             data_frame, selected_measures, extra_params=extra_params
         )
 
         if skipped:
-            messagebox.showwarning("Skipped Measures", f"These measures were not compatible:\n{', '.join(skipped)}")
+            explanation = self.generate_skipped_explanations(skipped, data_frame)
+            messagebox.showwarning("Incompatible Measures", explanation)
+
 
         self.table.controller.log_operation(selected_measures, results, dataType="Detected")
         self.table.controller.add_log_separator()
 
         if results:
-            result_str = "\n".join([f"{key}: {value}" for key, value in results.items()])
+            def format_result(measure, value):
+                if isinstance(value, dict) and any(isinstance(v, dict) for v in value.values()):
+                    # This means it's a dictionary of dictionaries, like Sign Test with multiple options
+                    return f"{measure}:\n" + "\n".join(
+                        f"  ↳ {hypo}:\n    " + "\n    ".join(f"{k}: {v}" for k, v in stats.items())
+                        for hypo, stats in value.items()
+                    )
+                else:
+                    # Single-value or flat dict
+                    return f"{measure}: " + "\n".join(f"{k}: {v}" for k, v in value.items()) if isinstance(value, dict) else str(value)
+
+            result_str = "\n\n".join(format_result(k, v) for k, v in results.items())
             messagebox.showinfo("Calculated Statistics", result_str)
-            self.table.controller.log_operation(selected_measures, results, dataType="Detected")
 
             self.gui_controller.pages["ResultsPage"].display_results(results)
-            self.gui_controller.show_page("ResultsPage")
+            #self.gui_controller.show_page("ResultsPage")
+            notification = tk.Label(self, text="✓ Results sent to Results Page", fg="green", bg="white", font=("Roboto", 12, "bold"))
+            notification.grid(row=7, column=1, pady=(10, 0), sticky="w")
+            # Auto-remove after 2 seconds
+            self.after(2000, notification.destroy)
 
             dashboard_page = self.gui_controller.get_page("DashboardPage")
-            print(selected_measures)  # TODO: Delete, for debugging
             dashboard_page.update_dropdowns(selected_measures, skipped)
 
     def get_selected_measures(self):
         """Return the selected measures (list of strings)."""
         return self.selected_stats
+    
+    def update_chi_square_dropdowns(self):
+        df = self.table.controller.get_table_selection()
+
+        if df.empty or df.shape[1] < 2:
+            self.expected_dropdown["values"] = []
+            self.observed_dropdown["values"] = []
+            return
+
+        column_names = df.columns.tolist()
+        self.expected_dropdown["values"] = column_names
+        self.observed_dropdown["values"] = column_names
+
+        # Optionally pre-select the first two
+        self.expected_dropdown.set(column_names[0])
+        self.observed_dropdown.set(column_names[1])
+
+    def generate_skipped_explanations(self, skipped_measures, df):
+        """
+        We want to better explain why the measure is not working so that the user may be able to troubleshoot the problem
+        themselves
+        """
+        explanations = []
+
+        for measure in skipped_measures:
+            if measure in ["Mean", "Median", "Mode", "Standard Deviation", "Variance", "Percentiles", "Coefficient of Variation"]:
+                explanations.append(f"X **{measure}** requires numeric data. Try selecting columns with numbers only.")
+            elif measure == "Chi Square":
+                explanations.append("X **Chi Square** requires two columns of equal length with non-negative integer values. You can select the columns manually once Chi Square is selected.")
+            elif measure in ["Least Square Line", "Correlation", "Spearman Correlation"]:
+                explanations.append(f"X **{measure}** requires at least two numeric columns of equal length (x and y pairs).")
+            elif measure == "Binomial Distribution":
+                explanations.append("X **Binomial Distribution** needs numeric data and a number of trials and probability between 0 and 1.")
+            elif measure == "Probability Distribution":
+                explanations.append("X **Probability Distribution** requires numeric data and may fail if the standard deviation is 0.")
+            else:
+                explanations.append(f"X **{measure}** couldn't be applied due to incompatible or missing data.")
+
+        return "Some measures could not be calculated:\n\n" + "\n".join(explanations)
 
 
 class DashboardPage(BasePage):
@@ -612,7 +699,6 @@ class DashboardPage(BasePage):
         self.column_dropdown = ttk.Combobox(self.control_frame, state="readonly", font=("Roboto", 14))
         self.column_dropdown.grid(row=6, column=0, sticky="ew", pady=(0, 10))
         self.column_dropdown.grid_remove()
-
 
         # Create button
         self.create_viz_button = Button(
@@ -754,7 +840,6 @@ class DashboardPage(BasePage):
         # Set column dropdown as empty
         self.column_dropdown.set("")
         self.column_dropdown["values"] = []
-
 
     def update_colors(self):
         """Updates colors for non-ttk widgets and Matplotlib elements."""
@@ -1545,7 +1630,7 @@ class ResultsPage(BasePage):
 
         if hasattr(self, 'table'):
             self.table.controller.update_table(headers=self.result_headers, data=list(self.result_rows.values()))
-        
+
         else:
             # Create new table frame
             self.results_table_frame = tk.Frame(self.results_display_frame)
@@ -1560,5 +1645,6 @@ class ResultsPage(BasePage):
 
 
 # Run the application
+
 app = App()
 app.mainloop()
