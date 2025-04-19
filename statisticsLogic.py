@@ -495,95 +495,79 @@ def signTest(self, option=None):
 
 @statistic.register("Rank Sum")
 def rankSum(self):
-    '''
-    Performs the Mann-Whitney U rank sum test on the first two numeric columns.
-    Ensures it works on a copy of the data to avoid side effects.
-    '''
-    # 1. Get the cleaned data (should be a copy/new array from _clean_data)
-    cleaned_data_result = self._clean_data() # Call the cleaning method
-
-    # Check if cleaning failed or returned None
-    if cleaned_data_result is None:
-        print("Rank Sum test cancelled due to data cleaning issues or lack of suitable data.")
+    """
+    Performs the Mann-Whitney U Rank Sum test (non-parametric).
+    Requires exactly two numeric columns with non-missing values.
+    """
+    cleaned_data = self._clean_data()
+    
+    if cleaned_data.shape[1] < 2:
+        messagebox.showerror("Rank Sum Error", "You need to select at least two numeric columns.")
         return None
 
-        # ***** ADDED STEP: Explicitly make a copy *****
-        # Even if _clean_data returns a copy, this guarantees that subsequent
-        # slicing/splitting within *this* function won't affect the array
-        # potentially cached or used elsewhere.
-    cleaned_data = cleaned_data_result.copy()
-        # ************************************************
-
-        # 2. Split into two arrays (using first two columns of the COPY)
+    # Use the first two columns
     try:
-            # Ensure we have at least 2 columns in the cleaned data
-        if cleaned_data.ndim != 2 or cleaned_data.shape[1] < 2:
-            messagebox.showerror("Rank Sum Error", "Cleaned data does not have at least two columns for Rank Sum test.")
+        col1, col2 = np.hsplit(cleaned_data[:, :2], 2)
+        col1 = col1.ravel()
+        col2 = col2.ravel()
+
+        # Remove NaNs (must align lengths)
+        col1 = col1[~np.isnan(col1)]
+        col2 = col2[~np.isnan(col2)]
+
+        if len(col1) < 2 or len(col2) < 2:
+            messagebox.showerror("Rank Sum Error", "Each group needs at least 2 valid values.")
             return None
 
-        data_to_split = cleaned_data[:, :2] # Slice the first two columns of the copy
-        x, y = np.hsplit(data_to_split, 2)
-        x = x.ravel()
-        y = y.ravel()
+        stat, p_value = stats.mannwhitneyu(col1, col2, alternative='two-sided')
 
-            # Debugging point using the *local copy*
-        print(f"Cleaned X (size {x.size}): {x[:10]}...")
-        print(f"Cleaned Y (size {y.size}): {y[:10]}...")
-
-        if x.size == 0 or y.size == 0:
-            messagebox.showerror("Rank Sum Error", "One or both data columns became empty after cleaning/splitting.")
-            return None
+        return {
+            "U-Statistic": f"{stat:.4f}",
+            "P-Value": f"{p_value:.4e}"
+        }
 
     except Exception as e:
-        messagebox.showerror("Data Error", f"An unexpected error occurred during data preparation for Rank Sum: {e}")
+        messagebox.showerror("Rank Sum Error", f"An error occurred: {e}")
         return None
 
-        # 4. Perform Mann-Whitney U Test using the local x, y copies
-    try:
-        result = stats.mannwhitneyu(x, y, method='auto', alternative=selected_hypothesis)
-        rank_results = {"Statistic": result.statistic, "P-Value": result.pvalue}
 
-        print(f"Rank Sum Test Results: {rank_results}")
-            # 5. Return the result. The original self.data remains untouched by rankSum's internal steps.
-        return rank_results
-
-    except ValueError as ve:
-        messagebox.showerror("Rank Sum Error", f"Calculation error during rank sum test: {ve}")
-        return None
-    except Exception as e:
-        messagebox.showerror("Rank Sum Error", f"An unexpected error occurred during the rank sum test: {e}")
-        return None
-
-@statistic.register("Spearman Rank Correlation")
+@statistic.register("Spearman Correlation")
 def spearmanRankCorrelation(self):
     """
-    Only works for ordinal datasets
-    Parameters:
-        grabs two arrays from an np.ndarray object
-    Returns:
-        the spearman rank correlation & p-value.
+    Computes Spearman's Rank Correlation Coefficient between two numeric columns.
     """
     cleaned_data = self._clean_data()
 
-        # Rows will always have the same number due to the main_controller filling NA with 0's
-    if np.isnan(cleaned_data).any():
-        messagebox.showerror("Error", "Both columns must have the same row length.")
-        raise ValueError("Both columns must have the same row length")
-        
-        # Checks to ensure number of columns are equal
-    if cleaned_data.shape[1] != 2:
-        messagebox.showerror("Error", "The number of columns must be equal to 2 (x,y).")
-        raise ValueError("The number of columns must be equal to 2 (x,y)")
+    # Check if we have at least two columns
+    if cleaned_data.shape[1] < 2:
+        messagebox.showerror("Spearman Correlation Error", "Please select at least two numeric columns.")
+        return None
 
-    x, y = np.hsplit(cleaned_data, 2)
+    try:
+        x, y = np.hsplit(cleaned_data[:, :2], 2)  # Only use first two columns
+        x = x.ravel()
+        y = y.ravel()
 
-    if len(x) < 3 or len(y) < 3:
-        messagebox.showerror("Error", "Spearman rank correlation requires at least 3 data points in each column.")
-        raise ValueError("Spearman rank correlation requires at least 3 data points in each column.")
+        # Drop NaNs (align lengths)
+        mask = ~np.isnan(x) & ~np.isnan(y)
+        x = x[mask]
+        y = y[mask]
 
-    spearman = stats.spearmanr(x,y)
-    return {"R Value (Spearman Rank Correlation)": spearman.correlation, "P-value (Spearman Rank Correlation)": spearman.pvalue}
-    
+        if len(x) < 2 or len(y) < 2:
+            messagebox.showerror("Spearman Correlation Error", "Need at least 2 valid values in each column.")
+            return None
+
+        coef, p_value = stats.spearmanr(x, y)
+
+        return {
+            "Spearman Correlation": f"{coef:.4f}",
+            "P-Value": f"{p_value:.4e}"
+        }
+
+    except Exception as e:
+        messagebox.showerror("Spearman Correlation Error", f"An error occurred: {e}")
+        return None
+
 
 class plotCreation():
     def __init__(self, data):
