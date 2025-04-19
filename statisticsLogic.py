@@ -10,715 +10,564 @@ import tkinter
 from scipy.stats import mode, norm
 from tkinter import simpledialog, messagebox
 
-"""
-Make a radio button class for the measures that need user input
-"""
+
 import tkinter
 from tkinter import Toplevel, Label, Radiobutton, Button, StringVar, W
 import sys # To check for existing root
-
-class RadioButton: # manages Tk/Toplevel internally
-    def __init__(self, title, prompt, options):
-        self.selected_option = None # Initialize before creating window
-
-        # Check if a Tk root window already exists
-        self.root = tkinter._get_default_root()
-        if self.root:
-            # Use Toplevel if a root exists
-            self.dialog = Toplevel(self.root)
-            self.dialog.title(title)
-            self.dialog.transient(self.root) # Keep dialog on top of parent
-            self.dialog.grab_set() # Make modal (block interaction with parent)
-            parent = self.dialog
-            self._is_toplevel = True
-        else:
-            # No root exists, create a new Tk instance (original behavior)
-            # This might be needed if run standalone
-            self.root = tkinter.Tk()
-            self.root.title(title)
-            # hide the empty root window if we create it just for this dialog
-            self.root.withdraw()
-            parent = self.root
-            self._is_toplevel = False
-
-
-        self.prompt = prompt
-        self.options = options
-
-
-        self.label = Label(parent, text=self.prompt)
-        self.label.pack(pady=5, padx=10)
-
-        self.var = StringVar(parent, value=options[0]) # Assign parent
-        for option in options:
-            # Assign parent to radiobuttons
-            radio = Radiobutton(parent, text=option, variable=self.var, value=option)
-            radio.pack(anchor=W, padx=20)
-
-        # Assign parent to button, update command
-        self.button = Button(parent, text="OK", command=self.on_ok)
-        self.button.pack(pady=10)
-
-        # Center the window (works for both Toplevel and Tk)
-        parent.update_idletasks() # Ensure dimensions are calculated
-        parent_width = parent.winfo_width()
-        parent_height = parent.winfo_height()
-        screen_width = parent.winfo_screenwidth()
-        screen_height = parent.winfo_screenheight()
-        x = (screen_width // 2) - (parent_width // 2)
-        y = (screen_height // 2) - (parent_height // 2)
-        parent.geometry(f'{parent_width}x{parent_height}+{x}+{y}')
-
-        # Handle closing the window via 'X' button
-        if self._is_toplevel:
-            self.dialog.protocol("WM_DELETE_WINDOW", self.on_cancel)
-        else:
-            # If we created the root, WM_DELETE_WINDOW applies to it
-             self.root.protocol("WM_DELETE_WINDOW", self.on_cancel)
-
-
-    def show(self):
-        """Shows the dialog and waits for it to close."""
-        # If using Toplevel, wait specifically for the Toplevel window
-        if self._is_toplevel:
-            # Make sure the window is visible if it was withdrawn
-            self.dialog.deiconify()
-            self.root.wait_window(self.dialog)
-        else:
-            # If using Tk root, make it visible and run its mainloop
-            self.root.deiconify()
-            self.root.mainloop()
-        # Return the selected option after the window is closed
-        return self.selected_option
-
-
-    def on_ok(self):
-        self.selected_option = self.var.get()
-        self._destroy_window()
-
-    def on_cancel(self):
-        """Handles closing the window without pressing OK."""
-        self.selected_option = None # Explicitly set to None on cancel/close
-        self._destroy_window()
-
-    def _destroy_window(self):
-        """Destroys the correct window (Toplevel or Tk root)."""
-        if self._is_toplevel and self.dialog:
-            self.dialog.destroy()
-        elif not self._is_toplevel and self.root:
-            self.root.destroy()
-        # Break potential wait_window or mainloop
 
 
 class statistic():
     """
     Equations for calculating statistics on a dataset 
     Parameters: 
-
+        - The name of the measure 
+        - The data type that the measure can calculate on
     """
+    registered_measures = {}
+
+    @classmethod
+    def register(cls, name):
+        """
+        decorator to register measures so that they can be easily called upon
+        """
+        def decorator(func):
+            cls.registered_measures[name] = func
+            return func
+        return decorator
+    measure_name_map = {
+        "Mean": ["double", "int", "float"],
+        "Median": ["double", "int", "float"],
+        "Mode": ["any", "double", "int", "float"],
+        "Standard Deviation": ["double", "int", "float"],
+        "Variance": ["double", "int", "float"],
+        "Coefficient of Variation": ["double", "int", "float"],
+        "Percentiles": ["double", "int", "float"],
+        "Correlation Coefficient": ["double", "int", "float"],
+        "Probability Distribution": ["double", "int", "float"],
+        "Binomial Distribution": ["int", "float"],
+        "Least Square Line": ["double", "int", "float"],
+        "Chi Square": ["int"],
+        "Spearman Correlation": ["double", "int", "float"],
+        "Rank Sum": ["double", "int", "float"],
+        "Sign Test": ["double", "int", "float"],
+    }
+
+
+
+    measure_options_map = {
+        "Variance": ["Population", "Sample"],
+        "Percentiles": ["Quartiles (25, 50, 75)", "Median (50)", "Deciles (10, 20, ..., 90)", "90th Percentile", "95th Percentile", "99th Percentile"],
+        "Probability Distribution": ["Normal", "PDF", "CDF"],
+        "Binomial Distribution": ["Trials and Probability Input"],
+        "Sign Test": ["two-sided", "less", "greater"],
+    }
+
     def __init__(self, data):
-        """
-        Initializes the Statistics class with a dataset
-        """
         self.data = data
+#TODO: change this so that we check if the data that was selected by the user
+# depending on the data types in the selected data, depends on what statistical functions they can actually use 
 
-        # Binomial distribution values
-        self.n = None
-        self.p = None
-
-        # Perctile values
-        self.selected_percentiles = None
-        self.selected_percentile_label = None
-
-    def _clean_data(self):
-
+    def _clean_data(self, allow_any = False):
         if isinstance(self.data, pd.DataFrame):
-            cleaned_data = self.data.select_dtypes(include=[np.number]).to_numpy()
+            if allow_any:
+                return self.data.dropna()  # Allow all types
+            else:
+                return self.data.select_dtypes(include=[np.number]).dropna().to_numpy()
         elif isinstance(self.data, (list, np.ndarray)):
-            cleaned_data = np.array(self.data)
-        else:
-            return []
+            return np.array(self.data)
+        return np.array([[0]])
 
-        # For 1D array
-        if cleaned_data.ndim == 1:
-            cleaned_data = [x for x in cleaned_data if not pd.isnull(x) and x != 0]
-        # For 2D array
-        elif cleaned_data.ndim == 2:
-            # Remove rows where all values are null or 0
-            mask = ~(np.isnan(cleaned_data).all(axis=1) | (cleaned_data == 0).all(axis=1))
-            cleaned_data = cleaned_data[mask]
 
         return cleaned_data if len(cleaned_data) > 0 else np.array([[0]])
 
-
-    def mean(self):
+    def calculate(self, measure, option=None):
         """
-        Return the mean (average) of the data set
+        Perform the calculation for the specified measure.
         """
         cleaned_data = self._clean_data()
-        return {"Mean": np.mean(cleaned_data)}
+
+        if measure == "Mean":
+            return {"Mean": np.mean(cleaned_data)}
+
+        elif measure == "Median":
+            return {"Median": np.median(cleaned_data)}
+
+        elif measure == "Mode":
+            return {"Mode": mode(cleaned_data, keepdims=False).mode[0]}
+
+        elif measure == "Standard Deviation":
+            return {"Standard Deviation": np.std(cleaned_data, ddof=1)}
+
+        elif measure == "Variance":
+            if option == "Sample":
+                return {"Sample Variance": np.var(cleaned_data, ddof=1)}
+            return {"Population Variance": np.var(cleaned_data, ddof=0)}
+
+        elif measure == "Coefficient of Variation":
+            mean = np.mean(cleaned_data)
+            std_dev = np.std(cleaned_data, ddof=1)
+            return {"Coefficient of Variation": std_dev / mean}
+
+        elif measure == "Percentiles" and option:
+            percentiles = {
+                "Quartiles (25, 50, 75)": [25, 50, 75],
+                "Median (50)": [50],
+                "Deciles (10, 20, ..., 90)": list(range(10, 100, 10)),
+                "90th Percentile": [90],
+                "95th Percentile": [95],
+                "99th Percentile": [99],
+            }
+            if option in percentiles:
+                return {"Percentiles": np.percentile(cleaned_data, percentiles[option], axis=0)}
+
+
+        raise ValueError(f"Unsupported measure or option: {measure}, {option}")
+
+@statistic.register("Mean")
+def mean(self):
+    """
+    Return the mean (average) of the data set
+    """
+    cleaned_data = self._clean_data()
+    return {"Mean": np.mean(cleaned_data)}
     
-    def median(self):
-        """
-        Return the median of the data set
-        """
-        cleaned_data = self._clean_data()
-        return {"Median": np.median(cleaned_data)}
+@statistic.register("Median")
+def median(self):
+    """
+    Return the median of the data set
+    """
+    cleaned_data = self._clean_data()
+    return {"Median": np.median(cleaned_data)}
     
-    def mode(self):
-        """
-        Return the mode of the data set
-        """
-        cleaned_data = self._clean_data()
-        return {"Mode": mode(cleaned_data, keepdims=False).mode[0]}
-    
-    def standardDeviation(self):
-        """
-        Calculate and return the sample standard deviation of the given data set.
-        Returns:
-            float: The sample standard deviation of the data.
+@statistic.register("Mode")
+def mode(self):
+    cleaned_data = self._clean_data(allow_any=True)
 
-        using an online calculator to confirm results : https://www.calculator.net/standard-deviation-calculator.html?numberinputs=12%2C1%2C1%2C2&ctype=s&x=Calculate
-        """
-        cleaned_data = self._clean_data()
-        # Validate the data
-        if not isinstance(cleaned_data, (list, np.ndarray)):
-            raise TypeError("Data must be a list or NumPy array of numbers")
-
-        # Flatten the data to check for all values // multi column support will still be there
-        if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in cleaned_data.flatten()):
-            raise TypeError("All elements in the data must be numbers")
-
-        if len(cleaned_data) < 2 :
-            return 0 # Prevent errors if all values are zero
-        
-        # Calculate and return the standard deviation
-        return {"Standard Deviation": np.std(cleaned_data, ddof=1)}
-    
-    def variance(self, variance_type = "Population"):
-        """
-        Calculate and return the sample variance of the given data set.
-        Returns:
-            float: The sample variance of the data.
-        """
-
-        # TODO: a.any or a.all to check if all values are the same 
-        cleaned_data = self._clean_data()
-        # Validate the data
-        if not isinstance(cleaned_data, (list, np.ndarray)):
-            raise TypeError("Data must be a list or NumPy array of numbers")
-        if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in cleaned_data.flatten()):
-            raise TypeError("All elements in the data must be numbers")
-        if len(cleaned_data) == 0:
-            raise ValueError("Data cannot be empty")
-        
-        if variance_type == "Sample":
-            return {"Sample Variance": np.var(cleaned_data, ddof=1)} # Sample variance
-        else:
-            return {"Population Variance": np.var(cleaned_data, ddof=0)} # Population variance
-        
-        # Calculate and return the variance
-        return {"Variance": np.var(cleaned_data, ddof=1)}
-
-    def coefficientOfVariation(self):
-        """
-        Calculate and return the coefficient of variation of the given data set.
-        Returns:
-            float: The coefficient of variation of the data.
-        """
-        cleaned_data = self._clean_data()
-        # Validate the data
-        if not isinstance(cleaned_data, (list, np.ndarray)):
-            raise TypeError("Data must be a list or NumPy array of numbers")
-        if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in cleaned_data.flatten()):
-            raise TypeError("All elements in the data must be numbers")
-        if len(cleaned_data) == 0:
-            raise ValueError("Data cannot be empty")
-        
-        # Calculate and return the coefficent of variation
-        mean = self.mean()
-        std_dev = self.standardDeviation()
-
-        return {"Coefficient of Variation": std_dev['Standard Deviation'] / mean['Mean']}
-    
-
-    def percentiles(self):
-        """
-        Calculates specified percentiles using a RadioButton dialog for selection.
-        Method applies with ordinal, frequency, and interval data.
-
-        Returns:
-            dict: {"Percentiles": numpy.ndarray} containing the calculated percentiles,
-                  or None if the operation is cancelled or fails.
-        """
-        cleaned_data = self._clean_data()
-        if cleaned_data is None:
-            print("Percentile calculation cancelled due to data cleaning issues.")
-            return None # Stop if cleaning failed
-
-        # --- Define Options for Radio Buttons ---
-        percentile_options_map = {
-            "Quartiles (25, 50, 75)": [25, 50, 75],
-            "Median (50)": [50],
-            "Deciles (10, 20, ..., 90)": list(range(10, 100, 10)),
-            "90th Percentile": [90],
-            "95th Percentile": [95],
-            "99th Percentile": [99],
-        }
-        option_labels = list(percentile_options_map.keys())
-
-        # --- Use RadioButton Dialog ---
-        try:
-            dialog = RadioButton(
-                title="Select Percentiles",
-                prompt="Choose the percentile(s) to calculate:",
-                options=option_labels
-            )
-            selected_label = dialog.show() # Show dialog and wait for selection
-        except Exception as e:
-             messagebox.showerror("GUI Error", f"Failed to create selection dialog: {e}")
-             return None
-
-        if selected_label is None:
-            print("Percentile calculation cancelled by user.")
-            return None # User cancelled or closed the window
-        psequence = percentile_options_map.get(selected_label)
-        self.selected_percentile_label = selected_label
-        self.selected_percentiles = percentile_options_map.get(selected_label)
-
-        if psequence is None:
-             # This shouldn't happen if dialog works correctly, but good practice
-             messagebox.showerror("Internal Error", f"Invalid selection '{selected_label}' received.")
-             return None
-        try:
-            # Ensure cleaned_data is not empty before calculation
-            if cleaned_data.shape[0] == 0:
-                 messagebox.showerror("Calculation Error", "Cannot calculate percentiles on empty data after cleaning.")
-                 return None
-
-            percentiles_array = np.percentile(cleaned_data, psequence, axis=0)
-
-            # Check if result is scalar (if only one column and one percentile)
-            if percentiles_array.ndim == 0:
-                 percentiles_array = np.array([[percentiles_array]]) # Make it 2D
-            elif percentiles_array.ndim == 1 and len(psequence) > 1:
-                 # Multiple percentiles, single column -> reshape to (n_percentiles, 1)
-                 percentiles_array = percentiles_array.reshape(-1, 1)
-            elif percentiles_array.ndim == 1 and len(psequence) == 1:
-                 # Single percentile, multiple columns -> reshape to (1, n_columns)
-                 percentiles_array = percentiles_array.reshape(1, -1)
-
-
-            # Format the output DataFrame (similar to before)
-            percentiles_df = pd.DataFrame(percentiles_array, columns=[f"Column {i+1}" for i in range(cleaned_data.shape[1])])
-            percentiles_df.insert(0, "Percentiles", [f"{p}th" for p in psequence])
-
-            return {"Percentiles": percentiles_df.to_numpy()}
-        # error messages for debugging <3
-        except ValueError as ve:
-             messagebox.showerror("Calculation Error", f"Error during percentile calculation: {ve}. Check data for issues.")
-             return None
-        except Exception as e:
-             messagebox.showerror("Calculation Error", f"An unexpected error occurred: {e}")
-             return None
-    
-
-    
-
-    def probabilityDistribution(self):
-        """
-        Computes properties related to Normal, PDF, or CDF using the loaded data.
-        Mean and standard deviation are calculated from the cleaned data.
-        Uses RadioButton dialog for distribution type selection.
-        """
-        cleaned_data = self._clean_data()
-        if cleaned_data is None:
-            print("Probability distribution calculation cancelled due to data cleaning issues.")
-            return None # Stop if cleaning failed
-        if cleaned_data.size == 0:
-             messagebox.showerror("Data Error", "Cannot calculate distribution on empty data.")
-             return None
-
-        # --- Define Options for Radio Buttons ---
-        option_labels = ["Normal", "PDF", "CDF"] # Keep labels user-friendly
-
-        # --- Use RadioButton Dialog ---
-        try:
-            dialog = RadioButton(
-                title="Select Distribution Type",
-                prompt="Choose the distribution characteristic to calculate:",
-                options=option_labels
-            )
-            selected_label = dialog.show() # Show dialog and wait
-        except Exception as e:
-             messagebox.showerror("GUI Error", f"Failed to create selection dialog: {e}")
-             return None
-
-        if selected_label is None:
-            print("Probability distribution calculation cancelled by user.")
-            return None # User cancelled or closed the window
-
-        # --- Map Selection to Internal Choice ---
-        distribution_choice = selected_label.lower() # Convert "Normal" -> "normal", etc.
-
-        # --- Perform Calculations ---
-        try:
-            # Calculate mean and std dev ONCE, using the entire cleaned dataset
-            # np.mean/std on a 2D array calculates over the whole array by default
-            mean_val = np.mean(cleaned_data)
-            std_dev_val = np.std(cleaned_data)
-
-            # Check for zero standard deviation, which causes issues with norm functions
-            if std_dev_val <= 0:
-                messagebox.showerror("Calculation Error", "Standard deviation is zero or negative. Cannot calculate distribution.")
+    if isinstance(self.data, pd.DataFrame):
+        result = {}
+        for col in self.data.columns:
+            counts = self.data[col].value_counts(dropna=True)
+            if counts.empty or counts.max() == 1:
+                messagebox.showerror("Data Error", "There is no mode in the selected data.")
                 return None
-
-            if distribution_choice == 'normal':
-                # norm.pdf(x, mean_val, std_dev_val) # Example calculation if needed
-                return {"Distribution": "Normal", "Mean": mean_val, "Standard Deviation": std_dev_val}
-
-            elif distribution_choice == 'pdf':
-                # pdf_values = norm.pdf(x, mean_val, std_dev_val)
-                return {"Distribution": "PDF", "Mean": mean_val, "Standard Deviation": std_dev_val} # "Values": pdf_values.tolist()
-
-            elif distribution_choice == 'cdf':
-                # cdf_values = norm.cdf(x, mean_val, std_dev_val)
-                return {"Distribution": "CDF", "Mean": mean_val, "Standard Deviation": std_dev_val} # "Values": cdf_values.tolist()
-
             else:
-                messagebox.showerror("Internal Error", f"Invalid distribution choice '{selected_label}' processed.")
-                return None
+                modes = counts[counts == counts.max()].index.tolist()
+                result[col] = modes[0] if len(modes) == 1 else modes  # support multimodal
 
-        except Exception as e:
-            messagebox.showerror("Calculation Error", f"An error occurred during distribution calculation: {e}")
-            return None
+        return {"Mode": result}
+
 
 
     
-    def binomialDistribution(self, selected_data):
-        """
-        Return the binomial distribution of the selected data set.
-        The sample size is automatically calculated based on the number of selected data points.
+@statistic.register("Standard Deviation")
+def standardDeviation(self):
+    """
+    Calculate and return the sample standard deviation of the given data set.
+    Returns:
+        float: The sample standard deviation of the data.
 
-        The binomial distribution is not taking the values that are selected in the data set but
-        the number of cells that are selected in the data set.
-        """
-        # Ask for number of trials
-        self.n = tkinter.simpledialog.askinteger("Binomial Distribution", "Enter the number of trials:")
-        if self.n is None or self.n <= 0:
-            messagebox.showerror("Error", "Number of trials must be a positive integer.")
-            return
+    using an online calculator to confirm results : https://www.calculator.net/standard-deviation-calculator.html?numberinputs=12%2C1%2C1%2C2&ctype=s&x=Calculate
+    """
+    cleaned_data = self._clean_data()
+    # Validate the data
+    if not isinstance(cleaned_data, (list, np.ndarray)):
+        raise TypeError("Data must be a list or NumPy array of numbers")
 
-        # Ask for probability with improved validation
-        while True:
-            try:
-                self.p = float(tkinter.simpledialog.askstring("Binomial Distribution",
-                                                              "Enter the probability of success (between 0 and 1):"))
-                if 0 <= self.p <= 1:
-                    break
-                else:
-                    messagebox.showerror("Error", "Probability must be between 0 and 1.")
-            except ValueError:
-                messagebox.showerror("Error", "Invalid probability. Please enter a valid number.")
+    # Flatten the data to check for all values // multi column support will still be there
+    if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in cleaned_data.flatten()):
+        raise TypeError("All elements in the data must be numbers")
 
-        # Dynamically calculate sample size
-        sample_size = len(selected_data)
-        if sample_size <= 0:
-            messagebox.showerror("Error", "No data selected for the sample size.")
-            return
+    if len(cleaned_data) < 2 :
+        return 0 # Prevent errors if all values are zero
+        
+    # Calculate and return the standard deviation
+    return {"Standard Deviation": np.std(cleaned_data, ddof=1)}
 
-        # Perform binomial distribution calculation
-        return {"Binomial Distribution": np.random.binomial(self.n, self.p, sample_size)}
+@statistic.register("Variance")
+def variance(self, variance_type = "Population"):
+    """
+    Calculate and return the sample variance of the given data set.
+    Returns:
+        float: The sample variance of the data.
+    """
+
+    # TODO: a.any or a.all to check if all values are the same 
+    cleaned_data = self._clean_data()
+    # Validate the data
+    if not isinstance(cleaned_data, (list, np.ndarray)):
+        raise TypeError("Data must be a list or NumPy array of numbers")
+    if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in cleaned_data.flatten()):
+        raise TypeError("All elements in the data must be numbers")
+    if len(cleaned_data) == 0:
+        raise ValueError("Data cannot be empty")
+        
+    if variance_type == "Sample":
+        return {"Sample Variance": np.var(cleaned_data, ddof=1)} # Sample variance
+    else:
+        return {"Population Variance": np.var(cleaned_data, ddof=0)} # Population variance
+        
+    # Calculate and return the variance
+    return {"Variance": np.var(cleaned_data, ddof=1)}
+
+@statistic.register("Coefficient of Variation")
+def coefficientOfVariation(self):
+    cleaned_data = self._clean_data()
+    if not isinstance(cleaned_data, (list, np.ndarray)):
+        raise TypeError("Data must be a list or NumPy array of numbers")
+    if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in cleaned_data.flatten()):
+        raise TypeError("All elements in the data must be numbers")
+    if len(cleaned_data) == 0:
+        raise ValueError("Data cannot be empty")
+
+    mean = statistic.registered_measures["Mean"](self)["Mean"]
+    std_dev = statistic.registered_measures["Standard Deviation"](self)["Standard Deviation"]
+    return {"Coefficient of Variation": std_dev / mean}
+
+    
+@statistic.register("Percentiles")
+def percentiles(self, option=None):
+    """
+    Calculates specific percentiles based on user-chosen option from measure_options_map.
+    """
+    cleaned_data = self._clean_data()
+    if cleaned_data is None or cleaned_data.size == 0:
+        return None
+
+    # Default fallback
+    selected_percentiles = [25, 50, 75]
+
+    # Map UI options to actual percent values
+    option_map = {
+        "Quartiles (25, 50, 75)": [25, 50, 75],
+        "Median (50)": [50],
+        "Deciles (10, 20, ..., 90)": list(range(10, 100, 10)),
+        "90th Percentile": [90],
+        "95th Percentile": [95],
+        "99th Percentile": [99],
+    }
+
+    if option in option_map:
+        selected_percentiles = option_map[option]
+
+    self.selected_percentiles = selected_percentiles
+    self.selected_percentile_label = f"Selected: {', '.join(str(p) for p in selected_percentiles)}"
+
+    percentile_values = np.percentile(cleaned_data, selected_percentiles, axis=0)
+
+    return {
+        "Percentiles": percentile_values,
+        "Selected": self.selected_percentile_label
+    }
+
+        
+@statistic.register("Probability Distribution")
+def probabilityDistribution(self, option=None):
+    cleaned_data = self._clean_data()
+    if cleaned_data is None or cleaned_data.size == 0:
+        messagebox.showerror("Data Error", "Cannot calculate distribution on empty or invalid data.")
+        return None
+
+    mean_val = np.mean(cleaned_data)
+    std_dev_val = np.std(cleaned_data)
+    if std_dev_val <= 0:
+        messagebox.showerror("Calculation Error", "Standard deviation is zero or negative.")
+        return None
+
+    if not option:
+        option = "Normal"
+
+    choice = option.lower().strip()
+
+    # Flatten to 1D for simplicity
+    flat_data = cleaned_data.flatten()
+    flat_data = np.sort(flat_data)
+
+    if choice == 'normal':
+        return {
+            "Distribution": "Normal",
+            "Mean": mean_val,
+            "Standard Deviation": std_dev_val
+        }
+
+    elif choice == 'pdf':
+        pdf_values = norm.pdf(flat_data, mean_val, std_dev_val)
+        return {
+            "Distribution": "PDF",
+            "Mean": mean_val,
+            "Standard Deviation": std_dev_val,
+            "PDF Values": pdf_values.tolist(),
+            "X": flat_data.tolist()
+        }
+
+    elif choice == 'cdf':
+        cdf_values = norm.cdf(flat_data, mean_val, std_dev_val)
+        return {
+            "Distribution": "CDF",
+            "Mean": mean_val,
+            "Standard Deviation": std_dev_val,
+            "CDF Values": cdf_values.tolist(),
+            "X": flat_data.tolist()
+        }
+
+    else:
+        messagebox.showerror("Option Error", f"Invalid option '{option}' for Probability Distribution.")
+        return None
+
+
+
+
+
+@statistic.register("Binomial Distribution")
+def binomialDistribution(self, n=None, p=None):
+    selected_data = self._clean_data()
+
+    # Fallback to default if not supplied
+    n = 10 if n is None or n <= 0 else n
+    p = 0.5 if p is None else p
+
+    if not (0 <= p <= 1):
+        raise ValueError("Probability must be between 0 and 1.")
+
+    if selected_data is None or len(selected_data) == 0:
+        raise ValueError("No valid numeric data selected.")
+
+    return {"Binomial Distribution": np.random.binomial(n, p, len(selected_data))}
 
     # ----------------------------------------------------------------------------------#
 # separating these statistical functions because these are the ones that I have to really hone on
 # they are all very specific and need to be tuned for the GUI 
-    def leastSquareLine(self):
-        """
-        Only works for interval & frequency datasets
-        Parameters: 
-            Grabs two arrays (can be np.array) as x and as y columns.
-                (e.g. Expected/Actual Freq. Data). 
-        Returns:
-            the slope, intercept, and equation of the regression line.
-        """
-        cleaned_data = self._clean_data()
-        # the user should be able to choose their own columns--however, they must be the same length 
+@statistic.register("Least Square Line")
+def leastSquareLine(self):
+    """
+    Only works for interval & frequency datasets
+    Parameters: 
+        Grabs two arrays (can be np.array) as x and as y columns.
+            (e.g. Expected/Actual Freq. Data). 
+    Returns:
+        the slope, intercept, and equation of the regression line.
+    """
+    cleaned_data = self._clean_data()
+    # the user should be able to choose their own columns--however, they must be the same length 
 
-        # Rows will always have the same number due to the main_controller filling NA with 0's
-        if np.isnan(cleaned_data).any():
-            messagebox.showerror("Error", "Both columns must have the same row length.")
-            raise ValueError("Both columns must have the same row length")
+    # Rows will always have the same number due to the main_controller filling NA with 0's
+    if np.isnan(cleaned_data).any():
+        messagebox.showerror("Error", "Both columns must have the same row length.")
+        raise ValueError("Both columns must have the same row length")
         
         # Checks to ensure number of columns are equal
-        if cleaned_data.shape[1] % 2 != 0:
-            messagebox.showerror("Error", "The number of columns must be even.")
-            raise ValueError("The number of columns must be even")
+    if cleaned_data.shape[1] % 2 != 0:
+        messagebox.showerror("Error", "The number of columns must be even.")
+        raise ValueError("The number of columns must be even")
         
-        x, y = np.hsplit(cleaned_data, 2)
+    x, y = np.hsplit(cleaned_data, 2)
         
-        # find the mean of the x and y columns 
-        x_mean = np.mean(x)
-        y_mean = np.mean(y)
+    # find the mean of the x and y columns 
+    x_mean = np.mean(x)
+    y_mean = np.mean(y)
 
-        numerator = np.sum((x - x_mean) * (y - y_mean))
-        denominator = np.sum((x - x_mean)** 2)
+    numerator = np.sum((x - x_mean) * (y - y_mean))
+    denominator = np.sum((x - x_mean)** 2)
 
-        if denominator == 0:
-            messagebox.showerror("Error", "Denominator is zero. Ensure that you select at least two (x,y) pairs.")
-            raise ZeroDivisionError("Cannot divide by zero!")
+    if denominator == 0:
+        messagebox.showerror("Error", "Denominator is zero. Ensure that you select at least two (x,y) pairs.")
+        raise ZeroDivisionError("Cannot divide by zero!")
         
-        slope = numerator / denominator
-        intercept = y_mean - slope * x_mean
+    slope = numerator / denominator
+    intercept = y_mean - slope * x_mean
         
-        return {"Slope": slope, "Y-Intercept": intercept}
+    return {"Slope": slope, "Y-Intercept": intercept}
 
-
-    def chiSquared(self):
-        """
-        Performs Chi-Square Test using two valid columns of data.
-        Returns: the Chi-Square statistic and p-value.
-        """
-        print(f"Incoming Data to Chi-Squared:\n{self.data}")  # Debugging point
+@statistic.register("Chi Square")
+def chiSquared(self, expected=None, observed=None):
+    if isinstance(self.data, pd.DataFrame):
+        cols = self.data.columns.tolist()
         
-        
-        if isinstance(self.data, pd.DataFrame):
-            if self.data.shape[1] >= 2:
-                f_exp = pd.to_numeric(self.data.iloc[:, 0], errors='coerce').dropna().astype(int).values
-                f_obs = pd.to_numeric(self.data.iloc[:, 1], errors='coerce').dropna().astype(int).values
-            else:
-                messagebox.showerror("Error", "Chi-square test requires two valid columns of data.")
-                return None
+        expected_col = expected if expected in cols else cols[0]
+        observed_col = observed if observed in cols else cols[1] if len(cols) > 1 else None
 
-        elif isinstance(self.data, np.ndarray) and self.data.shape[1] >= 2:
-            
-            f_exp = self.data[:, 0].astype(int)
-            f_obs = self.data[:, 1].astype(int)
-            
-        else:
-            messagebox.showerror("Error", "Chi-square test requires two valid columns of data.")
+        if observed_col is None:
+            messagebox.showerror("Error", "Chi-square test requires at least two valid columns.")
             return None
 
-        print(f"Expected Frequencies: {f_exp}")
-        print(f"Observed Frequencies: {f_obs}")
+        f_exp = pd.to_numeric(self.data[expected_col], errors='coerce').dropna().astype(int).values
+        f_obs = pd.to_numeric(self.data[observed_col], errors='coerce').dropna().astype(int).values
+    else:
+        messagebox.showerror("Error", "Invalid data for Chi-Square.")
+        return None
 
-        # Ensure both columns have the same length
-        if len(f_exp) != len(f_obs):
-            messagebox.showerror("Error", "Chi-square test requires equal-length data in both columns.")
-            return None
+    if len(f_exp) != len(f_obs):
+        messagebox.showerror("Error", "Chi-square test requires equal-length data in both columns.")
+        return None
 
-        # Ensure no negative values (chi-square requires non-negative integers)
-        if np.any(f_exp < 0) or np.any(f_obs < 0):
-            messagebox.showerror("Error", "Chi-square test cannot contain negative values.")
-            return None
+    if np.any(f_exp < 0) or np.any(f_obs < 0):
+        messagebox.showerror("Error", "Chi-square test cannot contain negative values.")
+        return None
 
-        # Perform chi-square test
-        try:
-            chi_sq_stat, p_value = stats.chisquare(f_obs, f_exp)
+    try:
+        chi_sq_stat, p_value = stats.chisquare(f_obs, f_exp)
+        return {"Chi-Squared Statistic": f"{chi_sq_stat:.4f}", "P-value": f"{p_value:.4e}"}
+    except Exception as e:
+        messagebox.showerror("Error", f"Chi-square calculation error: {e}")
+        return None
 
-            result_str = f"Chi-Square Statistic: {chi_sq_stat:.4f}, P-value: {p_value:.4e}"
-            #print(result_str)
-            return {"Chi-Squared Statistic": f"{chi_sq_stat}", "P-value": f"{p_value}"}
 
-        except Exception as e:
-            messagebox.showerror("Error", f"Chi-square calculation error: {e}")
-            return None
+@statistic.register("Correlation Coefficient")
+def correlationCoefficient(self):
+    """
+    Best for interval & frequency datasets
+    Parameters: 
+        grabs two columns of equal length
+    Returns:
+        the correlation coefficient R Value
+    """
 
-    def correlationCoefficient(self):
-        """
-        Best for interval & frequency datasets
-        Parameters: 
-            grabs two columns of equal length
-        Returns:
-            the correlation coefficient R Value
-        """
-
-        cleaned_data = self._clean_data()
+    cleaned_data = self._clean_data()
+    print(cleaned_data)
 
         # Rows will always have the same number due to the main_controller filling NA with 0's
-        if np.isnan(cleaned_data).any():
-            messagebox.showerror("Error", "Both columns must have the same row length.")
-            raise ValueError("Both columns must have the same row length")
+    if np.isnan(cleaned_data).any():
+        messagebox.showerror("Error", "Both columns must have the same row length.")
+        raise ValueError("Both columns must have the same row length")
         
         # Checks to ensure number of columns are equal
-        if cleaned_data.shape[1] % 2 != 0:
-            messagebox.showerror("Error", "The number of columns must be even.")
-            raise ValueError("The number of columns must be even")
+    if cleaned_data.shape[1] % 2 != 0:
+        messagebox.showerror("Error", "The number of columns must be even.")
+        raise ValueError("The number of columns must be even")
 
-        x, y = np.hsplit(cleaned_data, 2)
+    x, y = np.hsplit(cleaned_data, 2)
 
-        if len(x) < 2 or len(y) < 2:
-            messagebox.showerror("Error", "Correlation Coefficient requires at least 2 data points in each column.")
-            raise ValueError("Correlation Coefficient requires at least 2 data points in each column.")
+    if len(x) < 2 or len(y) < 2:
+        messagebox.showerror("Error", "Correlation Coefficient requires at least 2 data points in each column.")
+        raise ValueError("Correlation Coefficient requires at least 2 data points in each column.")
 
-        correlation = np.corrcoef(x.T,y.T)
-        correlation_coefficient = correlation[0, 1]  # Extract the correlation coefficient from the matrix
-        return {"R Value (Correlation Coefficient)": correlation_coefficient}
+    correlation = np.corrcoef(x.T,y.T)
+    correlation_coefficient = correlation[0, 1]  # Extract the correlation coefficient from the matrix
+    return {"R Value (Correlation Coefficient)": correlation_coefficient}
     
+@statistic.register("Sign Test")
+def signTest(self, option=None):
+    """
+    Performs Sign Test for one-sample or paired-sample with optional multiple hypothesis types.
+    If multiple hypothesis options are passed, all are calculated and returned.
+    """
+    cleaned_data = self._clean_data()
 
-    def signTest(self):
-        """
-        Parameters:
-            grabs either one array (for one-sample sign test) or two arrays of same length (for paired sample sign test),
-            user specified alternative hypothesis (H1),
-            and default auto method (exact-to-approximate results).
-        Returns:
-            two floats: the sign test statistic & p-value.
-        """
-        cleaned_data = self._clean_data()
+    # Determine sample type
+    if cleaned_data.shape[1] == 1:
+        x = cleaned_data.ravel()
+        median = np.median(x)
+        diffs = [xi - median for xi in x if xi != median]
+    elif cleaned_data.shape[1] == 2:
+        x, y = np.hsplit(cleaned_data, 2)
+        x = x.ravel()
+        y = y.ravel()
+        diffs = [xi - yi for xi, yi in zip(x, y) if xi != yi]
+    else:
+        messagebox.showerror("Sign Test Error", "Data must have one or two numeric columns.")
+        return None
 
-        # ONE-SAMPLE SIGN TEST
-        if cleaned_data.shape[1] == 1:
-            x = cleaned_data.ravel()
-            print(f"X: {x}")  # Debugging point
-            median = np.median(x)
-            signs = [xi - median for xi in x if xi != median]
-            n = len(signs)
-            n_positive = sum(1 for s in signs if s > 0)
-            n_negative = sum(1 for s in signs if s < 0)
+    n = len(diffs)
+    n_positive = sum(d > 0 for d in diffs)
+    n_negative = sum(d < 0 for d in diffs)
 
-        # PAIRED SAMPLE SIGN TEST
-        elif cleaned_data.shape[1] == 2:
-            if np.isnan(cleaned_data).any():
-                messagebox.showerror("Paired signTest Error", "Both columns must have the same row length.")
-                raise ValueError("Both columns must have the same row length")
-            x, y = np.hsplit(cleaned_data, 2)
-            x = x.ravel()
-            y = y.ravel()
-            print(f"X: {x}, Y: {y}")  # Debugging point
-            diffs = [xi - yi for xi, yi in zip(x, y) if xi != yi]
-            n = len(diffs)
-            n_positive = sum(1 for d in diffs if d > 0)
-            n_negative = sum(1 for d in diffs if d < 0)
+    # Normalize options
+    if isinstance(option, str):
+        option = [option]
+    elif not option:
+        option = ["two-sided"]  # Default
 
-        else:
-            messagebox.showerror("signTest Error", "Data must have either one or two columns.")
-            raise ValueError("Data must have either one or two columns.")
-        
-        H_prompt = tkinter.simpledialog.askstring("Alternative Hypothesis", "Choose one: two-sided, less, greater")
-        if H_prompt not in ["two-sided", "less", "greater"]:
-            tkinter.messagebox.showerror("signTest Error", "Invalid alternative hypothesis. Please choose 'two-sided', 'less', or 'greater'.")
-            return None
+    valid_hypotheses = {"two-sided", "less", "greater"}
+    option = [opt for opt in option if opt in valid_hypotheses]
 
-        result = stats.binomtest(n_positive, n, p=0.5, alternative=H_prompt)
-
-        sign = {"Sign Count": n,
+    results = {}
+    for hypo in option:
+        result = stats.binomtest(n_positive, n, p=0.5, alternative=hypo)
+        results[hypo] = {
+            "Sign Count": n,
             "Positive Count": n_positive,
             "Negative Count": n_negative,
-            "P-Value": result.pvalue}
+            "P-Value": result.pvalue,
+            "Alternative": hypo
+        }
 
-        print(f"Sign Test: {sign}")
-        return sign
-
-    def rankSum(self):
-        '''
-        Performs the Mann-Whitney U rank sum test on the first two numeric columns.
-        Ensures it works on a copy of the data to avoid side effects.
-        '''
-        # 1. Get the cleaned data (should be a copy/new array from _clean_data)
-        cleaned_data_result = self._clean_data() # Call the cleaning method
-
-        # Check if cleaning failed or returned None
-        if cleaned_data_result is None:
-            print("Rank Sum test cancelled due to data cleaning issues or lack of suitable data.")
-            return None
-
-        # ***** ADDED STEP: Explicitly make a copy *****
-        # Even if _clean_data returns a copy, this guarantees that subsequent
-        # slicing/splitting within *this* function won't affect the array
-        # potentially cached or used elsewhere.
-        cleaned_data = cleaned_data_result.copy()
-        # ************************************************
-
-        # 2. Split into two arrays (using first two columns of the COPY)
-        try:
-            # Ensure we have at least 2 columns in the cleaned data
-            if cleaned_data.ndim != 2 or cleaned_data.shape[1] < 2:
-                messagebox.showerror("Rank Sum Error", "Cleaned data does not have at least two columns for Rank Sum test.")
-                return None
-
-            data_to_split = cleaned_data[:, :2] # Slice the first two columns of the copy
-            x, y = np.hsplit(data_to_split, 2)
-            x = x.ravel()
-            y = y.ravel()
-
-            # Debugging point using the *local copy*
-            print(f"Cleaned X (size {x.size}): {x[:10]}...")
-            print(f"Cleaned Y (size {y.size}): {y[:10]}...")
-
-            if x.size == 0 or y.size == 0:
-                messagebox.showerror("Rank Sum Error", "One or both data columns became empty after cleaning/splitting.")
-                return None
-
-        except Exception as e:
-             messagebox.showerror("Data Error", f"An unexpected error occurred during data preparation for Rank Sum: {e}")
-             return None
+    return results if len(results) > 1 else list(results.values())[0]
 
 
-        # 3. Get Alternative Hypothesis using RadioButton Dialog
-        hypothesis_options = ["two-sided", "less", "greater"]
-        try:
-            dialog = RadioButton(
-                title="Alternative Hypothesis",
-                prompt="Choose the alternative hypothesis (H1):",
-                options=hypothesis_options
-            )
-            selected_hypothesis = dialog.show()
-        except Exception as e:
-             messagebox.showerror("GUI Error", f"Failed to create selection dialog: {e}")
-             return None
-
-        if selected_hypothesis is None:
-            print("Rank Sum test cancelled by user (hypothesis selection).")
-            return None
-
-
-        # 4. Perform Mann-Whitney U Test using the local x, y copies
-        try:
-            result = stats.mannwhitneyu(x, y, method='auto', alternative=selected_hypothesis)
-            rank_results = {"Statistic": result.statistic, "P-Value": result.pvalue}
-
-            print(f"Rank Sum Test Results: {rank_results}")
-            # 5. Return the result. The original self.data remains untouched by rankSum's internal steps.
-            return rank_results
-
-        except ValueError as ve:
-             messagebox.showerror("Rank Sum Error", f"Calculation error during rank sum test: {ve}")
-             return None
-        except Exception as e:
-            messagebox.showerror("Rank Sum Error", f"An unexpected error occurred during the rank sum test: {e}")
-            return None
-
-
-    def spearmanRankCorrelation(self):
-        """
-        Only works for ordinal datasets
-        Parameters:
-            grabs two arrays from an np.ndarray object
-        Returns:
-            the spearman rank correlation & p-value.
-        """
-        cleaned_data = self._clean_data()
-
-        # Rows will always have the same number due to the main_controller filling NA with 0's
-        if np.isnan(cleaned_data).any():
-            messagebox.showerror("Error", "Both columns must have the same row length.")
-            raise ValueError("Both columns must have the same row length")
-        
-        # Checks to ensure number of columns are equal
-        if cleaned_data.shape[1] != 2:
-            messagebox.showerror("Error", "The number of columns must be equal to 2 (x,y).")
-            raise ValueError("The number of columns must be equal to 2 (x,y)")
-
-        x, y = np.hsplit(cleaned_data, 2)
-
-        if len(x) < 3 or len(y) < 3:
-            messagebox.showerror("Error", "Spearman rank correlation requires at least 3 data points in each column.")
-            raise ValueError("Spearman rank correlation requires at least 3 data points in each column.")
-
-        spearman = stats.spearmanr(x,y)
-        return {"R Value (Spearman Rank Correlation)": spearman.correlation, "P-value (Spearman Rank Correlation)": spearman.pvalue}
+@statistic.register("Rank Sum")
+def rankSum(self):
+    """
+    Performs the Mann-Whitney U Rank Sum test (non-parametric).
+    Requires exactly two numeric columns with non-missing values.
+    """
+    cleaned_data = self._clean_data()
     
+    if cleaned_data.shape[1] < 2:
+        messagebox.showerror("Rank Sum Error", "You need to select at least two numeric columns.")
+        return None
+
+    # Use the first two columns
+    try:
+        col1, col2 = np.hsplit(cleaned_data[:, :2], 2)
+        col1 = col1.ravel()
+        col2 = col2.ravel()
+
+        # Remove NaNs (must align lengths)
+        col1 = col1[~np.isnan(col1)]
+        col2 = col2[~np.isnan(col2)]
+
+        if len(col1) < 2 or len(col2) < 2:
+            messagebox.showerror("Rank Sum Error", "Each group needs at least 2 valid values.")
+            return None
+
+        stat, p_value = stats.mannwhitneyu(col1, col2, alternative='two-sided')
+
+        return {
+            "U-Statistic": f"{stat:.4f}",
+            "P-Value": f"{p_value:.4e}"
+        }
+
+    except Exception as e:
+        messagebox.showerror("Rank Sum Error", f"An error occurred: {e}")
+        return None
+
+
+@statistic.register("Spearman Correlation")
+def spearmanRankCorrelation(self):
+    """
+    Computes Spearman's Rank Correlation Coefficient between two numeric columns.
+    """
+    cleaned_data = self._clean_data()
+
+    # Check if we have at least two columns
+    if cleaned_data.shape[1] < 2:
+        messagebox.showerror("Spearman Correlation Error", "Please select at least two numeric columns.")
+        return None
+
+    try:
+        x, y = np.hsplit(cleaned_data[:, :2], 2)  # Only use first two columns
+        x = x.ravel()
+        y = y.ravel()
+
+        # Drop NaNs (align lengths)
+        mask = ~np.isnan(x) & ~np.isnan(y)
+        x = x[mask]
+        y = y[mask]
+
+        if len(x) < 2 or len(y) < 2:
+            messagebox.showerror("Spearman Correlation Error", "Need at least 2 valid values in each column.")
+            return None
+
+        coef, p_value = stats.spearmanr(x, y)
+
+        return {
+            "Spearman Correlation": f"{coef:.4f}",
+            "P-Value": f"{p_value:.4e}"
+        }
+
+    except Exception as e:
+        messagebox.showerror("Spearman Correlation Error", f"An error occurred: {e}")
+        return None
+
 
 class plotCreation():
     def __init__(self, data):
@@ -790,62 +639,8 @@ class plotCreation():
         plt.tight_layout()
         plt.show()
 
-    #TODO: revision, +pie, +curve
-    
-
-# # Function to extract numeric columns
-# # shouldn't need this function when jarrett implements the loading of csv and the extraction of numerical data from the file 
-# # if not, this function will be used to extract the numerical data from the file
-# def extract_numeric_data(dataframe):
-#     """
-#     Extract only numeric columns from a DataFrame and flatten the data.
-    
-#     Parameters:
-#         dataframe (pd.DataFrame): Input DataFrame with mixed data types.
-        
-#     Returns:
-#         np.ndarray: A 1D array of numeric data.
-#     """
-#     numeric_data = dataframe.select_dtypes(include=[np.number])
-#     return numeric_data.to_numpy().flatten()
-
-
 
 
 # if __name__ == "__main__":
 
-#     path = r"C:\Users\matte\Desktop\CS499 - copy\Test Data\IntervalDataTest.csv"
-#     try:
-#         data = pd.read_csv(path)
-#     except Exception as e:
-#         print(f"Error reading the file: {e}")
-#         exit()
-
-
-#     print("DataFrame content:\n", data)   
-#     numeric_data = data.select_dtypes(include=[np.number])
-#     print("Numeric data:\n", numeric_data)
-
-#     # Creating an instance of the Statistic class with the numeric data
-#     measure = statistic(numeric_data)
-
-#     standard_deviation = measure.standardDeviation()
-#     print("Standard Deviation:", standard_deviation)
-#     print("Variance:", measure.variance())
-#     print("Coefficient of Variation:", measure.coefficientOfVariation())
-
-#     #leastSquare = measure.leastSquareLine()
-#     #print("\n--- Least Square Line ---")
-#     #print(leastSquare)
-
-#     #chisquared = measure.chiSquared()
-#     #print("\n--- Chi-Squared ---")
-#     #print(chisquared)
-
-#     #percentiles_df = measure.percentiles()
-#     #print("\n--- Percentiles ---")
-#     #print(percentiles_df)
-
-#     #plot vertical bar graph percentiles of 1st column
-#     #plotter = plotCreation(percentiles_df)
-#     #percentilesbar = plotter.plot_barChart(percentiles_df)
+#     print(statistic.measure_name_map)

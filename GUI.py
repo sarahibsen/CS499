@@ -273,7 +273,6 @@ class MeasureSelectionPage(BasePage):
     """
     Measure selection page of the application. Users will select what statistical measures
     they want to perform on the dataset.
-
     """
 
     def __init__(self, parent, controller):
@@ -286,15 +285,95 @@ class MeasureSelectionPage(BasePage):
         self.grid_columnconfigure(0, weight=0)  # Toolbar column
         self.grid_columnconfigure(2, weight=2)
 
+        # Measurement Frame
         self.measurement_frame = tk.Frame(self, bg="#FFFFFF")
         self.measurement_frame.grid(row=0, column=1, padx=10, pady=10, sticky="nw")
 
-        # Button style
-        style = Style()
-        style.configure(
-            "TButton", font=("Arial", 20), background="white", height=50,
-            width=20, pady=20, ipadx=20, ipady=10, relief="groove",
+        # ----- Data Table ----- #
+        self.table_frame = tk.Frame(self)
+        self.table_frame.grid(row=0, column=2, padx=10, pady=10, sticky="nsew")
+        self.table_frame.grid_rowconfigure(0, weight=1)
+        self.table_frame.grid_columnconfigure(0, weight=1)
+
+        self.table = TableView(self.table_frame)
+        self.table.grid(row=0, column=0, sticky='nsew')
+
+        style = ttk.Style()
+        style.configure("mystyle.Treeview", highlightthickness=0, bd=0,
+                        font=('Roboto', 15), rowheight=35)  # Modify the font of the body
+        style.configure("mystyle.Treeview.Heading", font=('Roboto', 18, 'bold'))  # Modify the font of the headings
+        style.layout("mystyle.Treeview", [('mystyle.Treeview.treearea', {'sticky': 'nswe'})])  # Remove the borders
+
+        # Statistical Measures TreeView
+        self.stat_treeview = ttk.Treeview(
+            self.measurement_frame, columns=("Measure"), show="headings", selectmode="extended", style="mystyle.Treeview"
         )
+        self.stat_treeview.heading("Measure", text="Statistical Measures")
+        self.stat_treeview.column("Measure", anchor="w")
+        self.stat_treeview.grid(row=2, column=1, padx=10, pady=10, sticky='nswe')
+
+        # Populate TreeView immediately
+        self.populate_treeview()
+
+        # Label to show selected measures
+        self.selected_stat_label = tk.Label(
+            self.measurement_frame,
+            text="Selected: None",
+            font=("Roboto", 12),
+            wraplength=300,
+            justify="left",
+            anchor="nw",
+        )
+        self.selected_stat_label.grid(row=3, column=1, padx=10, pady=10, sticky="nw")
+
+        # Bind TreeView selection event
+        self.stat_treeview.bind("<<TreeviewSelect>>", self.on_stat_measure_selected)
+
+        # Calculate Measures Button
+        self.calculate_button = Button(
+            self.measurement_frame,
+            text="Calculate Measures",
+            style="TButton",
+            command=self.calculate_statistics,
+        )
+        self.calculate_button.grid(row=4, column=1, padx=10, pady=10, sticky="w")
+
+        # --- Binomial Input Fields (Initially Hidden) --- #
+        self.binomial_frame = tk.Frame(self.measurement_frame, bg="#FFFFFF")
+
+        self.label_n = tk.Label(self.binomial_frame, text="Number of Trials (n):", bg="#FFFFFF", font=("Roboto", 12))
+        self.entry_n = tk.Entry(self.binomial_frame, font=("Roboto", 12), width=10)
+
+        self.label_p = tk.Label(self.binomial_frame, text="Probability (p):", bg="#FFFFFF", font=("Roboto", 12))
+        self.entry_p = tk.Entry(self.binomial_frame, font=("Roboto", 12), width=10)
+
+        self.label_n.grid(row=0, column=0, padx=5, pady=2, sticky="w")
+        self.entry_n.grid(row=0, column=1, padx=5, pady=2)
+
+        self.label_p.grid(row=1, column=0, padx=5, pady=2, sticky="w")
+        self.entry_p.grid(row=1, column=1, padx=5, pady=2)
+
+        self.binomial_frame.grid(row=5, column=1, padx=10, pady=5, sticky="w")
+        self.binomial_frame.grid_remove()  # Hide initially
+
+        # --- Chi-Square Column Selector --- #
+        self.chi_square_frame = tk.Frame(self.measurement_frame, bg="#FFFFFF")
+
+        self.label_expected = tk.Label(self.chi_square_frame, text="Expected Column:", bg="#FFFFFF", font=("Roboto", 12))
+        self.expected_dropdown = ttk.Combobox(self.chi_square_frame, state="readonly", font=("Roboto", 12))
+
+        self.label_observed = tk.Label(self.chi_square_frame, text="Observed Column:", bg="#FFFFFF", font=("Roboto", 12))
+        self.observed_dropdown = ttk.Combobox(self.chi_square_frame, state="readonly", font=("Roboto", 12))
+
+        self.label_expected.grid(row=0, column=0, padx=5, pady=2, sticky="w")
+        self.expected_dropdown.grid(row=0, column=1, padx=5, pady=2)
+
+        self.label_observed.grid(row=1, column=0, padx=5, pady=2, sticky="w")
+        self.observed_dropdown.grid(row=1, column=1, padx=5, pady=2)
+
+        self.chi_square_frame.grid(row=6, column=1, padx=10, pady=5, sticky="w")
+        self.chi_square_frame.grid_remove()  # Hidden initially
+
 
         # ----- Toolbar ----- #
         # Create a canvas to hold toolbar
@@ -319,192 +398,186 @@ class MeasureSelectionPage(BasePage):
 
         self.update_colors()
 
-        # ----- Data Table ----- #
-        self.table_frame = tk.Frame(self)
-
-        self.table_frame.grid(row=0, column=2, padx=10, pady=10, sticky="nsew")
-        self.table_frame.grid_rowconfigure(0, weight=1)
-        self.table_frame.grid_columnconfigure(0, weight=1)
-
-        self.table = TableView(self.table_frame)
-        self.table.grid(row=0, column=0, sticky='nsew')
-
-        # ----- Measure Selection Area ----- #
-        # Calculate Meaasures Button
-        self.calculate_button = Button(self.measurement_frame, text="Calculate Measures", style="TButton",
-                                       command=self.calculate_statistics)
-        self.calculate_button.grid(row=4, column=1, padx=10, pady=10, sticky='w')
-
-        ## TODO: change this to grab data types from main.py
-        # ComboBox for Data Types
-        self.data_type_options = ["Nominal", "Ordinal", "Discrete", "Continuous"]
-        self.data_type_dropdown = ttk.Combobox(self.measurement_frame, values=self.data_type_options,
-                                               font=("Roboto", 14), state="readonly")
-        self.data_type_dropdown.grid(row=1, column=1, padx=10, pady=10, sticky='nw')
-        self.data_type_dropdown.set("Select Data Type")
-        self.data_type_dropdown.bind("<<ComboboxSelected>>", self.on_data_type_selected)
-
-        # Statistical Measures Listbox
-        self.stat_measures_listbox = tk.Listbox(self.measurement_frame, font=("Roboto", 14), selectmode="multiple",
-                                                exportselection=False, height=15)
-        self.stat_measures_listbox.grid(row=2, column=1, padx=10, pady=10, sticky='nw')
-
-        # Label to show selected measures
-        self.selected_stat_label = tk.Label(
-            self.measurement_frame,
-            text="Selected: None",
-            font=("Roboto", 12),
-            # REMOVED: bg="#FFFFFF",
-            wraplength=300,
-            justify="left",
-            anchor="nw"
-        )
-        # self.selected_stat_label.place(x=151, y=500, width=351, height=50)
-        self.selected_stat_label.grid(row=3, column=1, padx=10, pady=10, sticky='nw')
-
-        # Bind listbox selection
-        self.stat_measures_listbox.bind("<<ListboxSelect>>", self.on_stat_measure_selected)
-
     def resize_toolbar(self, event):
         """Resize the rectangle dynamically when the window changes size."""
         self.canvas.coords(self.toolbarBackground, 0, 0, 100, event.height)  # Adjust height dynamically
 
-    def resize_elements(self, event):
-        """
-        Adjust measurement frame dynamically to fill the remaining canvas area.
-        """
-        canvas_width = self.canvas.winfo_width()
-        canvas_height = self.canvas.winfo_height()
+    def populate_treeview(self):
+        """Populate the treeview with statistical measures and options."""
+        self.stat_treeview.delete(*self.stat_treeview.get_children())  # Clear existing items
 
-        # Ensure canvas has a valid width before setting
-        if canvas_width > 100:
-            new_width = canvas_width - 100
-        else:
-            new_width = 0  # Prevent negative width
-
-        # Update the window inside the canvas
-        self.canvas.coords(self.measurement_window, 100, 0)  # Ensure it starts at (100,0)
-        self.canvas.itemconfig(self.measurement_window, width=new_width, height=canvas_height)
-
-    def update_colors(self):
-        """Updates colors for non-ttk widgets and specific configurations."""
-        # If BasePage only sets its own bg, call it:
-        if hasattr(super(), 'update_colors'):
-            super().update_colors()
-
-        # Check if controller and colors palette exist
-        if not (hasattr(self.controller, 'colors') and self.controller.colors):
-            print(f"Warning: Cannot update colors for {type(self).__name__}, controller or colors missing.")
-            return
-
-        # Get colors from the central palette
-        background_color = self.controller.colors.get_color("background")
-        text_color = self.controller.colors.get_color("text")
-        toolbar_bg_color = self.controller.colors.get_color("toolbar_bg")
-
-        # Update Frames
-        if hasattr(self, 'toolbar_frame'): self.toolbar_frame.configure(bg=toolbar_bg_color)
-        if hasattr(self, 'measurement_frame'): self.measurement_frame.configure(bg=background_color)
-        if hasattr(self, 'table_frame'): self.table_frame.configure(bg=background_color)
-        if hasattr(self, 'stat_measures_listbox'):
-            listbox_parent = self.stat_measures_listbox.master
-            if isinstance(listbox_parent, tk.Frame):
-                listbox_parent.configure(bg=background_color)  # Match measurement frame bg
-
-        if hasattr(self, 'label_data_type'): self.label_data_type.configure(bg=background_color, fg=text_color)
-        if hasattr(self, 'label_measures'): self.label_measures.configure(bg=background_color, fg=text_color)
-        if hasattr(self, 'label_selected'): self.label_selected.configure(bg=background_color, fg=text_color)
-
-        if hasattr(self, 'selected_stat_label') and self.selected_stat_label.winfo_exists():
-            self.selected_stat_label.configure(bg=background_color, fg=text_color)
-
-        if hasattr(self, 'table') and hasattr(self.table, 'update_theme') and callable(self.table.update_theme):
-            self.table.update_theme(self.controller.colors)
-
-    # def import_csv(self):
-    #     file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
-    #     if file_path:
-    #         try:
-    #             data = pd.read_csv(file_path)
-    #             # Show data in the table
-    #             self.display_table(data)
-
-    #         except Exception as e:
-    #             print(f"Error importing CSV: {e}")
-
-    def on_data_type_selected(self, event):
-        selected_data_type = self.data_type_dropdown.get()
-
-        # Clear existing options
-        self.stat_measures_listbox.delete(0, tk.END)
-
-        # Populate the statistical measures list based on the selected data type
-        self.measure_name_map = Controller.measures_for_data_type(selected_data_type)
-
-        for display_name in self.measure_name_map.keys():
-            self.stat_measures_listbox.insert(tk.END, display_name)
+        all_measures = statistic.registered_measures.keys()
+        for measure in sorted(all_measures):
+            parent_id = self.stat_treeview.insert("", tk.END, text=measure, values=(measure,))
+            if measure in statistic.measure_options_map:
+                for option in statistic.measure_options_map[measure]:
+                    self.stat_treeview.insert(parent_id, tk.END, text=option, values=(option,))
 
     def on_stat_measure_selected(self, event):
-        # Get selected items from the listbox
-        selected_indices = self.stat_measures_listbox.curselection()
-        self.selected_stats = [self.stat_measures_listbox.get(i) for i in selected_indices]  # Update the stored list
+        """Handles selection changes in the statistics treeview."""
+        # Get the selected item IDs (iids) from the treeview
+        selected_items_iids = self.stat_treeview.selection()
 
-        # Limit selection to 3 measures
-        if len(self.selected_stats) > 3:
-            self.stat_measures_listbox.selection_clear(selected_indices[0])  # Remove the first selected item
-            self.selected_stats.pop(0)  # Remove from the stored list as well
+        
+        selected_measures = [self.stat_treeview.item(iid, "values")[0] for iid in selected_items_iids]
+        self.selected_stats = sorted(selected_measures)  # Store unique, sorted measure names
 
-        # Update the label with selected measures
-        self.selected_stat_label.config(
-            text=f"Selected Measures: {', '.join(self.selected_stats)}"
-            if self.selected_stats else "Selected Measures: None"
-        )
+        # toggle the visibility of the binomial input based if the user clicks on this measure
+        if "Binomial Distribution" in self.selected_stats:
+            self.binomial_frame.grid()  # Show the frame
+        else:
+            self.binomial_frame.grid_remove()  # Hide if not selected
+        if "Chi Square" in self.selected_stats:
+            self.update_chi_square_dropdowns()
+            self.chi_square_frame.grid()
+        else:
+            self.chi_square_frame.grid_remove()
 
-    def get_selected_measures(self):
-        """Return the selected measures so other classes can retrieve them."""
-        return self.selected_stats
+        if self.selected_stats:
+            display_text = "Selected: " + ", ".join(self.selected_stats)
+        else:
+            display_text = "Selected: None"
+        self.selected_stat_label.config(text=display_text)
 
     def calculate_statistics(self):
-        if not hasattr(self.table.controller, 'get_table_selection'):
-            messagebox.showerror("Error", "Table not initialized.")
-            return
-
-        self.controller = Controller()
-
-        selected_data_type = self.data_type_dropdown.get()
-        selected_measures = [self.stat_measures_listbox.get(i) for i in self.stat_measures_listbox.curselection()]
-
-        data_frame = self.controller.load_data_from_table(self.table.controller)
-        # print(f"Final Data Before Validation:\n{data_frame}")  # Final confirmation
+        selected_measures = []
+        extra_params = {}
+        data_frame = self.table.controller.get_table_selection()
 
         if data_frame.empty:
-            messagebox.showerror("Error", "No data to analyze.")
+            messagebox.showerror("Error", "No data selected.")
             return
 
-        if not self.controller.validate_data(data_frame):
-            messagebox.showerror("Error", "Data validation failed.")
-            return
+        selected_items_iids = self.stat_treeview.selection()
 
-        results = self.controller.perform_statistics(data_frame, selected_measures, selected_data_type)
-        # send the results, as well as the chosen selected measures to the table controller log_operation
-        self.table.controller.log_operation(selected_measures, selected_data_type, results)
+        for iid in selected_items_iids:
+            val = self.stat_treeview.item(iid, "values")[0]
+            parent_iid = self.stat_treeview.parent(iid)
+
+            if parent_iid:  # It's a sub-option
+                main_measure = self.stat_treeview.item(parent_iid, "values")[0]
+
+                if main_measure not in selected_measures:
+                    selected_measures.append(main_measure)
+
+                if main_measure not in extra_params:
+                    extra_params[main_measure] = []
+                extra_params[main_measure].append(val)
+
+            else:  # Top-level measure
+                if val not in selected_measures:
+                    selected_measures.append(val)
+
+                if val not in extra_params:
+                    extra_params[val] = None  # Default will be used by logic if no sub-option
+
+        if "Binomial Distribution" in selected_measures:
+            try:
+                n_input = self.entry_n.get()
+                p_input = self.entry_p.get()
+
+                n = int(n_input) if n_input.strip() != "" else 10
+                p = float(p_input) if p_input.strip() != "" else 0.5
+
+                if not (0 <= p <= 1):
+                    raise ValueError("Probability must be between 0 and 1.")
+
+                extra_params["n"] = n
+                extra_params["p"] = p
+            except Exception as e:
+                messagebox.showerror("Input Error", f"Invalid input for Binomial Distribution: {e}")
+                return
+        
+        if "Chi Square" in selected_measures:
+            selected_expected = self.expected_dropdown.get()
+            selected_observed = self.observed_dropdown.get()
+
+            # If user didn’t change dropdowns or values are empty, fallback
+            if selected_expected and selected_observed:
+                extra_params["Chi Square"] = {"expected": selected_expected, "observed": selected_observed}
+
+        results, skipped = Controller.calculate_statistics(
+            data_frame, selected_measures, extra_params=extra_params
+        )
+
+        if skipped:
+            explanation = self.generate_skipped_explanations(skipped, data_frame)
+            messagebox.showwarning("Incompatible Measures", explanation)
+
+
+        self.table.controller.log_operation(selected_measures, results, dataType="Detected")
         self.table.controller.add_log_separator()
 
         if results:
-            result_str = "\n".join([f"{key}: {value}" for key, value in results.items()])
+            def format_result(measure, value):
+                if isinstance(value, dict) and any(isinstance(v, dict) for v in value.values()):
+                    # This means it's a dictionary of dictionaries, like Sign Test with multiple options
+                    return f"{measure}:\n" + "\n".join(
+                        f"  ↳ {hypo}:\n    " + "\n    ".join(f"{k}: {v}" for k, v in stats.items())
+                        for hypo, stats in value.items()
+                    )
+                else:
+                    # Single-value or flat dict
+                    return f"{measure}: " + "\n".join(f"{k}: {v}" for k, v in value.items()) if isinstance(value, dict) else str(value)
+
+            result_str = "\n\n".join(format_result(k, v) for k, v in results.items())
             messagebox.showinfo("Calculated Statistics", result_str)
-            # self.controller.export_results(results)
 
             self.gui_controller.pages["ResultsPage"].display_results(results)
-            self.gui_controller.show_page("ResultsPage")
+            #self.gui_controller.show_page("ResultsPage")
+            notification = tk.Label(self, text="✓ Results sent to Results Page", fg="green", bg="white", font=("Roboto", 12, "bold"))
+            notification.grid(row=7, column=1, pady=(10, 0), sticky="w")
+            # Auto-remove after 2 seconds
+            self.after(2000, notification.destroy)
 
-            # Notify Dashboard Page to update measure dropdown
             dashboard_page = self.gui_controller.get_page("DashboardPage")
-            dashboard_page.update_dropdowns(self.selected_stats, selected_data_type)
+            dashboard_page.update_dropdowns(selected_measures)
 
-    def get_table_data(self):
-        # Fetch table data from the CustomTable widget
-        return self.table.celldType()
+
+    def get_selected_measures(self):
+        """Return the selected measures (list of strings)."""
+        return self.selected_stats
+    
+    def update_chi_square_dropdowns(self):
+        df = self.table.controller.get_table_selection()
+
+        if df.empty or df.shape[1] < 2:
+            self.expected_dropdown["values"] = []
+            self.observed_dropdown["values"] = []
+            return
+
+        column_names = df.columns.tolist()
+        self.expected_dropdown["values"] = column_names
+        self.observed_dropdown["values"] = column_names
+
+        # Optionally pre-select the first two
+        self.expected_dropdown.set(column_names[0])
+        self.observed_dropdown.set(column_names[1])
+
+    def generate_skipped_explanations(self, skipped_measures, df):
+        """
+        We want to better explain why the measure is not working so that the user may be able to troubleshoot the problem
+        themselves
+        """
+        explanations = []
+
+        for measure in skipped_measures:
+            if measure in ["Mean", "Median", "Mode", "Standard Deviation", "Variance", "Percentiles", "Coefficient of Variation"]:
+                explanations.append(f"X **{measure}** requires numeric data. Try selecting columns with numbers only.")
+            elif measure == "Chi Square":
+                explanations.append("X **Chi Square** requires two columns of equal length with non-negative integer values. You can select the columns manually once Chi Square is selected.")
+            elif measure in ["Least Square Line", "Correlation", "Spearman Correlation"]:
+                explanations.append(f"X **{measure}** requires at least two numeric columns of equal length (x and y pairs).")
+            elif measure == "Binomial Distribution":
+                explanations.append("X **Binomial Distribution** needs numeric data and a number of trials and probability between 0 and 1.")
+            elif measure == "Probability Distribution":
+                explanations.append("X **Probability Distribution** requires numeric data and may fail if the standard deviation is 0.")
+            else:
+                explanations.append(f"X **{measure}** couldn't be applied due to incompatible or missing data.")
+
+        return "Some measures could not be calculated:\n\n" + "\n".join(explanations)
+
+
 
 
 class DashboardPage(BasePage):
