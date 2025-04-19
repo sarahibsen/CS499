@@ -295,6 +295,8 @@ class MeasureSelectionPage(BasePage):
         self.table_frame.grid_columnconfigure(0, weight=1)
 
         self.table = TableView(self.table_frame)
+        self.table.sheet.extra_bindings([("all_select_events", self.populate_treeview)])
+        
 
         self.table.grid(row=0, column=0, sticky='nsew')
 
@@ -399,7 +401,7 @@ class MeasureSelectionPage(BasePage):
         """Resize the rectangle dynamically when the window changes size."""
         self.canvas.coords(self.toolbarBackground, 0, 0, 100, event.height)  # Adjust height dynamically
 
-    def populate_treeview(self):
+    def populate_treeview(self, event=None):
         """Populate the treeview based on compatibility toggle."""
         print("Refreshing Treeview...")  # Debug print
         self.stat_treeview.delete(*self.stat_treeview.get_children())
@@ -1461,6 +1463,16 @@ class ResultsPage(BasePage):
         # --- Initial Color Update ---
         self.update_colors()
 
+        # Create new table frame
+        self.results_table_frame = tk.Frame(self.results_display_frame)
+        self.results_table_frame.grid(row=0, column=0, sticky="nsew")
+        self.results_table_frame.grid_rowconfigure(0, weight=1)
+        self.results_table_frame.grid_columnconfigure(0, weight=1)
+
+        # Create and populate table
+        self.table = TableView(self.results_table_frame, output=True)
+        self.table.grid(row=0, column=0, sticky='nsew')
+
     def update_colors(self):
         """Updates colors for non-ttk widgets and frames."""
         if not (hasattr(self.controller, 'colors') and self.controller.colors):
@@ -1514,15 +1526,11 @@ class ResultsPage(BasePage):
 
     def display_results(self, results):
         """Updates the result table with the latest calculation."""
+
         # Remove placeholder if it exists
         if hasattr(self, 'placeholder_label'):
             self.placeholder_label.destroy()
             del self.placeholder_label
-
-        # Clear existing table if it exists
-        if hasattr(self, 'results_table_frame'):
-            self.results_table_frame.destroy()
-            del self.results_table_frame
 
         # Process results
         self.display_headers(results)
@@ -1535,19 +1543,22 @@ class ResultsPage(BasePage):
 
         self.result_rows[len(self.result_rows) + 1] = row_data
 
-        # Create new table frame
-        self.results_table_frame = tk.Frame(self.results_display_frame)
-        self.results_table_frame.grid(row=0, column=0, sticky="nsew")
-        self.results_table_frame.grid_rowconfigure(0, weight=1)
-        self.results_table_frame.grid_columnconfigure(0, weight=1)
+        if hasattr(self, 'table'):
+            self.table.controller.update_table(headers=self.result_headers, data=list(self.result_rows.values()))
+        
+        else:
+            # Create new table frame
+            self.results_table_frame = tk.Frame(self.results_display_frame)
+            self.results_table_frame.grid(row=0, column=0, sticky="nsew")
+            self.results_table_frame.grid_rowconfigure(0, weight=1)
+            self.results_table_frame.grid_columnconfigure(0, weight=1)
 
-        # Create and populate table
-        table = TableView(self.results_table_frame, output=True)
-        table.grid(row=0, column=0, sticky='nsew')
-        table.controller.update_table(headers=self.result_headers, data=self.result_rows.values())
+            # Create and populate table
+            table = TableView(self.results_table_frame, output=True)
+            table.grid(row=0, column=0, sticky='nsew')
+            table.controller.update_table(headers=self.result_headers, data=list(self.result_rows.values()))
 
 
 # Run the application
-
 app = App()
 app.mainloop()

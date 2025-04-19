@@ -88,7 +88,7 @@ class TableController:
         self.model = TableModel()
         self.parent = parent
         self.table = table
-
+        
     def get_table_data(self):
         return self.model.get_data()
     
@@ -140,22 +140,12 @@ class TableController:
             data    (List)  : List of values from CSV file if available.
         """
 
-        if hasattr(self.table, 'destroy'):
-            self.table.destroy()
+        if headers:
+            self.table.headers(headers)
+        if data:
+            self.table.set_sheet_data(data)
 
-        if headers is None:  # If headers are not provided, default headers will be used
-            self.table = Sheet(self.parent, show_header=True, data=list(data))
-
-        else:
-            self.table = Sheet(self.parent, headers=list(headers), data=list(data))
-
-        self.table.change_theme(theme)
-        self.table.popup_menu_add_command("Light Mode", lambda: self.update_table_theme("light blue", self.table))
-        self.table.popup_menu_add_command("Dark Mode", lambda: self.update_table_theme("dark blue", self.table))
-
-        self.table.grid(row=0, column=0, sticky='nswe')
-        self.table.enable_bindings("all", "edit_header", "edit_index", "ctrl_select")
-        self.adjust_cell_sizes(self.table) # Adjust cell sizes to fit content
+        self.adjust_cell_sizes(self.table)  # Adjust cell sizes to fit content
 
     def get_table_selection(self):
         """ Creates a 2D list that matches the dimensions of the tksheet table and fills row list with None.
@@ -171,6 +161,8 @@ class TableController:
         selected_cells = self.table.get_selected_cells()
         all_data = []
         headers = self.table.headers()
+        if not headers:
+            headers = self.table.get_sheet_data(get_displayed=False, get_header=True, get_index=False, get_index_displayed=True, get_header_displayed=True)[0]
         
         # Create a dict to collect selected cell values by column
         data_dict = {header: [] for header in headers}
@@ -195,6 +187,15 @@ class TableController:
         print(df.head())
 
         return df
+    
+    def table_select_event(self, event):
+        """
+        Event handler for table selection changes.
+        This method is called whenever the selection in the table changes.
+        """
+        print(f"event: {self.get_table_selection()}")
+        return self.get_table_selection()
+
     
     def adjust_cell_sizes(self, sheet):
         """
@@ -316,6 +317,14 @@ class TableView(tk.Frame):
         self.controller = TableController(parent, self.sheet)
 
         self.toolbar = GUIToolbar(parent, self.controller, self.sheet, output)
+
+    def view_update_table(self, headers=None, data=None):
+        if headers:
+            self.sheet.headers(headers)
+        if data:
+            self.sheet.set_sheet_data(data)
+
+        self.controller.adjust_cell_sizes(self.sheet)  # Adjust cell sizes to fit content
 
     def update_table_theme(self, to_theme, table):
         table.change_theme(to_theme)
