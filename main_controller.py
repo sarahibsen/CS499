@@ -184,9 +184,6 @@ class Controller:
                     else:
                         result = func(stat_instance, option="two-sided")
 
-
-
-
                 else:
                     # For all other statistics that don't need specifications
                     result = func(stat_instance)

@@ -524,7 +524,11 @@ class MeasureSelectionPage(BasePage):
             messagebox.showinfo("Calculated Statistics", result_str)
 
             self.gui_controller.pages["ResultsPage"].display_results(results)
-            self.gui_controller.show_page("ResultsPage")
+            #self.gui_controller.show_page("ResultsPage")
+            notification = tk.Label(self, text="✓ Results sent to Results Page", fg="green", bg="white", font=("Roboto", 12, "bold"))
+            notification.grid(row=7, column=1, pady=(10, 0), sticky="w")
+            # Auto-remove after 2 seconds
+            self.after(2000, notification.destroy)
 
             dashboard_page = self.gui_controller.get_page("DashboardPage")
             dashboard_page.update_dropdowns(selected_measures)
