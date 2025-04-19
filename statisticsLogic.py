@@ -117,7 +117,6 @@ class statistic():
             if option in percentiles:
                 return {"Percentiles": np.percentile(cleaned_data, percentiles[option], axis=0)}
 
-        # add the others
 
         raise ValueError(f"Unsupported measure or option: {measure}, {option}")
 

@@ -177,7 +177,8 @@ class Controller:
                         # Just use the first one (since Variance expects one option)
                         result = func(stat_instance, variance_type=options[0])
                     else:
-                        result = func(stat_instance)
+                        result = func(stat_instance, variance_type=(options[0] if options else "Population"))
+
 
                 else:
                     # For all other statistics that don't need specifications
