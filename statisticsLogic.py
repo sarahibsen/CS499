@@ -436,37 +436,85 @@ def leastSquareLine(self):
     return {"Slope": slope, "Y-Intercept": intercept}
 
 @statistic.register("Chi Square")
-def chiSquared(self, expected=None, observed=None):
-    if isinstance(self.data, pd.DataFrame):
-        cols = self.data.columns.tolist()
-        
-        expected_col = expected if expected in cols else cols[0]
-        observed_col = observed if observed in cols else cols[1] if len(cols) > 1 else None
+def chiSquared(self, expected=None, observed=None, rel_tolerance=1e-8):
+    """
+    Perform Chi-Square test with validation for frequency sums
 
-        if observed_col is None:
-            messagebox.showerror("Error", "Chi-square test requires at least two valid columns.")
-            raise ValueError("Chi-square test requires at least two valid columns.")
+    Parameters:
+    - expected: Column name for expected frequencies (optional)
+    - observed: Column name for observed frequencies (optional)
+    - rel_tolerance: Relative tolerance for frequency sum agreement (default 1e-8)
 
-        f_exp = pd.to_numeric(self.data[expected_col], errors='coerce').dropna().astype(int).values
-        f_obs = pd.to_numeric(self.data[observed_col], errors='coerce').dropna().astype(int).values
-    else:
+    Returns:
+    - Dictionary with Chi-Square statistic and p-value
+    """
+    if not isinstance(self.data, pd.DataFrame):
         messagebox.showerror("Error", "Invalid data for Chi-Square.")
         raise ValueError("Invalid data for Chi-Square.")
 
+    cols = self.data.columns.tolist()
+
+    # Column selection
+    expected_col = expected if expected in cols else cols[0]
+    observed_col = observed if observed in cols else cols[1] if len(cols) > 1 else None
+
+    if observed_col is None:
+        messagebox.showerror("Error", "Chi-square test requires exactly two valid columns.")
+        raise ValueError("Chi-square test requires exactly two valid columns.")
+
+    # Convert to numeric and clean data
+    try:
+        f_exp = pd.to_numeric(self.data[expected_col], errors='coerce').dropna().astype(int)
+        f_obs = pd.to_numeric(self.data[observed_col], errors='coerce').dropna().astype(int)
+    except Exception as e:
+        messagebox.showerror("Error", f"Data conversion error: {str(e)}")
+        raise ValueError(f"Data conversion error: {str(e)}")
+
+    # Validation checks
     if len(f_exp) != len(f_obs):
         messagebox.showerror("Error", "Chi-square test requires equal-length data in both columns.")
         raise ValueError("Chi-square test requires equal-length data in both columns")
+
+    if len(f_exp) < 2:
+        messagebox.showerror("Error", "Chi-square test requires at least 2 data points.")
+        raise ValueError("Chi-square test requires at least 2 data points")
 
     if np.any(f_exp < 0) or np.any(f_obs < 0):
         messagebox.showerror("Error", "Chi-square test cannot contain negative values.")
         raise ValueError("Chi-square test cannot contain negative values")
 
+    # Percent difference check
+    sum_exp = np.sum(f_exp)
+    sum_obs = np.sum(f_obs)
+
+    if sum_exp == 0 or sum_obs == 0:
+        messagebox.showerror("Error", "Frequency sums cannot be zero.")
+        raise ValueError("Frequency sums cannot be zero")
+
+    percent_diff = abs(sum_obs - sum_exp) / max(sum_exp, sum_obs)
+
+    if percent_diff > rel_tolerance:
+        error_msg = (
+            f"Frequency sums differ by {percent_diff:.2%} (allowed: {rel_tolerance:.2%})\n"
+            f"Expected sum: {sum_exp}\n"
+            f"Observed sum: {sum_obs}\n"
+            "Please normalize your data so sums match."
+        )
+        messagebox.showerror("Error", error_msg)
+        raise ValueError("Please normalize your data so sums match.")
+
+    # Perform Chi-Square test
     try:
         chi_sq_stat, p_value = stats.chisquare(f_obs, f_exp)
-        return {"Chi-Squared Statistic": f"{chi_sq_stat:.4f}", "P-value": f"{p_value:.4e}"}
+        return {
+            "Chi-Squared Statistic": f"{chi_sq_stat:.4f}",
+            "P-value": f"{p_value:.4e}",
+            "Expected Sum": sum_exp,
+            "Observed Sum": sum_obs
+        }
     except Exception as e:
         messagebox.showerror("Error", f"Chi-square calculation error: {e}")
-        raise ValueError("Chi-square calculation error: {e}")
+        raise ValueError(f"Chi-square calculation error: {e}")
 
 
 @statistic.register("Correlation Coefficient")
