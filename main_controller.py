@@ -262,11 +262,11 @@ class Controller:
         Returns No grouping if the measure cannot be graphed with grouping, Must group if the measure can  only
         be graphed with grouping, and Both if measure cna be grouped or not grouped
         """
-        if measure in ["Standard Deviation", "Variance", "Coefficient Of Variation", "Percentiles",
-                       "Binomial Distribution"]:
+        if measure in ["Standard Deviation", "Variance", "Percentiles","Binomial Distribution",
+                       "Probability Distribution"]:
             return "No grouping"
-        elif measure in ["Chi Square", "Least Square Line", "Chi Square", "Correlation", "Sign Test",
-                         "Rank Sum", "Spearman Correlation"]:
+        elif measure in ["Chi Square", "Least Square Line", "Chi Square", "Correlation", "Sign Test", "Rank Sum",
+                         "Spearman Correlation", "Coefficient of Variation", "Correlation Coefficient"]:
             return "Must group"
         return "Both"
 
@@ -298,35 +298,53 @@ class Controller:
         compatible = []
 
         for measure, rules in statistic.measure_requirements.items():
-            # Check if any present type is valid for this measure
-            if not any(t in rules["types"] for t in present_types):
+            # Skip if no columns match required types
+            required_types = set(rules["types"])
+            if not required_types.intersection(present_types):
                 continue
 
+            # CHI-SQUARE SPECIFIC CHECKS
+            if measure == "Chi Square":
+                # Must have exactly 2 numeric columns
+                if num_columns != 2:
+                    continue
+
+                # Both columns must be convertible to integers
+                try:
+                    col1 = pd.to_numeric(df.iloc[:, 0], errors='coerce').dropna().astype(int)
+                    col2 = pd.to_numeric(df.iloc[:, 1], errors='coerce').dropna().astype(int)
+                except:
+                    continue
+
+                # Check for negative values
+                if (col1 < 0).any() or (col2 < 0).any():
+                    continue
+
+                # Check equal length after dropping NA
+                if len(col1) != len(col2):
+                    continue
+
+                # NEW: Check frequency sums are within 1% tolerance
+                sum1 = np.sum(col1)
+                sum2 = np.sum(col2)
+
+                if sum1 == 0 or sum2 == 0:
+                    continue  # Skip if either sum is zero
+
+                percent_diff = abs(sum1 - sum2) / max(sum1, sum2)
+                if percent_diff > 0.01:  # 1% tolerance
+                    continue
+
+            # GENERAL CHECKS FOR ALL MEASURES
             # Check column count rules
             if "exact_columns" in rules and num_columns != rules["exact_columns"]:
                 continue
             if "min_columns" in rules and num_columns < rules["min_columns"]:
                 continue
-            if "allowed_columns" in rules and num_columns not in rules["allowed_columns"]:
-                continue
 
             # Check minimum row count
             if "min_length" in rules and num_rows < rules["min_length"]:
                 continue
-
-            # Additional checks
-            if rules.get("requires_equal_length", False):
-                if not df.apply(lambda col: col.dropna().shape[0], axis=0).nunique() == 1:
-                    continue
-
-            if rules.get("no_negatives", False):
-                if (numeric_df < 0).any().any():
-                    continue
-
-            if rules.get("requires_std_dev", False):
-                std_dev = numeric_df.std().mean()
-                if std_dev <= 0 or np.isnan(std_dev):
-                    continue
 
             compatible.append(measure)
 
