@@ -732,41 +732,43 @@ class DashboardPage(BasePage):
 
     def on_measure_change(self, event=None):
         selected_measure = self.measure_dropdown.get()
-        print(f"Selected Measure: {selected_measure}")
         graph_types = Controller.plots_for_measure(selected_measure)
 
-        self.graph_dropdown.set("")
         self.graph_dropdown["values"] = graph_types
         if graph_types:
             self.graph_dropdown.set(graph_types[0])
 
-        # Update column dropdown based on measure's grouping requirement
-        table_controller = self.get_table_controller()
-        if not table_controller:
-            return
-
-        data_frame = self.main_control.load_entire_table(table_controller)
-        selected_table = self.main_control.load_data_from_table(table_controller)
-
+        # Get grouping eligibility
         grouping_eligible = Controller.measure_supports_grouping(selected_measure)
 
-        # Show/hide column dropdown based on measure's eligibility
-        if grouping_eligible == "Both" or grouping_eligible == "Must group":
-            self.show_groupby_dropdown()
-        else:
-            self.hide_groupby_dropdown()
-            return
-
-        all_columns = list(data_frame.columns)
-        selected_columns = list(selected_table.columns)
-        available_columns = [col for col in all_columns if col not in selected_columns]
+        # Clear previous grouping selection
+        self.column_dropdown.set("")
 
         if grouping_eligible == "Must group":
-            self.column_dropdown["values"] = available_columns
-            self.column_dropdown.current(0)  # force user to pick a grouping column
-        else:
-            self.column_dropdown["values"] = ["No Grouping"] + available_columns
-            self.column_dropdown.set("No Grouping")  # default to no grouping
+            self.show_groupby_dropdown()
+            table_controller = self.get_table_controller()
+            if table_controller:
+                data_frame = self.main_control.load_entire_table(table_controller)
+                selected_table = self.main_control.load_data_from_table(table_controller)
+                available_columns = [col for col in data_frame.columns
+                                     if col not in selected_table.columns]
+                self.column_dropdown["values"] = available_columns
+                if available_columns:
+                    self.column_dropdown.current(0)
+
+        elif grouping_eligible == "Both":
+            self.show_groupby_dropdown()
+            table_controller = self.get_table_controller()
+            if table_controller:
+                data_frame = self.main_control.load_entire_table(table_controller)
+                selected_table = self.main_control.load_data_from_table(table_controller)
+                available_columns = [col for col in data_frame.columns
+                                     if col not in selected_table.columns]
+                self.column_dropdown["values"] = ["No Grouping"] + available_columns
+                self.column_dropdown.set("No Grouping")
+
+        else:  # "No grouping"
+            self.hide_groupby_dropdown()
 
     def get_table_controller(self):
         """Retrieve the table controller from MeasureSelectionPage."""
@@ -895,547 +897,573 @@ class DashboardPage(BasePage):
             print(f"Error updating plot colors: {e}")
 
     def get_grouped_data(self):
-        """Retrieve the selected measure and column, apply groupby() to the DataFrame, and create a plot."""
+            # Get selected values from dropdowns
+            selected_measure = self.measure_dropdown.get()
+            groupby_column = self.column_dropdown.get()
+            graph_type = self.graph_dropdown.get()
 
+            # Ensure the table controller is available
+            table_controller = self.get_table_controller()
+            if not table_controller:
+                print("Error: Table controller not found.")
+                return
+
+            # Get all columns and selected columns
+            data_frame = self.main_control.load_entire_table(table_controller)
+            selected_columns = data_frame.select_dtypes(include='number').columns.tolist()
+
+            # Validate selections
+            if not selected_measure or selected_measure == "Select value":
+                messagebox.showerror("Error", "Please select a measure.")
+                return
+
+            if not graph_type:
+                messagebox.showerror("Error", "Please select a graph type.")
+                return
+
+            # Check grouping requirements
+            grouping_eligible = Controller.measure_supports_grouping(selected_measure)
+
+            graph_data = None
+
+            # For measures that don't support grouping at all
+            if grouping_eligible == "No grouping":
+                graph_data = self.process_non_grouped_data(selected_measure)
+
+            # For measures that require grouping
+            elif grouping_eligible == "Must group":
+                if not self.column_dropdown.winfo_ismapped() or not self.column_dropdown.get():
+                    messagebox.showerror("Error",
+                                         f"'{selected_measure}' requires a grouping column.")
+                    return
+                graph_data = self.process_grouped_data(selected_measure, groupby_column)
+
+            # For measures that support both
+            else:  # "Both"
+                if self.column_dropdown.winfo_ismapped() and self.column_dropdown.get() and self.column_dropdown.get() != "No Grouping":
+                    graph_data = self.process_grouped_data(selected_measure, groupby_column)
+                else:
+                    graph_data = self.process_non_grouped_data(selected_measure)
+
+            # Fully clear the figure and remove all subplots
+            self.figure.clf()
+            self.ax = self.figure.add_subplot(111)
+            plt.style.use('seaborn-v0_8-deep')
+
+            # Generate the selected graph
+            if graph_type == "Horizontal Bar Chart":
+                graph_data.plot(kind="barh", ax=self.ax).legend(loc='upper left', bbox_to_anchor=(1, 1))
+                self.ax.set_ylabel(f'{selected_measure} Value')
+
+            elif graph_type == "Vertical Bar Chart":
+                graph_data.plot(kind="bar", ax=self.ax).legend(loc='upper left', bbox_to_anchor=(1, 1))
+                self.ax.set_ylabel(f'{selected_measure} Value')
+
+            elif graph_type == "Pie Chart":
+                self.figure.clf()  # Make sure to fully clear everything again here too
+                num_cols = len(selected_columns)
+                for i, col in enumerate(selected_columns, 1):
+                    ax = self.figure.add_subplot(1, num_cols, i)
+                    graph_data[col].plot(kind="pie", ax=ax, autopct='%1.1f%%', title=col)
+                    ax.set_ylabel('')  # Remove Y-axis label
+                self.canvas_widget.draw()
+
+            elif graph_type == "Normal Distribution Curve":
+                if selected_measure == "Binomial Distribution":
+                    n_trails, prob = Controller.get_last_binomial_params()
+                    if n_trails is None or prob is None:
+                        messagebox.showerror("Error",
+                                             "No binomial parameters found. Please run Binomial Distribution measure first.")
+                        return
+                    mean = n_trails * prob
+                    std_dev = np.sqrt(n_trails * prob * (1 - prob))
+                    if n_trails * prob < 5 or n_trails * (1 - prob) < 5:
+                        messagebox.showwarning(
+                            "Warning",
+                            "Normal approximation may not be accurate for small n or extreme probabilities. "
+                            "Please consider using Vertical Bar Chart instead."
+                        )
+
+                    # Generate values for the x-axis
+                    x_vals = np.linspace(0, n_trails, 1000)
+                    normal_approx = stats.norm.pdf(x_vals, mean, std_dev)
+
+                    # Plot the normal approximation curve
+                    self.ax.plot(x_vals, normal_approx, color='green',
+                                 label=f"Normal Approximation (μ={mean:.2f}, σ={std_dev:.2f})")
+                    self.ax.set_xlabel("Number of Successes (k)")
+                    self.ax.set_ylabel("Probability Density")
+                    self.ax.legend()
+
+                elif selected_measure == "Percentiles":
+                    # Plot the percentiles for the selected measure
+                    self.plot_normal_distribution_with_percentiles(graph_data, data_frame, selected_columns)
+
+                elif selected_measure == "Standard Deviation":
+                    try:
+                        # Clear previous plot
+                        self.figure.clf()
+                        self.ax = self.figure.add_subplot(111)
+
+                        # Get the original data
+                        table_controller = self.get_table_controller()
+
+                        if not table_controller:
+                            messagebox.showerror("Error", "Could not access table data")
+                            return
+
+                        data_frame = self.main_control.load_data_from_table(table_controller)
+
+                        if data_frame.empty:
+                            messagebox.showerror("Error", "No data available for plotting")
+                            return
+
+                        # Select only numeric columns
+                        numeric_cols = data_frame.select_dtypes(include=['number']).columns
+
+                        if len(numeric_cols) == 0:
+                            messagebox.showerror("Error", "No numeric columns found for calculation")
+                            return
+
+                        # Calculate standard deviation for each column
+                        std_values = {}
+                        for col in numeric_cols:
+                            col_data = data_frame[col].dropna()
+                            if len(col_data) > 1:  # Need at least 2 points for std dev
+                                std = col_data.std()
+                                std_values[col] = std
+
+                        if not std_values:
+                            messagebox.showerror("Error", "Could not calculate standard deviation")
+                            return
+
+                        # Plot normal distribution of the actual data with std dev in legend
+                        for col, std in std_values.items():
+                            col_data = data_frame[col].dropna()
+
+                            # Plot KDE of actual data
+                            sns.kdeplot(col_data, ax=self.ax, fill=True,
+                                        label=f"{col} (σ={std:.2f})")
+
+                            # Calculate reference values
+                            mean_val = col_data.mean()
+
+                            # Add vertical lines with labels
+                            mean_line = self.ax.axvline(mean_val, color='r', linestyle='--', alpha=0.7,
+                                                        label=f'{col} Mean ({mean_val:.2f})')
+                            upper_line = self.ax.axvline(mean_val + std, color='g', linestyle=':', alpha=0.7,
+                                                         label=f'{col} Mean+σ ({mean_val + std:.2f})')
+                            lower_line = self.ax.axvline(mean_val - std, color='g', linestyle=':', alpha=0.7,
+                                                         label=f'{col} Mean-σ ({mean_val - std:.2f})')
+
+                            # Add text labels near the lines
+                            y_max = self.ax.get_ylim()[1]
+                            offset = y_max * 0.05  # Small offset from lines
+                            self.ax.text(mean_val, y_max - offset, 'Mean',
+
+                                         color='red', ha='center', va='bottom',
+                                         bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+
+                            self.ax.text(mean_val + std, y_max - offset * 2, '+σ',
+                                         color='green', ha='center', va='bottom',
+                                         bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+
+                            self.ax.text(mean_val - std, y_max - offset * 2, '-σ',
+                                         color='green', ha='center', va='bottom',
+                                         bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+
+                            # Shade the ±1σ region
+                            self.ax.axvspan(mean_val - std, mean_val + std,
+                                            color='green', alpha=0.1,
+                                            label=f'{col} ±1σ range')
+
+                        # Add plot decorations
+                        self.ax.set_title("Data Distribution with Standard Deviation")
+                        self.ax.set_xlabel("Values")
+                        self.ax.set_ylabel("Density")
+
+                        # Create legend with all elements
+                        handles, labels = self.ax.get_legend_handles_labels()
+
+                        # Remove duplicate labels while preserving order
+                        unique = [(h, l) for i, (h, l) in enumerate(zip(handles, labels)) if l not in labels[:i]]
+                        self.ax.legend(*zip(*unique), loc='upper right')
+                        self.canvas_widget.draw()
+
+                    except Exception as e:
+                        messagebox.showerror("Error", f"Failed to plot Standard Deviation: {str(e)}")
+                        print(f"Error plotting Std Dev: {e}")
+
+                elif selected_measure == "Variance":
+                    try:
+                        # Clear previous plot
+                        self.figure.clf()
+                        self.ax = self.figure.add_subplot(111)
+
+                        # Get the original data, not just the variance values
+                        table_controller = self.get_table_controller()
+
+                        if not table_controller:
+                            messagebox.showerror("Error", "Could not access table data")
+                            return
+
+                        data_frame = self.main_control.load_data_from_table(table_controller)
+
+                        if data_frame.empty:
+                            messagebox.showerror("Error", "No data available for plotting")
+                            return
+
+                        # Select only numeric columns
+                        numeric_cols = data_frame.select_dtypes(include=['number']).columns
+                        if len(numeric_cols) == 0:
+                            messagebox.showerror("Error", "No numeric columns found for variance calculation")
+                            return
+
+                        # Calculate and display variance for each column
+                        variance_values = data_frame[numeric_cols].var()
+
+                        # Plot normal distribution of the actual data
+                        for col in numeric_cols:
+                            col_data = data_frame[col].dropna()
+                            if len(col_data) > 1:  # Need at least 2 points for variance
+                                # Plot KDE of actual data
+                                sns.kdeplot(col_data, ax=self.ax, fill=True,
+                                            label=f"{col} (σ²={variance_values[col]:.2f})")
+                                # Add vertical line at mean
+                                mean_val = col_data.mean()
+                                self.ax.axvline(mean_val, color='r', linestyle='--', alpha=0.5)
+
+                        if len(numeric_cols) > 0:
+                            self.ax.set_title("Data Distribution with Variance")
+                            self.ax.set_xlabel("Values")
+                            self.ax.set_ylabel("Density")
+                            self.ax.legend()
+                            self.canvas_widget.draw()
+                        else:
+                            messagebox.showwarning("Warning", "No plottable data found")
+
+
+                    except Exception as e:
+                        messagebox.showerror("Error", f"Failed to plot variance: {str(e)}")
+                        print(f"Error plotting variance: {e}")
+
+                elif selected_measure == "Coefficient Of Variation":
+                    try:
+                        # Clear previous plot
+                        self.figure.clf()
+                        self.ax = self.figure.add_subplot(111)
+
+                        # Get the original data
+                        table_controller = self.get_table_controller()
+                        if not table_controller:
+                            messagebox.showerror("Error", "Could not access table data")
+                            return
+
+                        data_frame = self.main_control.load_data_from_table(table_controller)
+                        if data_frame.empty:
+                            messagebox.showerror("Error", "No data available for plotting")
+                            return
+
+                        # Select only numeric columns
+                        numeric_cols = data_frame.select_dtypes(include=['number']).columns
+
+                        if len(numeric_cols) == 0:
+                            messagebox.showerror("Error", "No numeric columns found for calculation")
+                            return
+
+                        # Calculate coefficient of variation for each column
+                        cv_values = {}
+                        for col in numeric_cols:
+                            col_data = data_frame[col].dropna()
+                            if len(col_data) > 1 and col_data.mean() != 0:  # Need at least 2 points and non-zero mean
+                                cv = col_data.std() / col_data.mean()
+                                cv_values[col] = cv
+
+                        if not cv_values:
+                            messagebox.showerror("Error", "Could not calculate CV (possibly zero mean values)")
+                            return
+
+                        # Plot normal distribution of the actual data with CV in legend
+                        for col, cv in cv_values.items():
+                            col_data = data_frame[col].dropna()
+                            # Plot KDE of actual data
+                            sns.kdeplot(col_data, ax=self.ax, fill=True,
+                                        label=f"{col} (CV={cv:.2f})")
+
+                            # Calculate reference values
+                            mean_val = col_data.mean()
+                            std_val = col_data.std()
+
+                            # Add vertical lines with labels
+                            mean_line = self.ax.axvline(mean_val, color='r', linestyle='--', alpha=0.7,
+                                                        label=f'{col} Mean ({mean_val:.2f})')
+
+                            upper_line = self.ax.axvline(mean_val + std_val, color='g', linestyle=':', alpha=0.7,
+                                                         label=f'{col} Mean+1σ ({mean_val + std_val:.2f})')
+
+                            lower_line = self.ax.axvline(mean_val - std_val, color='g', linestyle=':', alpha=0.7,
+                                                         label=f'{col} Mean-1σ ({mean_val - std_val:.2f})')
+
+                            # Add text labels near the lines
+                            y_max = self.ax.get_ylim()[1]
+                            offset = y_max * 0.05  # Small offset from lines
+
+                            self.ax.text(mean_val, y_max - offset, 'Mean',
+                                         color='red', ha='center', va='bottom',
+                                         bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+
+                            self.ax.text(mean_val + std_val, y_max - offset * 2, '+1σ',
+                                         color='green', ha='center', va='bottom',
+                                         bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+
+                            self.ax.text(mean_val - std_val, y_max - offset * 2, '-1σ',
+                                         color='green', ha='center', va='bottom',
+                                         bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+
+                        # Add plot decorations
+                        self.ax.set_title("Data Distribution with Coefficient of Variation")
+                        self.ax.set_xlabel("Values")
+                        self.ax.set_ylabel("Density")
+
+                        # Create legend with all elements
+                        handles, labels = self.ax.get_legend_handles_labels()
+                        # Remove duplicate labels while preserving order
+                        unique = [(h, l) for i, (h, l) in enumerate(zip(handles, labels)) if l not in labels[:i]]
+                        self.ax.legend(*zip(*unique), loc='upper right')
+
+                        self.canvas_widget.draw()
+
+                    except Exception as e:
+                        messagebox.showerror("Error", f"Failed to plot Coefficient of Variation: {str(e)}")
+                        print(f"Error plotting CV: {e}")
+
+                elif isinstance(graph_data, pd.Series):
+                    sns.kdeplot(graph_data, ax=self.ax, fill=True, label=selected_measure)
+
+                else:
+                    for col in selected_columns:
+                        if col in data_frame.columns:
+                            col_data = pd.to_numeric(data_frame[col], errors='coerce').dropna()
+                            if not col_data.empty:
+                                sns.kdeplot(col_data, ax=self.ax, fill=True, label=col)
+                                self.ax.legend([f"{col}"])
+
+            elif graph_type == "Scatter Plot":  # X-Y Graph
+                if selected_measure == "Correlation":
+                    x = graph_data[selected_columns[0]]
+                    y = graph_data[selected_columns[1]]
+
+                    self.ax.scatter(x, y, label=groupby_column)
+                    self.ax.set_xlabel(selected_columns[0])
+                    self.ax.set_ylabel(selected_columns[1])
+
+                    coefficients = np.polyfit(x, y, 1)
+                    trend = np.poly1d(coefficients)
+                    self.ax.plot(x, trend(x), 'r--', label='Trend Line')
+                if selected_measure == "Spearman Correlation":
+                    x = graph_data[selected_columns[0]]
+                    y = graph_data[selected_columns[1]]
+
+                    self.ax.scatter(x, y, label=groupby_column)
+                    self.ax.set_xlabel(selected_columns[0])
+                    self.ax.set_ylabel(selected_columns[1])
+
+                    coefficients = np.polyfit(x, y, 1)
+                    trend = np.poly1d(coefficients)
+                    self.ax.plot(x, trend(x), 'r--', label='Trend Line')
+                if selected_measure == "Least Square Line":
+                    x = graph_data[selected_columns[0]]  # should be graphed on the horizontal
+                    y = graph_data[selected_columns[1]]  # vertical
+
+                    coefficients = np.polyfit(x, y, 1)
+                    slope = coefficients[0]
+                    intercept = coefficients[1]
+
+                    # Create the line of best fit
+                    line = slope * x + intercept
+                    # Plot the original data points
+                    self.ax.scatter(x, y, label='Data Points')
+                    # Plot the least squares line
+                    self.ax.plot(x, line, color='red', label='Least Square Line')
+
+                else:
+                    for col in selected_columns:
+                        self.ax.scatter(graph_data.index, graph_data[col], label=col)
+
+                self.ax.legend()
+
+            # Set labels and title
+            column_names = ", ".join(selected_columns)
+            if groupby_column == "No Grouping":
+                self.ax.set_title(f"{selected_measure} of {column_names}")
+            else:
+                self.ax.set_title(f"{selected_measure} of {column_names} by {groupby_column}")
+
+            if graph_type != "Pie Chart":
+                self.ax.tick_params(axis='x', rotation=45)
+
+            # Redraw the canvas
+            self.canvas_widget.draw()
+
+    def process_non_grouped_data(self, selected_measure):
         # Ensure the table controller is available
         table_controller = self.get_table_controller()
         if not table_controller:
             print("Error: Table controller not found.")
             return
 
-        # Get selected values from dropdowns
-        selected_measure = self.measure_dropdown.get()
-        groupby_column = self.column_dropdown.get()
-        graph_type = self.graph_dropdown.get()
-
-        # Validate selections
-        if selected_measure == "Select value":
-            messagebox.showerror("Error", "Please select a measure.")
+        selected_table = self.main_control.load_data_from_table(table_controller)
+        if selected_table.empty:
+            messagebox.showerror("Error", "No data selected for visualization.")
             return None
 
-        if not graph_type:
-            messagebox.showerror("Error", "Please select a graph.")
-            return None
+        raw_data = selected_table.select_dtypes(include='number')
+        selected_columns = raw_data.columns.tolist()
 
-        # Get all columns and selected columns
+        if selected_measure == "Mean":
+            graph_data = pd.DataFrame(raw_data.mean()).T
+        elif selected_measure == "Median":
+            graph_data = pd.DataFrame(raw_data.median()).T
+        elif selected_measure == "Mode":
+            graph_data = pd.DataFrame(raw_data.mode().iloc[0]).T
+        elif selected_measure == "Standard Deviation":
+            graph_data = pd.DataFrame(raw_data.std()).T
+        elif selected_measure == "Variance":
+            graph_data = pd.DataFrame(raw_data.var()).T
+        elif selected_measure == "Coefficient Of Variation":
+            graph_data = pd.DataFrame((raw_data.std() / raw_data.mean())).T
+        elif selected_measure == "Percentiles":
+            label, values = Controller.get_last_selected_percentiles()
+            values = [v / 100 for v in values]
+            percentiles_df = raw_data.quantile(values)
+            percentiles_df.index = [f"{int(v * 100)}th" for v in values]
+            graph_data = percentiles_df
+        elif selected_measure == "Probability Distribution":
+            freq = raw_data.apply(lambda col: col.value_counts(normalize=True))
+            graph_data = freq.fillna(0).T
+        elif selected_measure == "Binomial Distribution":
+            n_trials, prob = Controller.get_last_binomial_params()
+            if n_trials is None or prob is None:
+                messagebox.showerror("Error",
+                                     "No binomial parameters found. Please run Binomial Distribution measure first.")
+                return None
+            try:
+                k = np.arange(0, n_trials + 1)
+                pmf_values = stats.binom.pmf(k, n_trials, prob)
+                graph_data = pd.Series(pmf_values, index=k, name="Probability")
+                graph_data = graph_data.to_frame()  # Convert to DataFrame for consistent downstream handling
+                graph_data.index.name = "Number of Successes"
+            except Exception as e:
+                messagebox.showerror("Error", f"Error calculating Binomial Distribution: {e}")
+                return None
+
+    def process_grouped_data(self, selected_measure, groupby_column):
+        # Ensure the table controller is available
+        table_controller = self.get_table_controller()
+        if not table_controller:
+            print("Error: Table controller not found.")
+            return
+
         data_frame = self.main_control.load_entire_table(table_controller)
-        selected_columns = data_frame.select_dtypes(include='number').columns.tolist()
 
-        # Variable to hold dataframe to graph
-        graph_data = None
+        if data_frame.empty:
+            messagebox.showerror("Error", "Table is empty.")
+            return None
 
-        # Check if there is a group by column
-        if not groupby_column or groupby_column == 'No Grouping':
-            selected_table = self.main_control.load_data_from_table(table_controller)
-            if selected_table.empty:
-                messagebox.showerror("Error", "No data selected for visualization.")
-                return None
+        selected_table = self.main_control.load_data_from_table(table_controller)
+        selected_rows = table_controller.get_table_selection()
+        if not selected_rows.empty:
+            data_frame = data_frame.loc[selected_rows.index]
 
-            raw_data = selected_table.select_dtypes(include='number')
-            selected_columns = raw_data.columns.tolist()
+        if selected_table.empty:
+            print("Error: Data frame is empty, cannot populate dropdown.")
+            return
 
-            if selected_measure == "Mean":
-                graph_data = pd.DataFrame(raw_data.mean()).T
-            elif selected_measure == "Median":
-                graph_data = pd.DataFrame(raw_data.median()).T
-            elif selected_measure == "Mode":
-                graph_data = pd.DataFrame(raw_data.mode().iloc[0]).T
-            elif selected_measure == "Standard Deviation":
-                graph_data = pd.DataFrame(raw_data.std()).T
-            elif selected_measure == "Variance":
-                graph_data = pd.DataFrame(raw_data.var()).T
-            elif selected_measure == "Coefficient Of Variation":
-                graph_data = pd.DataFrame((raw_data.std() / raw_data.mean())).T
-            elif selected_measure == "Percentiles":
-                label, values = Controller.get_last_selected_percentiles()
-                values = [v / 100 for v in values]
-                percentiles_df = raw_data.quantile(values)
-                percentiles_df.index = [f"{int(v * 100)}th" for v in values]
-                graph_data = percentiles_df
-            elif selected_measure == "Probability Distribution":
-                freq = raw_data.apply(lambda col: col.value_counts(normalize=True))
-                graph_data = freq.fillna(0).T
-            elif selected_measure == "Binomial Distribution":
-                n_trials, prob = Controller.get_last_binomial_params()
-                if n_trials is None or prob is None:
-                    messagebox.showerror("Error",
-                                         "No binomial parameters found. Please run Binomial Distribution measure first.")
-                    return None
-                try:
-                    k = np.arange(0, n_trials + 1)
-                    pmf_values = stats.binom.pmf(k, n_trials, prob)
-                    graph_data = pd.Series(pmf_values, index=k, name="Probability")
-                    graph_data = graph_data.to_frame()  # Convert to DataFrame for consistent downstream handling
-                    graph_data.index.name = "Number of Successes"
-                except Exception as e:
-                    messagebox.showerror("Error", f"Error calculating Binomial Distribution: {e}")
-                    return None
+        selected_columns = list(selected_table.columns)
+
+        # Filter the dataframe to only include rows with indices from selected_rows
+        if not selected_rows.empty:
+            selected_indices = selected_rows.index
+            data_frame = data_frame.loc[selected_indices]
+
+        # Group the data
+        grouped = data_frame.groupby([groupby_column])[selected_columns]
+
+        # Perform statistical measure on grouped data and create dataframe
+        if selected_measure == "Mean":
+            grouped_data = grouped.mean()
+        elif selected_measure == "Median":
+            grouped_data = grouped.median()
+        elif selected_measure == "Mode":
+            grouped_data = grouped.agg(lambda x: x.mode().iloc[0] if not x.mode().empty else None)
+        elif selected_measure == "Standard Deviation":
+            messagebox.showerror("Error", f"{selected_measure} is not supported with grouping.\n"
+                                          f"Please select No Grouping for Group By Column.")
+            return None
+        elif selected_measure == "Variance":
+            messagebox.showerror("Error", f"{selected_measure} is not supported with grouping.\n"
+                                          f"Please select No Grouping for Group By Column.")
+            return None
+        elif selected_measure == "Coefficient Of Variation":
+            messagebox.showerror("Error", f"{selected_measure} is not supported with grouping.\n"
+                                          f"Please select No Grouping for Group By Column.")
+            return None
+        elif selected_measure == "Percentiles":
+            messagebox.showerror("Error", f"{selected_measure} is not supported with grouping.\n"
+                                          f"Please select No Grouping for Group By Column.")
+            return None
+        elif selected_measure == "Probability Distribution":
+            # calculating the frequency of each group
+            group_counts = grouped.size()  # Get counts for each group
+            total_count = group_counts.sum()  # Total number of rows
+            grouped_data = group_counts / total_count
+        elif selected_measure == "Binomial Distribution":
+            messagebox.showerror("Error", f"{selected_measure} is not supported with grouping.\n"
+                                          f"Please select No Grouping for Group By Column.")
+            return None
+        elif selected_measure == "Least Square Line":
+            # slope, y_int = np.polyfit(x, y, 1)
+            grouped_data = grouped.mean()
+            # x values is on the horizontal and y-vlaues on the vertical. the slope and y int will be used as the regression line
+        elif selected_measure == "Chi Square":
+            grouped_data = grouped.apply(lambda x: x)
+            grouped_data.iloc[:, 0] = pd.to_numeric(grouped_data.iloc[:, 0], errors='coerce').dropna().astype(
+                int).values
+            grouped_data.iloc[:, 1] = pd.to_numeric(grouped_data.iloc[:, 1], errors='coerce').dropna().astype(
+                int).values
+        elif selected_measure == "Correlation":
+            grouped_data = grouped.apply(lambda x: x).reset_index()
+        elif selected_measure == "Sign Test":
+            if len(selected_columns) >= 2:
+                col1, col2 = selected_columns[:2]
+                data_frame[col1] = pd.to_numeric(data_frame[col1], errors='coerce')
+                data_frame[col2] = pd.to_numeric(data_frame[col2], errors='coerce')
+                data_frame['diff'] = data_frame[col1] - data_frame[col2]
+                value_col = 'diff'
+            elif len(selected_columns) == 1:
+                col = selected_columns[0]
+                data_frame[col] = pd.to_numeric(data_frame[col], errors='coerce')
+                value_col = col
             else:
-                messagebox.showerror("Error", f"{selected_measure} is not supported without grouping.\n"
-                                              f"Please select a Group By Column")
-                return None
-
-        else:
-            # Original groupby logic
-            data_frame = self.main_control.load_entire_table(table_controller)
-            grouped_data = None
-            if data_frame.empty:
-                messagebox.showerror("Error", "Table is empty.")
-                return None
-
-            selected_table = self.main_control.load_data_from_table(table_controller)
-            selected_rows = table_controller.get_table_selection()
-            if not selected_rows.empty:
-                data_frame = data_frame.loc[selected_rows.index]
-
-            if selected_table.empty:
-                print("Error: Data frame is empty, cannot populate dropdown.")
+                messagebox.showerror("Error", "Select at least one column for Sign Test.")
                 return
 
-            selected_columns = list(selected_table.columns)
-
-            # Filter the dataframe to only include rows with indices from selected_rows
-            if not selected_rows.empty:
-                selected_indices = selected_rows.index
-                data_frame = data_frame.loc[selected_indices]
-
-            # Group the data
-            grouped = data_frame.groupby([groupby_column])[selected_columns]
-
-            # Perform statistical measure on grouped data and create dataframe
-            if selected_measure == "Mean":
-                grouped_data = grouped.mean()
-            elif selected_measure == "Median":
-                grouped_data = grouped.median()
-            elif selected_measure == "Mode":
-                grouped_data = grouped.agg(lambda x: x.mode().iloc[0] if not x.mode().empty else None)
-            elif selected_measure == "Standard Deviation":
-                messagebox.showerror("Error", f"{selected_measure} is not supported with grouping.\n"
-                                              f"Please select No Grouping for Group By Column.")
-                return None
-            elif selected_measure == "Variance":
-                messagebox.showerror("Error", f"{selected_measure} is not supported with grouping.\n"
-                                              f"Please select No Grouping for Group By Column.")
-                return None
-            elif selected_measure == "Coefficient Of Variation":
-                messagebox.showerror("Error", f"{selected_measure} is not supported with grouping.\n"
-                                              f"Please select No Grouping for Group By Column.")
-                return None
-            elif selected_measure == "Percentiles":
-                messagebox.showerror("Error", f"{selected_measure} is not supported with grouping.\n"
-                                              f"Please select No Grouping for Group By Column.")
-                return None
-            elif selected_measure == "Probability Distribution":
-                # calculating the frequency of each group
-                group_counts = grouped.size()  # Get counts for each group
-                total_count = group_counts.sum()  # Total number of rows
-                grouped_data = group_counts / total_count
-            elif selected_measure == "Binomial Distribution":
-                messagebox.showerror("Error", f"{selected_measure} is not supported with grouping.\n"
-                                              f"Please select No Grouping for Group By Column.")
-                return None
-            elif selected_measure == "Least Square Line":
-                # slope, y_int = np.polyfit(x, y, 1)
-                grouped_data = grouped.mean()
-                # x values is on the horizontal and y-vlaues on the vertical. the slope and y int will be used as the regression line
-            elif selected_measure == "Chi Square":
-                grouped_data = grouped.apply(lambda x: x)
-                grouped_data.iloc[:, 0] = pd.to_numeric(grouped_data.iloc[:, 0], errors='coerce').dropna().astype(
-                    int).values
-                grouped_data.iloc[:, 1] = pd.to_numeric(grouped_data.iloc[:, 1], errors='coerce').dropna().astype(
-                    int).values
-            elif selected_measure == "Correlation":
-                grouped_data = grouped.apply(lambda x: x).reset_index()
-            elif selected_measure == "Sign Test":
-                if len(selected_columns) >= 2:
-                    col1, col2 = selected_columns[:2]
-                    data_frame[col1] = pd.to_numeric(data_frame[col1], errors='coerce')
-                    data_frame[col2] = pd.to_numeric(data_frame[col2], errors='coerce')
-                    data_frame['diff'] = data_frame[col1] - data_frame[col2]
-                    value_col = 'diff'
-                elif len(selected_columns) == 1:
-                    col = selected_columns[0]
-                    data_frame[col] = pd.to_numeric(data_frame[col], errors='coerce')
-                    value_col = col
-                else:
-                    messagebox.showerror("Error", "Select at least one column for Sign Test.")
-                    return
-
-                def sign_counts(series):
-                    pos = (series > 0).sum()
-                    neg = (series < 0).sum()
-                    return pd.Series({'Positive Count': pos, 'Negative Count': neg})
-
-                grouped_data = data_frame.groupby(groupby_column)[value_col].apply(sign_counts).unstack().reset_index()
-            elif selected_measure == "Rank Sum":
-                grouped_data = grouped.mean()
-                ranked_data = grouped_data.rank(numeric_only=True, method='average')
-            elif selected_measure == "Spearman Correlation":
-                grouped_data = grouped.apply(lambda x: x).reset_index()
-            else:
-                messagebox.showerror("Error", "Invalid measure selected.")
-                return None
-
-            graph_data = grouped_data
-
-        # Fully clear the figure and remove all subplots
-        self.figure.clf()
-        self.ax = self.figure.add_subplot(111)
-        plt.style.use('seaborn-v0_8-deep')
-
-        # Generate the selected graph
-        if graph_type == "Horizontal Bar Chart":
-            graph_data.plot(kind="barh", ax=self.ax).legend(loc='upper left', bbox_to_anchor=(1, 1))
-            self.ax.set_ylabel(f'{selected_measure} Value')
-
-        elif graph_type == "Vertical Bar Chart":
-            graph_data.plot(kind="bar", ax=self.ax).legend(loc='upper left', bbox_to_anchor=(1, 1))
-            self.ax.set_ylabel(f'{selected_measure} Value')
-
-        elif graph_type == "Pie Chart":
-            self.figure.clf()  # Make sure to fully clear everything again here too
-            num_cols = len(selected_columns)
-            for i, col in enumerate(selected_columns, 1):
-                ax = self.figure.add_subplot(1, num_cols, i)
-                graph_data[col].plot(kind="pie", ax=ax, autopct='%1.1f%%', title=col)
-                ax.set_ylabel('')  # Remove Y-axis label
-            self.canvas_widget.draw()
-
-        elif graph_type == "Normal Distribution Curve":
-            if selected_measure == "Binomial Distribution":
-                n_trails, prob = Controller.get_last_binomial_params()
-                if n_trails is None or prob is None:
-                    messagebox.showerror("Error",
-                                         "No binomial parameters found. Please run Binomial Distribution measure first.")
-                    return
-                mean = n_trails * prob
-                std_dev = np.sqrt(n_trails * prob * (1 - prob))
-                if n_trails * prob < 5 or n_trails * (1 - prob) < 5:
-                    messagebox.showwarning(
-                        "Warning",
-                        "Normal approximation may not be accurate for small n or extreme probabilities. "
-                        "Please consider using Vertical Bar Chart instead."
-                    )
-
-                # Generate values for the x-axis
-                x_vals = np.linspace(0, n_trails, 1000)
-                normal_approx = stats.norm.pdf(x_vals, mean, std_dev)
-
-                # Plot the normal approximation curve
-                self.ax.plot(x_vals, normal_approx, color='green',
-                             label=f"Normal Approximation (μ={mean:.2f}, σ={std_dev:.2f})")
-                self.ax.set_xlabel("Number of Successes (k)")
-                self.ax.set_ylabel("Probability Density")
-                self.ax.legend()
-
-            elif selected_measure == "Percentiles":
-                # Plot the percentiles for the selected measure
-                self.plot_normal_distribution_with_percentiles(graph_data, data_frame, selected_columns)
-
-            elif selected_measure == "Standard Deviation":
-                try:
-                    # Clear previous plot
-                    self.figure.clf()
-                    self.ax = self.figure.add_subplot(111)
-
-                    # Get the original data
-                    table_controller = self.get_table_controller()
-
-                    if not table_controller:
-                        messagebox.showerror("Error", "Could not access table data")
-                        return
-
-                    data_frame = self.main_control.load_data_from_table(table_controller)
-
-                    if data_frame.empty:
-                        messagebox.showerror("Error", "No data available for plotting")
-                        return
-
-                    # Select only numeric columns
-                    numeric_cols = data_frame.select_dtypes(include=['number']).columns
-
-                    if len(numeric_cols) == 0:
-                        messagebox.showerror("Error", "No numeric columns found for calculation")
-                        return
-
-                    # Calculate standard deviation for each column
-                    std_values = {}
-                    for col in numeric_cols:
-                        col_data = data_frame[col].dropna()
-                        if len(col_data) > 1:  # Need at least 2 points for std dev
-                            std = col_data.std()
-                            std_values[col] = std
-
-                    if not std_values:
-                        messagebox.showerror("Error", "Could not calculate standard deviation")
-                        return
-
-                    # Plot normal distribution of the actual data with std dev in legend
-                    for col, std in std_values.items():
-                        col_data = data_frame[col].dropna()
-
-                        # Plot KDE of actual data
-                        sns.kdeplot(col_data, ax=self.ax, fill=True,
-                                    label=f"{col} (σ={std:.2f})")
-
-                        # Calculate reference values
-                        mean_val = col_data.mean()
-
-                        # Add vertical lines with labels
-                        mean_line = self.ax.axvline(mean_val, color='r', linestyle='--', alpha=0.7,
-                                                    label=f'{col} Mean ({mean_val:.2f})')
-                        upper_line = self.ax.axvline(mean_val + std, color='g', linestyle=':', alpha=0.7,
-                                                     label=f'{col} Mean+σ ({mean_val + std:.2f})')
-                        lower_line = self.ax.axvline(mean_val - std, color='g', linestyle=':', alpha=0.7,
-                                                     label=f'{col} Mean-σ ({mean_val - std:.2f})')
-
-                        # Add text labels near the lines
-                        y_max = self.ax.get_ylim()[1]
-                        offset = y_max * 0.05  # Small offset from lines
-                        self.ax.text(mean_val, y_max - offset, 'Mean',
-
-                                     color='red', ha='center', va='bottom',
-                                     bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
-
-                        self.ax.text(mean_val + std, y_max - offset * 2, '+σ',
-                                     color='green', ha='center', va='bottom',
-                                     bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
-
-                        self.ax.text(mean_val - std, y_max - offset * 2, '-σ',
-                                     color='green', ha='center', va='bottom',
-                                     bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
-
-                        # Shade the ±1σ region
-                        self.ax.axvspan(mean_val - std, mean_val + std,
-                                        color='green', alpha=0.1,
-                                        label=f'{col} ±1σ range')
-
-                    # Add plot decorations
-                    self.ax.set_title("Data Distribution with Standard Deviation")
-                    self.ax.set_xlabel("Values")
-                    self.ax.set_ylabel("Density")
-
-                    # Create legend with all elements
-                    handles, labels = self.ax.get_legend_handles_labels()
-
-                    # Remove duplicate labels while preserving order
-                    unique = [(h, l) for i, (h, l) in enumerate(zip(handles, labels)) if l not in labels[:i]]
-                    self.ax.legend(*zip(*unique), loc='upper right')
-                    self.canvas_widget.draw()
-
-                except Exception as e:
-                    messagebox.showerror("Error", f"Failed to plot Standard Deviation: {str(e)}")
-                    print(f"Error plotting Std Dev: {e}")
-
-            elif selected_measure == "Variance":
-                try:
-                    # Clear previous plot
-                    self.figure.clf()
-                    self.ax = self.figure.add_subplot(111)
-
-                    # Get the original data, not just the variance values
-                    table_controller = self.get_table_controller()
-
-                    if not table_controller:
-                        messagebox.showerror("Error", "Could not access table data")
-                        return
-
-                    data_frame = self.main_control.load_data_from_table(table_controller)
-
-                    if data_frame.empty:
-                        messagebox.showerror("Error", "No data available for plotting")
-                        return
-
-                    # Select only numeric columns
-                    numeric_cols = data_frame.select_dtypes(include=['number']).columns
-                    if len(numeric_cols) == 0:
-                        messagebox.showerror("Error", "No numeric columns found for variance calculation")
-                        return
-
-                    # Calculate and display variance for each column
-                    variance_values = data_frame[numeric_cols].var()
-
-                    # Plot normal distribution of the actual data
-                    for col in numeric_cols:
-                        col_data = data_frame[col].dropna()
-                        if len(col_data) > 1:  # Need at least 2 points for variance
-                            # Plot KDE of actual data
-                            sns.kdeplot(col_data, ax=self.ax, fill=True, label=f"{col} (σ²={variance_values[col]:.2f})")
-                            # Add vertical line at mean
-                            mean_val = col_data.mean()
-                            self.ax.axvline(mean_val, color='r', linestyle='--', alpha=0.5)
-
-                    if len(numeric_cols) > 0:
-                        self.ax.set_title("Data Distribution with Variance")
-                        self.ax.set_xlabel("Values")
-                        self.ax.set_ylabel("Density")
-                        self.ax.legend()
-                        self.canvas_widget.draw()
-                    else:
-                        messagebox.showwarning("Warning", "No plottable data found")
-
-
-                except Exception as e:
-                    messagebox.showerror("Error", f"Failed to plot variance: {str(e)}")
-                    print(f"Error plotting variance: {e}")
-
-            elif selected_measure == "Coefficient Of Variation":
-                try:
-                    # Clear previous plot
-                    self.figure.clf()
-                    self.ax = self.figure.add_subplot(111)
-
-                    # Get the original data
-                    table_controller = self.get_table_controller()
-                    if not table_controller:
-                        messagebox.showerror("Error", "Could not access table data")
-                        return
-
-                    data_frame = self.main_control.load_data_from_table(table_controller)
-                    if data_frame.empty:
-                        messagebox.showerror("Error", "No data available for plotting")
-                        return
-
-                    # Select only numeric columns
-                    numeric_cols = data_frame.select_dtypes(include=['number']).columns
-
-                    if len(numeric_cols) == 0:
-                        messagebox.showerror("Error", "No numeric columns found for calculation")
-                        return
-
-                    # Calculate coefficient of variation for each column
-                    cv_values = {}
-                    for col in numeric_cols:
-                        col_data = data_frame[col].dropna()
-                        if len(col_data) > 1 and col_data.mean() != 0:  # Need at least 2 points and non-zero mean
-                            cv = col_data.std() / col_data.mean()
-                            cv_values[col] = cv
-
-                    if not cv_values:
-                        messagebox.showerror("Error", "Could not calculate CV (possibly zero mean values)")
-                        return
-
-                    # Plot normal distribution of the actual data with CV in legend
-                    for col, cv in cv_values.items():
-                        col_data = data_frame[col].dropna()
-                        # Plot KDE of actual data
-                        sns.kdeplot(col_data, ax=self.ax, fill=True,
-                                    label=f"{col} (CV={cv:.2f})")
-
-                        # Calculate reference values
-                        mean_val = col_data.mean()
-                        std_val = col_data.std()
-
-                        # Add vertical lines with labels
-                        mean_line = self.ax.axvline(mean_val, color='r', linestyle='--', alpha=0.7,
-                                                    label=f'{col} Mean ({mean_val:.2f})')
-
-                        upper_line = self.ax.axvline(mean_val + std_val, color='g', linestyle=':', alpha=0.7,
-                                                     label=f'{col} Mean+1σ ({mean_val + std_val:.2f})')
-
-                        lower_line = self.ax.axvline(mean_val - std_val, color='g', linestyle=':', alpha=0.7,
-                                                     label=f'{col} Mean-1σ ({mean_val - std_val:.2f})')
-
-                        # Add text labels near the lines
-                        y_max = self.ax.get_ylim()[1]
-                        offset = y_max * 0.05  # Small offset from lines
-
-                        self.ax.text(mean_val, y_max - offset, 'Mean',
-                                     color='red', ha='center', va='bottom',
-                                     bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
-
-                        self.ax.text(mean_val + std_val, y_max - offset * 2, '+1σ',
-                                     color='green', ha='center', va='bottom',
-                                     bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
-
-                        self.ax.text(mean_val - std_val, y_max - offset * 2, '-1σ',
-                                     color='green', ha='center', va='bottom',
-                                     bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
-
-                    # Add plot decorations
-                    self.ax.set_title("Data Distribution with Coefficient of Variation")
-                    self.ax.set_xlabel("Values")
-                    self.ax.set_ylabel("Density")
-
-                    # Create legend with all elements
-                    handles, labels = self.ax.get_legend_handles_labels()
-                    # Remove duplicate labels while preserving order
-                    unique = [(h, l) for i, (h, l) in enumerate(zip(handles, labels)) if l not in labels[:i]]
-                    self.ax.legend(*zip(*unique), loc='upper right')
-
-                    self.canvas_widget.draw()
-
-                except Exception as e:
-                    messagebox.showerror("Error", f"Failed to plot Coefficient of Variation: {str(e)}")
-                    print(f"Error plotting CV: {e}")
-
-            elif isinstance(graph_data, pd.Series):
-                sns.kdeplot(graph_data, ax=self.ax, fill=True, label=selected_measure)
-
-            else:
-                for col in selected_columns:
-                    if col in data_frame.columns:
-                        col_data = pd.to_numeric(data_frame[col], errors='coerce').dropna()
-                        if not col_data.empty:
-                            sns.kdeplot(col_data, ax=self.ax, fill=True, label=col)
-                            self.ax.legend([f"{col}"])
-
-        elif graph_type == "Scatter Plot":  # X-Y Graph
-            if selected_measure == "Correlation":
-                x = graph_data[selected_columns[0]]
-                y = graph_data[selected_columns[1]]
-
-                self.ax.scatter(x, y, label=groupby_column)
-                self.ax.set_xlabel(selected_columns[0])
-                self.ax.set_ylabel(selected_columns[1])
-
-                coefficients = np.polyfit(x, y, 1)
-                trend = np.poly1d(coefficients)
-                self.ax.plot(x, trend(x), 'r--', label='Trend Line')
-            if selected_measure == "Spearman Correlation":
-                x = graph_data[selected_columns[0]]
-                y = graph_data[selected_columns[1]]
-
-                self.ax.scatter(x, y, label=groupby_column)
-                self.ax.set_xlabel(selected_columns[0])
-                self.ax.set_ylabel(selected_columns[1])
-
-                coefficients = np.polyfit(x, y, 1)
-                trend = np.poly1d(coefficients)
-                self.ax.plot(x, trend(x), 'r--', label='Trend Line')
-            if selected_measure == "Least Square Line":
-                x = graph_data[selected_columns[0]]  # should be graphed on the horizontal
-                y = graph_data[selected_columns[1]]  # vertical
-
-                coefficients = np.polyfit(x, y, 1)
-                slope = coefficients[0]
-                intercept = coefficients[1]
-
-                # Create the line of best fit
-                line = slope * x + intercept
-                # Plot the original data points
-                self.ax.scatter(x, y, label='Data Points')
-                # Plot the least squares line
-                self.ax.plot(x, line, color='red', label='Least Square Line')
-
-            else:
-                for col in selected_columns:
-                    self.ax.scatter(graph_data.index, graph_data[col], label=col)
-
-            self.ax.legend()
-
-        # Set labels and title
-        column_names = ", ".join(selected_columns)
-        if groupby_column == "No Grouping":
-            self.ax.set_title(f"{selected_measure} of {column_names}")
+            def sign_counts(series):
+                pos = (series > 0).sum()
+                neg = (series < 0).sum()
+                return pd.Series({'Positive Count': pos, 'Negative Count': neg})
+
+            grouped_data = data_frame.groupby(groupby_column)[value_col].apply(sign_counts).unstack().reset_index()
+        elif selected_measure == "Rank Sum":
+            grouped_data = grouped.mean()
+            ranked_data = grouped_data.rank(numeric_only=True, method='average')
+        elif selected_measure == "Spearman Correlation":
+            grouped_data = grouped.apply(lambda x: x).reset_index()
         else:
-            self.ax.set_title(f"{selected_measure} of {column_names} by {groupby_column}")
+            messagebox.showerror("Error", "Invalid measure selected.")
+            return None
 
-        if graph_type != "Pie Chart":
-            self.ax.tick_params(axis='x', rotation=45)
-
-        # Redraw the canvas
-        self.canvas_widget.draw()
+        return grouped_data
 
     def plot_normal_distribution_with_percentiles(self, grouped_data, data_frame, selected_columns):
         """
