@@ -250,7 +250,7 @@ class Controller:
             return ["Vertical Bar Chart", "Horizontal Bar Chart"]
         elif measure == "Mode":
             return ["Vertical Bar Chart", "Horizontal Bar Chart", "Pie Chart"]
-        elif measure in ["Probability Distribution", "Standard Deviation", "Variance", "Coefficient Of Variation"]:
+        elif measure in ["Probability Distribution", "Standard Deviation", "Variance", "Coefficient of Variation"]:
             return ["Normal Distribution Curve"]
         elif measure == "Percentiles":
             return ["Normal Distribution Curve", "Vertical Bar Chart", "Horizontal Bar Chart"]
@@ -267,10 +267,10 @@ class Controller:
         be graphed with grouping, and Both if measure cna be grouped or not grouped
         """
         if measure in ["Standard Deviation", "Variance", "Percentiles","Binomial Distribution",
-                       "Probability Distribution"]:
+                       "Probability Distribution", "Coefficient of Variation"]:
             return "No grouping"
         elif measure in ["Chi Square", "Least Square Line", "Chi Square", "Correlation", "Sign Test", "Rank Sum",
-                         "Spearman Correlation", "Coefficient of Variation", "Correlation Coefficient"]:
+                         "Spearman Correlation", "Correlation Coefficient"]:
             return "Must group"
         return "Both"
 
