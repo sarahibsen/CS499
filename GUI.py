@@ -3,6 +3,7 @@ from tkinter import *
 from tkinter import Canvas, Button, PhotoImage, filedialog, ttk, messagebox, Label, simpledialog
 from tkinter.ttk import Button, Style
 import scipy.stats as stats
+from scipy.stats import spearmanr
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -1285,37 +1286,38 @@ class DashboardPage(BasePage):
                                 self.ax.legend([f"{col}"])
 
             elif graph_type == "Scatter Plot":  # X-Y Graph
-                if selected_measure == "Spearman Correlation":
-                    x = graph_data[selected_columns[0]]
-                    y = graph_data[selected_columns[1]]
+                    if selected_measure == "Spearman Correlation":
+                        x = graph_data[selected_columns[0]]
+                        y = graph_data[selected_columns[1]]
 
-                    self.ax.scatter(x, y, label=groupby_column)
-                    self.ax.set_xlabel(selected_columns[0])
-                    self.ax.set_ylabel(selected_columns[1])
+                        self.ax.scatter(x, y, label=groupby_column)
+                        self.ax.set_xlabel(selected_columns[0])
+                        self.ax.set_ylabel(selected_columns[1])
 
-                    coefficients = np.polyfit(x, y, 1)
-                    trend = np.poly1d(coefficients)
-                    self.ax.plot(x, trend(x), 'r--', label='Trend Line')
-                elif selected_measure == "Least Square Line":
-                    x = graph_data[selected_columns[0]]  # should be graphed on the horizontal
-                    y = graph_data[selected_columns[1]]  # vertical
+                        coefficients = np.polyfit(x, y, 1)
+                        trend = np.poly1d(coefficients)
+                        self.ax.plot(x, trend(x), 'r--', label='Trend Line')
 
-                    coefficients = np.polyfit(x, y, 1)
-                    slope = coefficients[0]
-                    intercept = coefficients[1]
+                    elif selected_measure == "Least Square Line":
+                        x = graph_data[selected_columns[0]]  # should be graphed on the horizontal
+                        y = graph_data[selected_columns[1]]  # vertical
+                        coefficients = np.polyfit(x, y, 1)
+                        slope = coefficients[0]
+                        intercept = coefficients[1]
 
-                    # Create the line of best fit
-                    line = slope * x + intercept
-                    # Plot the original data points
-                    self.ax.scatter(x, y, label='Data Points')
-                    # Plot the least squares line
-                    self.ax.plot(x, line, color='red', label='Least Square Line')
+                        # Create the line of best fit
+                        line = slope * x + intercept
 
-                else:
-                    for col in selected_columns:
-                        self.ax.scatter(graph_data.index, graph_data[col], label=col)
+                        # Plot the original data points
+                        self.ax.scatter(x, y, label='Data Points')
 
-                self.ax.legend()
+                        # Plot the least squares line
+                        self.ax.plot(x, line, color='red', label='Least Square Line')
+
+                    else:
+                        for col in selected_columns:
+                            self.ax.scatter(graph_data.index, graph_data[col], label=col)
+                    self.ax.legend()
 
             # Set labels and title
             column_names = ", ".join(selected_columns)
