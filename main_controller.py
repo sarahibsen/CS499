@@ -127,7 +127,9 @@ class Controller:
 
         print("Cleaned numeric data:", data_frame.head())
 
-        compatible = Controller.get_compatible_measures(data_frame)
+       # compatible = Controller.get_compatible_measures(data_frame)
+        all_measures = list(statistic.registered_measures.keys())
+        compatible = all_measures + selected_measures
         incompatible = [m for m in selected_measures if m not in compatible]
         valid = [m for m in selected_measures if m in compatible]
 
@@ -200,6 +202,19 @@ class Controller:
 
 
         return results, incompatible
+    
+    @staticmethod
+    def get_compatible_measures(data_frame):
+        if data_frame.empty:
+            return []
+
+        numeric_columns = data_frame.select_dtypes(include='number').columns
+        if numeric_columns.empty:
+            return []
+
+        # Allow all registered measures by default 
+        return list(statistic.registered_measures.keys())
+
 
 
     @staticmethod

@@ -130,6 +130,11 @@ class App(tk.Tk):
         viewmenu.add_command(label="Set Theme",
                              command=lambda: set_theme(self))
         menubar.add_cascade(label="View", menu=viewmenu)
+        # Add stat option for users
+        custommenu = Menu(menubar, tearoff=0)
+        custommenu.add_command(label="Add Custom Measure", command=self.add_custom_measure_popup)
+        menubar.add_cascade(label="Add", menu=custommenu)
+
         # ----
         # Create a container to hold pages
         self.container = tk.Frame(self, bg="white")
@@ -192,6 +197,47 @@ class App(tk.Tk):
                 print(
                     f"Warning: Page {page_name} ({type(page).__name__}) has no update_colors method or doesn't exist.")
         print("App finished updating UI colors.")
+
+    def add_custom_measure_popup(self):
+        def on_submit():
+            name = entry_name.get()
+            expr = text_expr.get("1.0", tk.END).strip()
+            if name and expr:
+                self.register_custom_stat(name, expr)
+                messagebox.showinfo("Success", f"Custom measure '{name}' added.")
+                self.get_page("MeasureSelectionPage").populate_treeview()
+                popup.destroy()
+
+        popup = tk.Toplevel(self)
+        popup.title("Add Custom Measure")
+        tk.Label(popup, text="Name:").pack()
+        entry_name = tk.Entry(popup)
+        entry_name.pack()
+
+        tk.Label(popup, text="Expression (use `data`):").pack()
+        text_expr = tk.Text(popup, height=4)
+        text_expr.pack()
+
+        tk.Button(popup, text="Add Measure", command=on_submit).pack()
+
+
+    def register_custom_stat(self, name, expression):
+
+        def custom_func(self):
+            data = self._clean_data()
+            try:
+                result = eval(expression, {"np": np, "pd": pd, "data": data})
+                return {name: result}
+            except Exception as e:
+                messagebox.showerror("Error", f"Error in custom measure:\n{e}")
+                return None
+
+        custom_func.__name__ = name.replace(" ", "_").lower()
+        decorated = statistic.register(name)(custom_func)
+        setattr(statistic, custom_func.__name__, decorated)
+        print("Registered Measures:", statistic.registered_measures.keys())
+
+
 
 
 class BasePage(tk.Frame):
