@@ -246,7 +246,7 @@ class Controller:
 
     @staticmethod
     def plots_for_measure(measure):
-        if measure in ["Mean", "Median", "Chi Square", "Sign Test", "Rank Sum"]:
+        if measure in ["Mean", "Median", "Chi Square", "Sign Test", "Rank Sum", "Correlation Coefficient"]:
             return ["Vertical Bar Chart", "Horizontal Bar Chart"]
         elif measure == "Mode":
             return ["Vertical Bar Chart", "Horizontal Bar Chart", "Pie Chart"]
@@ -254,7 +254,7 @@ class Controller:
             return ["Normal Distribution Curve"]
         elif measure == "Percentiles":
             return ["Normal Distribution Curve", "Vertical Bar Chart", "Horizontal Bar Chart"]
-        elif measure in ["Correlation", "Spearman Correlation", "Least Square Line"]:
+        elif measure in ["Spearman Correlation", "Least Square Line"]:
             return ["Scatter Plot"]
         elif measure == "Binomial Distribution":
             return ["Vertical Bar Chart", "Normal Distribution Curve"]
@@ -267,10 +267,10 @@ class Controller:
         be graphed with grouping, and Both if measure cna be grouped or not grouped
         """
         if measure in ["Standard Deviation", "Variance", "Percentiles","Binomial Distribution",
-                       "Probability Distribution", "Coefficient of Variation"]:
+                       "Probability Distribution", "Coefficient of Variation", "Correlation Coefficient"]:
             return "No grouping"
         elif measure in ["Chi Square", "Least Square Line", "Chi Square", "Correlation", "Sign Test", "Rank Sum",
-                         "Spearman Correlation", "Correlation Coefficient"]:
+                         "Spearman Correlation"]:
             return "Must group"
         return "Both"
 
