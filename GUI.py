@@ -1155,7 +1155,7 @@ class DashboardPage(BasePage):
                         messagebox.showerror("Error", f"Failed to plot variance: {str(e)}")
                         print(f"Error plotting variance: {e}")
 
-                elif selected_measure == "Coefficient Of Variation":
+                elif selected_measure == "Coefficient of Variation":
                     try:
                         # Clear previous plot
                         self.figure.clf()
@@ -1339,7 +1339,7 @@ class DashboardPage(BasePage):
             graph_data = pd.DataFrame(raw_data.std()).T
         elif selected_measure == "Variance":
             graph_data = pd.DataFrame(raw_data.var()).T
-        elif selected_measure == "Coefficient Of Variation":
+        elif selected_measure == "Coefficient of Variation":
             graph_data = pd.DataFrame((raw_data.std() / raw_data.mean())).T
         elif selected_measure == "Percentiles":
             label, values = Controller.get_last_selected_percentiles()
@@ -1416,7 +1416,7 @@ class DashboardPage(BasePage):
             messagebox.showerror("Error", f"{selected_measure} is not supported with grouping.\n"
                                           f"Please select No Grouping for Group By Column.")
             return None
-        elif selected_measure == "Coefficient Of Variation":
+        elif selected_measure == "Coefficient of Variation":
             messagebox.showerror("Error", f"{selected_measure} is not supported with grouping.\n"
                                           f"Please select No Grouping for Group By Column.")
             return None
