@@ -119,7 +119,12 @@ class Controller:
         if data_frame.empty:
             return {}, selected_measures
 
-        data_frame = data_frame.apply(pd.to_numeric, errors='coerce').dropna()
+        # Only drop rows that are fully NaN in numeric columns
+        numeric_df = data_frame.select_dtypes(include='number')
+
+        # Filter rows where at least one numeric column is not null
+        data_frame = data_frame[numeric_df.notna().any(axis=1)]
+
         print("Cleaned numeric data:", data_frame.head())
 
         compatible = Controller.get_compatible_measures(data_frame)
@@ -161,21 +166,33 @@ class Controller:
                     else:
                         # No option selected, so use the default
                         result = func(stat_instance, option=None)
-
+                elif m == "Chi Square":
+                    col_info = extra_params.get(m) if extra_params else {}
+                    expected_col = col_info.get("expected") if isinstance(col_info, dict) else None
+                    observed_col = col_info.get("observed") if isinstance(col_info, dict) else None
+                    result = func(stat_instance, expected=expected_col, observed=observed_col)
 
                 elif m == "Variance":
                     if options and isinstance(options, list):
                         # Just use the first one (since Variance expects one option)
                         result = func(stat_instance, variance_type=options[0])
                     else:
-                        result = func(stat_instance)
+                        result = func(stat_instance, variance_type=(options[0] if options else "Population"))
+                elif m == "Sign Test":
+                    if options and isinstance(options, list):
+                        result = func(stat_instance, option=options)
+                    else:
+                        result = func(stat_instance, option="two-sided")
 
                 else:
                     # For all other statistics that don't need specifications
                     result = func(stat_instance)
 
-                # Save the result
-                results[m] = result if isinstance(result, dict) else {m: result}
+                if result is not None:
+                    results[m] = result if isinstance(result, dict) else {m: result}
+                else:
+                    print(f"{m} was not computed due to an error or invalid data.")
+
 
             except Exception as e:
                 print(f"Error computing {m}: {e}")

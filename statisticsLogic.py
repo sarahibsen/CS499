@@ -37,16 +37,19 @@ class statistic():
     measure_name_map = {
         "Mean": ["double", "int", "float"],
         "Median": ["double", "int", "float"],
-        "Mode": ["any"],
+        "Mode": ["any", "double", "int", "float"],
         "Standard Deviation": ["double", "int", "float"],
         "Variance": ["double", "int", "float"],
         "Coefficient of Variation": ["double", "int", "float"],
         "Percentiles": ["double", "int", "float"],
-        "Coefficient of Variation": ["double", "int", "float"],
+        "Correlation Coefficient": ["double", "int", "float"],
         "Probability Distribution": ["double", "int", "float"],
         "Binomial Distribution": ["int", "float"],
         "Least Square Line": ["double", "int", "float"],
         "Chi Square": ["int"],
+        "Spearman Correlation": ["double", "int", "float"],
+        "Rank Sum": ["double", "int", "float"],
+        "Sign Test": ["double", "int", "float"],
     }
 
 
@@ -55,7 +58,8 @@ class statistic():
         "Variance": ["Population", "Sample"],
         "Percentiles": ["Quartiles (25, 50, 75)", "Median (50)", "Deciles (10, 20, ..., 90)", "90th Percentile", "95th Percentile", "99th Percentile"],
         "Probability Distribution": ["Normal", "PDF", "CDF"],
-        "Binomial Distribution": ["Trials and Probability Input"] 
+        "Binomial Distribution": ["Trials and Probability Input"],
+        "Sign Test": ["two-sided", "less", "greater"],
     }
 
     def __init__(self, data):
@@ -63,19 +67,16 @@ class statistic():
 #TODO: change this so that we check if the data that was selected by the user
 # depending on the data types in the selected data, depends on what statistical functions they can actually use 
 
-    def _clean_data(self):
+    def _clean_data(self, allow_any = False):
         if isinstance(self.data, pd.DataFrame):
-            cleaned_data = self.data.select_dtypes(include=[np.number]).to_numpy()
+            if allow_any:
+                return self.data.dropna()  # Allow all types
+            else:
+                return self.data.select_dtypes(include=[np.number]).dropna().to_numpy()
         elif isinstance(self.data, (list, np.ndarray)):
-            cleaned_data = np.array(self.data)
-        else:
-            return []
+            return np.array(self.data)
+        return np.array([[0]])
 
-        if cleaned_data.ndim == 1:
-            cleaned_data = [x for x in cleaned_data if not pd.isnull(x) and x != 0]
-        elif cleaned_data.ndim == 2:
-            mask = ~(np.isnan(cleaned_data).all(axis=1) | (cleaned_data == 0).all(axis=1))
-            cleaned_data = cleaned_data[mask]
 
         return cleaned_data if len(cleaned_data) > 0 else np.array([[0]])
 
@@ -119,7 +120,6 @@ class statistic():
             if option in percentiles:
                 return {"Percentiles": np.percentile(cleaned_data, percentiles[option], axis=0)}
 
-        # add the others
 
         raise ValueError(f"Unsupported measure or option: {measure}, {option}")
 
@@ -141,11 +141,23 @@ def median(self):
     
 @statistic.register("Mode")
 def mode(self):
-    """
-    Return the mode of the data set
-    """
-    cleaned_data = self._clean_data()
-    return {"Mode": mode(cleaned_data, keepdims=False).mode[0]}
+    cleaned_data = self._clean_data(allow_any=True)
+
+    if isinstance(self.data, pd.DataFrame):
+        result = {}
+        for col in self.data.columns:
+            counts = self.data[col].value_counts(dropna=True)
+            if counts.empty or counts.max() == 1:
+                messagebox.showerror("Data Error", "There is no mode in the selected data.")
+                return None
+            else:
+                modes = counts[counts == counts.max()].index.tolist()
+                result[col] = modes[0] if len(modes) == 1 else modes  # support multimodal
+
+        return {"Mode": result}
+
+
+
     
 @statistic.register("Standard Deviation")
 def standardDeviation(self):
@@ -199,25 +211,18 @@ def variance(self, variance_type = "Population"):
 
 @statistic.register("Coefficient of Variation")
 def coefficientOfVariation(self):
-    """
-    Calculate and return the coefficient of variation of the given data set.
-    Returns:
-        float: The coefficient of variation of the data.
-    """
     cleaned_data = self._clean_data()
-    # Validate the data
     if not isinstance(cleaned_data, (list, np.ndarray)):
         raise TypeError("Data must be a list or NumPy array of numbers")
     if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in cleaned_data.flatten()):
         raise TypeError("All elements in the data must be numbers")
     if len(cleaned_data) == 0:
         raise ValueError("Data cannot be empty")
-        
-    # Calculate and return the coefficent of variation
-    mean = self.mean()
-    std_dev = self.standardDeviation()
 
-    return {"Coefficient of Variation": std_dev['Standard Deviation'] / mean['Mean']}
+    mean = statistic.registered_measures["Mean"](self)["Mean"]
+    std_dev = statistic.registered_measures["Standard Deviation"](self)["Standard Deviation"]
+    return {"Coefficient of Variation": std_dev / mean}
+
     
 @statistic.register("Percentiles")
 def percentiles(self, option=None):
@@ -373,55 +378,38 @@ def leastSquareLine(self):
     return {"Slope": slope, "Y-Intercept": intercept}
 
 @statistic.register("Chi Square")
-def chiSquared(self):
-    """
-    Performs Chi-Square Test using two valid columns of data.
-    Returns: the Chi-Square statistic and p-value.
-    """
-    print(f"Incoming Data to Chi-Squared:\n{self.data}")  # Debugging point
-        
-        
+def chiSquared(self, expected=None, observed=None):
     if isinstance(self.data, pd.DataFrame):
-        if self.data.shape[1] >= 2:
-            f_exp = pd.to_numeric(self.data.iloc[:, 0], errors='coerce').dropna().astype(int).values
-            f_obs = pd.to_numeric(self.data.iloc[:, 1], errors='coerce').dropna().astype(int).values
-        else:
-            messagebox.showerror("Error", "Chi-square test requires two valid columns of data.")
+        cols = self.data.columns.tolist()
+        
+        expected_col = expected if expected in cols else cols[0]
+        observed_col = observed if observed in cols else cols[1] if len(cols) > 1 else None
+
+        if observed_col is None:
+            messagebox.showerror("Error", "Chi-square test requires at least two valid columns.")
             return None
 
-    elif isinstance(self.data, np.ndarray) and self.data.shape[1] >= 2:
-            
-        f_exp = self.data[:, 0].astype(int)
-        f_obs = self.data[:, 1].astype(int)
-            
+        f_exp = pd.to_numeric(self.data[expected_col], errors='coerce').dropna().astype(int).values
+        f_obs = pd.to_numeric(self.data[observed_col], errors='coerce').dropna().astype(int).values
     else:
-        messagebox.showerror("Error", "Chi-square test requires two valid columns of data.")
+        messagebox.showerror("Error", "Invalid data for Chi-Square.")
         return None
 
-    print(f"Expected Frequencies: {f_exp}")
-    print(f"Observed Frequencies: {f_obs}")
-
-        # Ensure both columns have the same length
     if len(f_exp) != len(f_obs):
         messagebox.showerror("Error", "Chi-square test requires equal-length data in both columns.")
         return None
 
-        # Ensure no negative values (chi-square requires non-negative integers)
     if np.any(f_exp < 0) or np.any(f_obs < 0):
         messagebox.showerror("Error", "Chi-square test cannot contain negative values.")
         return None
 
-        # Perform chi-square test
     try:
         chi_sq_stat, p_value = stats.chisquare(f_obs, f_exp)
-
-        result_str = f"Chi-Square Statistic: {chi_sq_stat:.4f}, P-value: {p_value:.4e}"
-        #print(result_str)
-        return {"Chi-Squared Statistic": f"{chi_sq_stat}", "P-value": f"{p_value}"}
-
+        return {"Chi-Squared Statistic": f"{chi_sq_stat:.4f}", "P-value": f"{p_value:.4e}"}
     except Exception as e:
         messagebox.showerror("Error", f"Chi-square calculation error: {e}")
         return None
+
 
 @statistic.register("Correlation Coefficient")
 def correlationCoefficient(self):
@@ -434,6 +422,7 @@ def correlationCoefficient(self):
     """
 
     cleaned_data = self._clean_data()
+    print(cleaned_data)
 
         # Rows will always have the same number due to the main_controller filling NA with 0's
     if np.isnan(cleaned_data).any():
@@ -456,150 +445,129 @@ def correlationCoefficient(self):
     return {"R Value (Correlation Coefficient)": correlation_coefficient}
     
 @statistic.register("Sign Test")
-def signTest(self):
+def signTest(self, option=None):
     """
-    Parameters:
-        grabs either one array (for one-sample sign test) or two arrays of same length (for paired sample sign test),
-        user specified alternative hypothesis (H1),
-        and default auto method (exact-to-approximate results).
-    Returns:
-        two floats: the sign test statistic & p-value.
+    Performs Sign Test for one-sample or paired-sample with optional multiple hypothesis types.
+    If multiple hypothesis options are passed, all are calculated and returned.
     """
     cleaned_data = self._clean_data()
 
-        # ONE-SAMPLE SIGN TEST
+    # Determine sample type
     if cleaned_data.shape[1] == 1:
         x = cleaned_data.ravel()
-        print(f"X: {x}")  # Debugging point
         median = np.median(x)
-        signs = [xi - median for xi in x if xi != median]
-        n = len(signs)
-        n_positive = sum(1 for s in signs if s > 0)
-        n_negative = sum(1 for s in signs if s < 0)
-
-        # PAIRED SAMPLE SIGN TEST
+        diffs = [xi - median for xi in x if xi != median]
     elif cleaned_data.shape[1] == 2:
-        if np.isnan(cleaned_data).any():
-            messagebox.showerror("Paired signTest Error", "Both columns must have the same row length.")
-            raise ValueError("Both columns must have the same row length")
         x, y = np.hsplit(cleaned_data, 2)
         x = x.ravel()
         y = y.ravel()
-        print(f"X: {x}, Y: {y}")  # Debugging point
         diffs = [xi - yi for xi, yi in zip(x, y) if xi != yi]
-        n = len(diffs)
-        n_positive = sum(1 for d in diffs if d > 0)
-        n_negative = sum(1 for d in diffs if d < 0)
-
     else:
-        messagebox.showerror("signTest Error", "Data must have either one or two columns.")
-        raise ValueError("Data must have either one or two columns.")
-        
-    H_prompt = tkinter.simpledialog.askstring("Alternative Hypothesis", "Choose one: two-sided, less, greater")
-    if H_prompt not in ["two-sided", "less", "greater"]:
-        tkinter.messagebox.showerror("signTest Error", "Invalid alternative hypothesis. Please choose 'two-sided', 'less', or 'greater'.")
+        messagebox.showerror("Sign Test Error", "Data must have one or two numeric columns.")
         return None
 
-    result = stats.binomtest(n_positive, n, p=0.5, alternative=H_prompt)
+    n = len(diffs)
+    n_positive = sum(d > 0 for d in diffs)
+    n_negative = sum(d < 0 for d in diffs)
 
-    sign = {"Sign Count": n,
+    # Normalize options
+    if isinstance(option, str):
+        option = [option]
+    elif not option:
+        option = ["two-sided"]  # Default
+
+    valid_hypotheses = {"two-sided", "less", "greater"}
+    option = [opt for opt in option if opt in valid_hypotheses]
+
+    results = {}
+    for hypo in option:
+        result = stats.binomtest(n_positive, n, p=0.5, alternative=hypo)
+        results[hypo] = {
+            "Sign Count": n,
             "Positive Count": n_positive,
             "Negative Count": n_negative,
-            "P-Value": result.pvalue}
+            "P-Value": result.pvalue,
+            "Alternative": hypo
+        }
 
-    print(f"Sign Test: {sign}")
-    return sign
+    return results if len(results) > 1 else list(results.values())[0]
+
+
 @statistic.register("Rank Sum")
 def rankSum(self):
-    '''
-    Performs the Mann-Whitney U rank sum test on the first two numeric columns.
-    Ensures it works on a copy of the data to avoid side effects.
-    '''
-    # 1. Get the cleaned data (should be a copy/new array from _clean_data)
-    cleaned_data_result = self._clean_data() # Call the cleaning method
-
-    # Check if cleaning failed or returned None
-    if cleaned_data_result is None:
-        print("Rank Sum test cancelled due to data cleaning issues or lack of suitable data.")
+    """
+    Performs the Mann-Whitney U Rank Sum test (non-parametric).
+    Requires exactly two numeric columns with non-missing values.
+    """
+    cleaned_data = self._clean_data()
+    
+    if cleaned_data.shape[1] < 2:
+        messagebox.showerror("Rank Sum Error", "You need to select at least two numeric columns.")
         return None
 
-        # ***** ADDED STEP: Explicitly make a copy *****
-        # Even if _clean_data returns a copy, this guarantees that subsequent
-        # slicing/splitting within *this* function won't affect the array
-        # potentially cached or used elsewhere.
-    cleaned_data = cleaned_data_result.copy()
-        # ************************************************
-
-        # 2. Split into two arrays (using first two columns of the COPY)
+    # Use the first two columns
     try:
-            # Ensure we have at least 2 columns in the cleaned data
-        if cleaned_data.ndim != 2 or cleaned_data.shape[1] < 2:
-            messagebox.showerror("Rank Sum Error", "Cleaned data does not have at least two columns for Rank Sum test.")
+        col1, col2 = np.hsplit(cleaned_data[:, :2], 2)
+        col1 = col1.ravel()
+        col2 = col2.ravel()
+
+        # Remove NaNs (must align lengths)
+        col1 = col1[~np.isnan(col1)]
+        col2 = col2[~np.isnan(col2)]
+
+        if len(col1) < 2 or len(col2) < 2:
+            messagebox.showerror("Rank Sum Error", "Each group needs at least 2 valid values.")
             return None
 
-        data_to_split = cleaned_data[:, :2] # Slice the first two columns of the copy
-        x, y = np.hsplit(data_to_split, 2)
-        x = x.ravel()
-        y = y.ravel()
+        stat, p_value = stats.mannwhitneyu(col1, col2, alternative='two-sided')
 
-            # Debugging point using the *local copy*
-        print(f"Cleaned X (size {x.size}): {x[:10]}...")
-        print(f"Cleaned Y (size {y.size}): {y[:10]}...")
-
-        if x.size == 0 or y.size == 0:
-            messagebox.showerror("Rank Sum Error", "One or both data columns became empty after cleaning/splitting.")
-            return None
+        return {
+            "U-Statistic": f"{stat:.4f}",
+            "P-Value": f"{p_value:.4e}"
+        }
 
     except Exception as e:
-        messagebox.showerror("Data Error", f"An unexpected error occurred during data preparation for Rank Sum: {e}")
+        messagebox.showerror("Rank Sum Error", f"An error occurred: {e}")
         return None
 
-        # 4. Perform Mann-Whitney U Test using the local x, y copies
-    try:
-        result = stats.mannwhitneyu(x, y, method='auto', alternative=selected_hypothesis)
-        rank_results = {"Statistic": result.statistic, "P-Value": result.pvalue}
 
-        print(f"Rank Sum Test Results: {rank_results}")
-            # 5. Return the result. The original self.data remains untouched by rankSum's internal steps.
-        return rank_results
-
-    except ValueError as ve:
-        messagebox.showerror("Rank Sum Error", f"Calculation error during rank sum test: {ve}")
-        return None
-    except Exception as e:
-        messagebox.showerror("Rank Sum Error", f"An unexpected error occurred during the rank sum test: {e}")
-        return None
-
-@statistic.register("Spearman Rank Correlation")
+@statistic.register("Spearman Correlation")
 def spearmanRankCorrelation(self):
     """
-    Only works for ordinal datasets
-    Parameters:
-        grabs two arrays from an np.ndarray object
-    Returns:
-        the spearman rank correlation & p-value.
+    Computes Spearman's Rank Correlation Coefficient between two numeric columns.
     """
     cleaned_data = self._clean_data()
 
-        # Rows will always have the same number due to the main_controller filling NA with 0's
-    if np.isnan(cleaned_data).any():
-        messagebox.showerror("Error", "Both columns must have the same row length.")
-        raise ValueError("Both columns must have the same row length")
-        
-        # Checks to ensure number of columns are equal
-    if cleaned_data.shape[1] != 2:
-        messagebox.showerror("Error", "The number of columns must be equal to 2 (x,y).")
-        raise ValueError("The number of columns must be equal to 2 (x,y)")
+    # Check if we have at least two columns
+    if cleaned_data.shape[1] < 2:
+        messagebox.showerror("Spearman Correlation Error", "Please select at least two numeric columns.")
+        return None
 
-    x, y = np.hsplit(cleaned_data, 2)
+    try:
+        x, y = np.hsplit(cleaned_data[:, :2], 2)  # Only use first two columns
+        x = x.ravel()
+        y = y.ravel()
 
-    if len(x) < 3 or len(y) < 3:
-        messagebox.showerror("Error", "Spearman rank correlation requires at least 3 data points in each column.")
-        raise ValueError("Spearman rank correlation requires at least 3 data points in each column.")
+        # Drop NaNs (align lengths)
+        mask = ~np.isnan(x) & ~np.isnan(y)
+        x = x[mask]
+        y = y[mask]
 
-    spearman = stats.spearmanr(x,y)
-    return {"R Value (Spearman Rank Correlation)": spearman.correlation, "P-value (Spearman Rank Correlation)": spearman.pvalue}
-    
+        if len(x) < 2 or len(y) < 2:
+            messagebox.showerror("Spearman Correlation Error", "Need at least 2 valid values in each column.")
+            return None
+
+        coef, p_value = stats.spearmanr(x, y)
+
+        return {
+            "Spearman Correlation": f"{coef:.4f}",
+            "P-Value": f"{p_value:.4e}"
+        }
+
+    except Exception as e:
+        messagebox.showerror("Spearman Correlation Error", f"An error occurred: {e}")
+        return None
+
 
 class plotCreation():
     def __init__(self, data):
