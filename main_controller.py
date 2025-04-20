@@ -269,8 +269,8 @@ class Controller:
         if measure in ["Standard Deviation", "Variance", "Percentiles","Binomial Distribution",
                        "Probability Distribution", "Coefficient of Variation", "Correlation Coefficient"]:
             return "No grouping"
-        elif measure in ["Chi Square", "Least Square Line", "Chi Square", "Correlation", "Sign Test", "Rank Sum",
-                         "Spearman Correlation"]:
+        elif measure in ["Chi Square", "Least Square Line", "Chi Square", "Correlation", "Sign Test",
+                         "Rank Sum", "Spearman Correlation"]:
             return "Must group"
         return "Both"
 
@@ -345,15 +345,24 @@ class Controller:
                     continue
 
             # GENERAL CHECKS FOR ALL MEASURES
-            # Check column count rules
+            # Column count rules
             if "exact_columns" in rules and num_columns != rules["exact_columns"]:
                 continue
             if "min_columns" in rules and num_columns < rules["min_columns"]:
                 continue
 
-            # Check minimum row count
-            if "min_length" in rules and num_rows < rules["min_length"]:
-                continue
+            # Check row count using only the required number of numeric columns
+            if "min_length" in rules:
+                if "exact_columns" in rules:
+                    sub_df = numeric_df.iloc[:, :rules["exact_columns"]]
+                elif "min_columns" in rules:
+                    sub_df = numeric_df.iloc[:, :rules["min_columns"]]
+                else:
+                    sub_df = numeric_df
+
+                valid_rows = sub_df.dropna()
+                if valid_rows.shape[0] < rules["min_length"]:
+                    continue
 
             compatible.append(measure)
 
