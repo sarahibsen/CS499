@@ -102,6 +102,8 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
 
+        self.controller = Controller()
+
         # Default mode is light
         self.colors = ColorPalette(mode="light")
 
@@ -278,6 +280,7 @@ class MeasureSelectionPage(BasePage):
     def __init__(self, parent, controller):
         super().__init__(parent, controller)
         self.gui_controller = controller
+        self.main_control = controller.controller
         self.selected_stats = []  # Store selected measures
 
         # ----- Configure grid, canvas, and frames ----- #
@@ -540,6 +543,10 @@ class MeasureSelectionPage(BasePage):
 
                 extra_params["n"] = n
                 extra_params["p"] = p
+
+                # Store in controller for dashboard access
+                self.main_control.set_binomial_params(n, p)
+
             except Exception as e:
                 messagebox.showerror("Input Error", f"Invalid input for Binomial Distribution: {e}")
                 return
@@ -639,7 +646,7 @@ class DashboardPage(BasePage):
     def __init__(self, parent, controller):
         super().__init__(parent, controller)
         self.controller = controller
-        self.main_control = Controller()
+        self.main_control = controller.controller
 
         self.result_headers = []
         self.result_rows = {}
@@ -924,8 +931,6 @@ class DashboardPage(BasePage):
             # Check grouping requirements
             grouping_eligible = Controller.measure_supports_grouping(selected_measure)
 
-            graph_data = None
-
             # For measures that don't support grouping at all
             if grouping_eligible == "No grouping":
                 graph_data = self.process_non_grouped_data(selected_measure)
@@ -970,14 +975,17 @@ class DashboardPage(BasePage):
 
             elif graph_type == "Normal Distribution Curve":
                 if selected_measure == "Binomial Distribution":
-                    n_trails, prob = Controller.get_last_binomial_params()
-                    if n_trails is None or prob is None:
+
+                    # Get parameters from controller
+                    n_trials, prob = self.main_control.get_last_binomial_params()
+
+                    if n_trials is None or prob is None:
                         messagebox.showerror("Error",
                                              "No binomial parameters found. Please run Binomial Distribution measure first.")
                         return
-                    mean = n_trails * prob
-                    std_dev = np.sqrt(n_trails * prob * (1 - prob))
-                    if n_trails * prob < 5 or n_trails * (1 - prob) < 5:
+                    mean = n_trials * prob
+                    std_dev = np.sqrt(n_trials * prob * (1 - prob))
+                    if n_trials * prob < 5 or n_trials * (1 - prob) < 5:
                         messagebox.showwarning(
                             "Warning",
                             "Normal approximation may not be accurate for small n or extreme probabilities. "
@@ -985,7 +993,7 @@ class DashboardPage(BasePage):
                         )
 
                     # Generate values for the x-axis
-                    x_vals = np.linspace(0, n_trails, 1000)
+                    x_vals = np.linspace(0, n_trials, 1000)
                     normal_approx = stats.norm.pdf(x_vals, mean, std_dev)
 
                     # Plot the normal approximation curve
@@ -1320,6 +1328,7 @@ class DashboardPage(BasePage):
         raw_data = selected_table.select_dtypes(include='number')
         selected_columns = raw_data.columns.tolist()
 
+        graph_data = None
         if selected_measure == "Mean":
             graph_data = pd.DataFrame(raw_data.mean()).T
         elif selected_measure == "Median":
@@ -1342,7 +1351,8 @@ class DashboardPage(BasePage):
             freq = raw_data.apply(lambda col: col.value_counts(normalize=True))
             graph_data = freq.fillna(0).T
         elif selected_measure == "Binomial Distribution":
-            n_trials, prob = Controller.get_last_binomial_params()
+            n_trials, prob = self.main_control.get_last_binomial_params()
+            print(n_trials, prob)
             if n_trials is None or prob is None:
                 messagebox.showerror("Error",
                                      "No binomial parameters found. Please run Binomial Distribution measure first.")
@@ -1356,6 +1366,8 @@ class DashboardPage(BasePage):
             except Exception as e:
                 messagebox.showerror("Error", f"Error calculating Binomial Distribution: {e}")
                 return None
+
+        return graph_data
 
     def process_grouped_data(self, selected_measure, groupby_column):
         # Ensure the table controller is available
