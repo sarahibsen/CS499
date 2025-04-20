@@ -957,12 +957,40 @@ class DashboardPage(BasePage):
 
             # Generate the selected graph
             if graph_type == "Horizontal Bar Chart":
-                graph_data.plot(kind="barh", ax=self.ax).legend(loc='upper left', bbox_to_anchor=(1, 1))
-                self.ax.set_ylabel(f'{selected_measure} Value')
+                if selected_measure == "Correlation Coefficient":
+                    graph_data = graph_data.reset_index()
+                    graph_data['Pair'] = graph_data.apply(lambda row: f"{row.iloc[0]} vs {row.iloc[1]}", axis=1)
+
+
+                    self.ax.barh(graph_data['Pair'], graph_data['Correlation Coefficient'], color='skyblue')
+                    self.ax.set_xlabel("Correlation Coefficient")
+                    self.ax.set_ylabel("Variable Pair")
+                    self.ax.set_xlim(-1, 1)
+                    self.ax.axvline(0, color='gray', linestyle='--')
+
+                    for i, v in enumerate(graph_data['Correlation Coefficient']):
+                        self.ax.text(v + 0.03 * np.sign(v), i, f"{v:.2f}", va='center',
+                                     ha='left' if v >= 0 else 'right')
+                else:
+                    graph_data.plot(kind="barh", ax=self.ax).legend(loc='upper left', bbox_to_anchor=(1, 1))
+                    self.ax.set_ylabel(f'{selected_measure} Value')
 
             elif graph_type == "Vertical Bar Chart":
-                graph_data.plot(kind="bar", ax=self.ax).legend(loc='upper left', bbox_to_anchor=(1, 1))
-                self.ax.set_ylabel(f'{selected_measure} Value')
+                if selected_measure == "Correlation Coefficient":
+                    graph_data = graph_data.reset_index()
+                    graph_data['Pair'] = graph_data.apply(lambda row: f"{row.iloc[0]} vs {row.iloc[1]}", axis=1)
+
+                    self.ax.bar(graph_data['Pair'], graph_data['Correlation Coefficient'], color='steelblue')
+                    self.ax.set_ylabel("Correlation Coefficient")
+                    self.ax.set_xlabel("Variable Pair")
+                    self.ax.set_ylim(-1, 1)  # Correlation range
+                    self.ax.axhline(0, color='gray', linestyle='--')
+
+                    for i, v in enumerate(graph_data['Correlation Coefficient']):
+                        self.ax.text(i, v + 0.03 * np.sign(v), f"{v:.2f}", ha='center', va='bottom' if v >= 0 else 'top')
+                else:
+                    graph_data.plot(kind="bar", ax=self.ax).legend(loc='upper left', bbox_to_anchor=(1, 1))
+                    self.ax.set_ylabel(f'{selected_measure} Value')
 
             elif graph_type == "Pie Chart":
                 self.figure.clf()  # Make sure to fully clear everything again here too
@@ -1257,17 +1285,6 @@ class DashboardPage(BasePage):
                                 self.ax.legend([f"{col}"])
 
             elif graph_type == "Scatter Plot":  # X-Y Graph
-                if selected_measure == "Correlation":
-                    x = graph_data[selected_columns[0]]
-                    y = graph_data[selected_columns[1]]
-
-                    self.ax.scatter(x, y, label=groupby_column)
-                    self.ax.set_xlabel(selected_columns[0])
-                    self.ax.set_ylabel(selected_columns[1])
-
-                    coefficients = np.polyfit(x, y, 1)
-                    trend = np.poly1d(coefficients)
-                    self.ax.plot(x, trend(x), 'r--', label='Trend Line')
                 if selected_measure == "Spearman Correlation":
                     x = graph_data[selected_columns[0]]
                     y = graph_data[selected_columns[1]]
@@ -1279,7 +1296,7 @@ class DashboardPage(BasePage):
                     coefficients = np.polyfit(x, y, 1)
                     trend = np.poly1d(coefficients)
                     self.ax.plot(x, trend(x), 'r--', label='Trend Line')
-                if selected_measure == "Least Square Line":
+                elif selected_measure == "Least Square Line":
                     x = graph_data[selected_columns[0]]  # should be graphed on the horizontal
                     y = graph_data[selected_columns[1]]  # vertical
 
@@ -1341,6 +1358,21 @@ class DashboardPage(BasePage):
             graph_data = pd.DataFrame(raw_data.var()).T
         elif selected_measure == "Coefficient of Variation":
             graph_data = pd.DataFrame((raw_data.std() / raw_data.mean())).T
+        elif selected_measure == "Correlation Coefficient":
+            if len(selected_columns) < 2:
+                messagebox.showerror("Error", "Correlation requires at least two numeric columns.")
+                return None
+
+            # Compute the correlation matrix (pairwise Pearson)
+            correlation_matrix = raw_data.corr()
+
+            # Optional: keep only upper triangle (excluding diagonal)
+            mask = np.triu(np.ones(correlation_matrix.shape), k=1).astype(bool)
+            correlation_pairs = correlation_matrix.where(mask)
+
+            # Flatten to a Series with multi-index
+            stacked = correlation_pairs.stack()
+            graph_data = stacked.to_frame(name="Correlation Coefficient")
         elif selected_measure == "Percentiles":
             label, values = Controller.get_last_selected_percentiles()
             values = [v / 100 for v in values]
@@ -1408,31 +1440,11 @@ class DashboardPage(BasePage):
             grouped_data = grouped.median()
         elif selected_measure == "Mode":
             grouped_data = grouped.agg(lambda x: x.mode().iloc[0] if not x.mode().empty else None)
-        elif selected_measure == "Standard Deviation":
-            messagebox.showerror("Error", f"{selected_measure} is not supported with grouping.\n"
-                                          f"Please select No Grouping for Group By Column.")
-            return None
-        elif selected_measure == "Variance":
-            messagebox.showerror("Error", f"{selected_measure} is not supported with grouping.\n"
-                                          f"Please select No Grouping for Group By Column.")
-            return None
-        elif selected_measure == "Coefficient of Variation":
-            messagebox.showerror("Error", f"{selected_measure} is not supported with grouping.\n"
-                                          f"Please select No Grouping for Group By Column.")
-            return None
-        elif selected_measure == "Percentiles":
-            messagebox.showerror("Error", f"{selected_measure} is not supported with grouping.\n"
-                                          f"Please select No Grouping for Group By Column.")
-            return None
         elif selected_measure == "Probability Distribution":
             # calculating the frequency of each group
             group_counts = grouped.size()  # Get counts for each group
             total_count = group_counts.sum()  # Total number of rows
             grouped_data = group_counts / total_count
-        elif selected_measure == "Binomial Distribution":
-            messagebox.showerror("Error", f"{selected_measure} is not supported with grouping.\n"
-                                          f"Please select No Grouping for Group By Column.")
-            return None
         elif selected_measure == "Least Square Line":
             # slope, y_int = np.polyfit(x, y, 1)
             grouped_data = grouped.mean()
