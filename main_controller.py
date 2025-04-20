@@ -1,5 +1,7 @@
 # Refactored Controller as a lightweight Component
 import pandas as pd
+
+import statisticsLogic
 from Table import TableController, TableModel
 from statisticsLogic import statistic
 import datetime
@@ -18,6 +20,9 @@ class Controller:
     """
 
     last_stat_instance = None
+
+    def __init__(self):
+        self.binomial_params = {'n': None, 'p': None}
 
     @staticmethod
     def load_data_from_table(table_controller):
@@ -70,7 +75,6 @@ class Controller:
 
         print("Data validation successful!")
         return True
-
 
     @staticmethod
     def perform_statistics(data_frame, selected_measures, data_type, variance_type=None, extra_params=None):
@@ -270,12 +274,17 @@ class Controller:
             return "Must group"
         return "Both"
 
-    @staticmethod
-    def get_last_binomial_params():
-        instance = Controller.last_stat_instance
-        if instance and hasattr(instance, 'n') and hasattr(instance, 'p'):
-            return instance.n, instance.p
-        return None, None
+    def set_binomial_params(self, n, p):
+        """Store the binomial parameters"""
+        self.binomial_params = {'n': n, 'p': p}
+        print(self.binomial_params)
+
+    def get_last_binomial_params(self):
+        """Returns the last used binomial parameters (n, p)"""
+        print("get")
+        print(self.binomial_params)
+        return self.binomial_params.get('n'), self.binomial_params.get('p')
+
 
     @staticmethod
     def get_last_selected_percentiles():
