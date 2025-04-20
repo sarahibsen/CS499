@@ -235,6 +235,8 @@ class App(tk.Tk):
         custom_func.__name__ = name.replace(" ", "_").lower()
         decorated = statistic.register(name)(custom_func)
         setattr(statistic, custom_func.__name__, decorated)
+        print("Registered Measures:", statistic.registered_measures.keys())
+
 
 
 
