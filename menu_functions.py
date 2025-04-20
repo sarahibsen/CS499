@@ -4,6 +4,7 @@ This holds all of the functionality for the menu bar options in the GUI
 
 import tkinter as tk
 from tkinter import ttk, messagebox
+from Table import TableView
 try:
     import sv_ttk
 except ImportError:
@@ -98,6 +99,30 @@ def apply_theme(theme, app, theme_window):
         else:
              print("Error: App instance does not have update_ui_colors method.")
              messagebox.showerror("Theme Error", "Could not trigger UI update.")
+
+        if theme == "dark":
+            TableView.theme = "dark blue"
+            measure_page = app.get_page("MeasureSelectionPage")
+            if measure_page and hasattr(measure_page, "table"):
+                table_view = measure_page.table
+                table_view.sheet.change_theme("dark blue")
+            
+            results_page = app.get_page("ResultsPage")
+            if results_page and hasattr(results_page, "table"):
+                table_view = results_page.table
+                table_view.sheet.change_theme("dark blue")
+
+        if theme == "light":
+            TableView.theme = "light blue"
+            measure_page = app.get_page("MeasureSelectionPage")
+            if measure_page and hasattr(measure_page, "table"):
+                table_view = measure_page.table
+                table_view.sheet.change_theme("light blue")
+            
+            results_page = app.get_page("ResultsPage")
+            if results_page and hasattr(results_page, "table"):
+                table_view = results_page.table
+                table_view.sheet.change_theme("light blue")
 
         # 4. Close the theme selection window
         theme_window.destroy()

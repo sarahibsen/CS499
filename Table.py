@@ -235,8 +235,8 @@ class TableController:
             selected_rows2 = list(range(table2.total_rows()))
 
         # Get headers and data from both tables
-        headers1 = table1.headers()
-        headers2 = table2.headers()
+        headers1 = table1.get_sheet_data(get_header=True)[0]
+        headers2 = table2.get_sheet_data(get_header=True)[0]
 
         # Filter headers based on selected columns
         selected_headers2 = [headers2[col] for col in selected_columns2]
@@ -355,6 +355,7 @@ class TableView(tk.Frame):
     TableView class to be displayed on application startup. Table will be empty until user imports a CSV or inputs data manually.
     All bindings must be enabled to allow for row/column selections and manual header changes.
     """
+    theme = "light blue"
     def __init__(self, parent, output=False):
         super().__init__(parent)
 
@@ -367,8 +368,9 @@ class TableView(tk.Frame):
         self.sheet.popup_menu_add_command("Dark Mode", lambda: self.update_table_theme("dark blue", self.sheet))
 
         self.controller = TableController(parent, self.sheet)
-
         self.toolbar = GUIToolbar(parent, self.controller, self.sheet, output)
+
+        self.update_table_theme(theme, self.sheet)  # Set the initial theme
 
     def update_table_theme(self, to_theme, table):
         table.change_theme(to_theme)

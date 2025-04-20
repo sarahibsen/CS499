@@ -1561,7 +1561,6 @@ class ResultsPage(BasePage):
 
         if hasattr(self, 'table'):
             self.table.controller.update_table(headers=self.result_headers, data=list(self.result_rows.values()))
-
         else:
             # Create new table frame
             self.results_table_frame = tk.Frame(self.results_display_frame)
@@ -1570,10 +1569,11 @@ class ResultsPage(BasePage):
             self.results_table_frame.grid_columnconfigure(0, weight=1)
 
             # Create and populate table
-            table = TableView(self.results_table_frame, output=True)
-            table.grid(row=0, column=0, sticky='nsew')
-            #table.sheet.popup_menu_add_command("Merge to Input Table", lambda: table.controller.merge_tksheet_tables(table_controller, table))
-            table.controller.update_table(headers=self.result_headers, data=list(self.result_rows.values()))
+            self.table = TableView(self.results_table_frame, output=True)
+            self.table.sheet.change_theme(TableView.theme)
+            self.table.grid(row=0, column=0, sticky='nsew')
+            self.table.sheet.popup_menu_add_command("Merge to Input Table", lambda: (self.table.controller.merge_tksheet_tables(table_controller, self.table), self.controller.show_page("MeasureSelectionPage")))
+            self.table.controller.update_table(headers=self.result_headers, data=list(self.result_rows.values()))
 
 
 # Run the application
