@@ -210,11 +210,17 @@ class Controller:
                     result = func(stat_instance, expected=expected_col, observed=observed_col)
 
                 elif m == "Variance":
-                    if options and isinstance(options, list):
-                        # Just use the first one (since Variance expects one option)
-                        result = func(stat_instance, variance_type=options[0])
+                    # Auto-pick based on sample size if not provided
+                    selected_option = None
+
+                    if options and isinstance(options, list) and options:
+                        selected_option = options[0]  # User explicitly chose
                     else:
-                        result = func(stat_instance, variance_type=(options[0] if options else "Population"))
+                        row_count = len(data_frame)
+                        selected_option = "Population" if row_count > 30 else "Sample"
+
+                    result = func(stat_instance, variance_type=selected_option)
+
                 elif m == "Sign Test":
                     if options and isinstance(options, list):
                         result = func(stat_instance, option=options)
