@@ -123,17 +123,35 @@ class Controller:
         if data_frame.empty:
             return {}, selected_measures
 
-        # Only drop rows that are fully NaN in numeric columns
-        numeric_df = data_frame.select_dtypes(include='number')
+        #print("Before coercion:")
+        #print(data_frame)
+
+        # Clean up string-based numeric data
+        for col in data_frame.columns:
+            if data_frame[col].dtype == object:
+                # Try to strip string values, but avoid NaNs turning into "nan"
+                data_frame[col] = data_frame[col].apply(lambda x: str(x).strip() if pd.notna(x) else x)
+
+        # Convert to numeric where possible
+        data_frame = data_frame.apply(pd.to_numeric, errors='coerce')
+
+        #print("After coercion:")
+        #print(data_frame)
+
+        # Drop rows where all values are NaN
+        data_frame.dropna(how='all', inplace=True)
+
+        #print("Final cleaned numeric data:")
+        #print(data_frame)
 
         # Filter rows where at least one numeric column is not null
-        data_frame = data_frame[numeric_df.notna().any(axis=1)]
+        #data_frame = data_frame[numeric_df.notna().any(axis=1)]
 
-        print("Cleaned numeric data:", data_frame.head())
+       # print("Cleaned numeric data:", data_frame.head())
 
         compatible = Controller.get_compatible_measures(data_frame)
         incompatible = [m for m in selected_measures if m not in compatible]
-        print("\nIncompatible: {}\n".format(incompatible))  # Debugging
+        #print("\nIncompatible: {}\n".format(incompatible))  # Debugging
         valid = [m for m in selected_measures if m in compatible]
 
         stat_instance = statistic(data_frame)
@@ -295,7 +313,6 @@ class Controller:
 
     @staticmethod
     def get_compatible_measures(df):
-        from statisticsLogic import statistic  # Ensure this is accessible or imported properly
 
         type_map = TableModel().detect_data_type(df)
         present_types = set(type_map.values())

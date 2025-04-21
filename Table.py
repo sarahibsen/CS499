@@ -44,11 +44,6 @@ class TableModel:
 
 
 
-        
-            
-
-            
-
     def celldType(self, value):
         """ Infers datatype (String, Float, Int, None) of each value in table.
             This method should be called whenever we need to retrieve data from the table.
@@ -163,6 +158,7 @@ class TableController:
         headers = self.table.headers()
         if not headers:
             headers = self.table.get_sheet_data(get_displayed=False, get_header=True, get_index=False, get_index_displayed=True, get_header_displayed=True)[0]
+            print(headers)
         
         # Create a dict to collect selected cell values by column
         data_dict = {header: [] for header in headers}
@@ -183,8 +179,8 @@ class TableController:
             return pd.DataFrame()  # Empty selection
 
         df = pd.DataFrame(all_data)
-        print("Raw selected data:")
-        print(df.head())
+       # print("Raw selected data:")
+       # print(df.head())
 
         return df
     

@@ -429,14 +429,23 @@ class MeasureSelectionPage(BasePage):
 
     def populate_treeview(self, event=None):
         """Populate the treeview based on compatibility toggle."""
-        print("Refreshing Treeview...")  # Debug print
+       # print("Refreshing Treeview...")  # Debug print
+        
         self.stat_treeview.delete(*self.stat_treeview.get_children())
 
         data_frame = self.table.controller.get_table_selection()
-        print("Data selected: ", data_frame.head())  # Debug
+        #print("Data selected: ", data_frame.head())  # Debug
         if data_frame.empty:
             print("No data selected.")
             return
+        # Clean up object-type columns
+        for col in data_frame.columns:
+            if data_frame[col].dtype == 'object':
+                data_frame[col] = pd.to_numeric(data_frame[col], errors='coerce')
+
+        # Drop rows/columns that are entirely NaN after coercion
+        data_frame.dropna(axis=0, how='all', inplace=True)
+        data_frame.dropna(axis=1, how='all', inplace=True)
 
         all_measures = statistic.registered_measures.keys()
         compatible = Controller.get_compatible_measures(data_frame)
@@ -559,6 +568,10 @@ class MeasureSelectionPage(BasePage):
             # If user didn’t change dropdowns or values are empty, fallback
             if selected_expected and selected_observed:
                 extra_params["Chi Square"] = {"expected": selected_expected, "observed": selected_observed}
+
+        print("Final DataFrame sent to Controller:")
+        print(data_frame.dtypes)
+        print(data_frame.head())
 
         results, skipped = Controller.calculate_statistics(
             data_frame, selected_measures, extra_params=extra_params
