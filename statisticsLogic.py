@@ -138,6 +138,7 @@ class statistic():
 
         return cleaned_data if len(cleaned_data) > 0 else np.array([[0]])
 
+
     def calculate(self, measure, option=None):
         """
         Perform the calculation for the specified measure.
@@ -522,8 +523,7 @@ def chiSquared(self, expected=None, observed=None, rel_tolerance=1e-8):
         }
     except Exception as e:
         messagebox.showerror("Error", f"Chi-square calculation error: {e}")
-        raise ValueError(f"Chi-square calculation error: {e}")
-
+        return None
 
 @statistic.register("Correlation Coefficient")
 def correlationCoefficient(self):
@@ -536,6 +536,7 @@ def correlationCoefficient(self):
     """
 
     cleaned_data = self._clean_data()
+    print(cleaned_data)
     print(cleaned_data)
 
         # Rows will always have the same number due to the main_controller filling NA with 0's

@@ -4,6 +4,7 @@ This holds all of the functionality for the menu bar options in the GUI
 
 import tkinter as tk
 from tkinter import ttk, messagebox
+from Table import TableView
 try:
     import sv_ttk
 except ImportError:
@@ -99,6 +100,30 @@ def apply_theme(theme, app, theme_window):
              print("Error: App instance does not have update_ui_colors method.")
              messagebox.showerror("Theme Error", "Could not trigger UI update.")
 
+        if theme == "dark":
+            TableView.theme = "dark blue"
+            measure_page = app.get_page("MeasureSelectionPage")
+            if measure_page and hasattr(measure_page, "table"):
+                table_view = measure_page.table
+                table_view.sheet.change_theme("dark blue")
+            
+            results_page = app.get_page("ResultsPage")
+            if results_page and hasattr(results_page, "table"):
+                table_view = results_page.table
+                table_view.sheet.change_theme("dark blue")
+
+        if theme == "light":
+            TableView.theme = "light blue"
+            measure_page = app.get_page("MeasureSelectionPage")
+            if measure_page and hasattr(measure_page, "table"):
+                table_view = measure_page.table
+                table_view.sheet.change_theme("light blue")
+            
+            results_page = app.get_page("ResultsPage")
+            if results_page and hasattr(results_page, "table"):
+                table_view = results_page.table
+                table_view.sheet.change_theme("light blue")
+
         # 4. Close the theme selection window
         theme_window.destroy()
 
@@ -144,3 +169,26 @@ def show_help():
     help_text_widget.config(state=tk.DISABLED)  # Make it read-only
     help_text_widget.pack(pady=10, padx=10, fill=tk.BOTH, expand=True)
     
+
+# allow the user to add their own stat measure (if it is an easy to implement one)
+def add_custom_measure_popup(self):
+    def on_submit():
+        name = entry_name.get()
+        expr = text_expr.get("1.0", tk.END).strip()
+        if name and expr:
+            self.register_custom_stat(name, expr)
+            messagebox.showinfo("Success", f"Custom measure '{name}' added.")
+            self.get_page("MeasureSelectionPage").populate_treeview()
+            popup.destroy()
+
+    popup = tk.Toplevel(self)
+    popup.title("Add Custom Measure")
+    tk.Label(popup, text="Name:").pack()
+    entry_name = tk.Entry(popup)
+    entry_name.pack()
+
+    tk.Label(popup, text="Expression (use `data`):").pack()
+    text_expr = tk.Text(popup, height=4)
+    text_expr.pack()
+
+    tk.Button(popup, text="Add Measure", command=on_submit).pack()

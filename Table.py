@@ -41,7 +41,7 @@ class TableModel:
                 data_types[column] = "any"
 
         return data_types
-
+  
 
 
     def celldType(self, value):
@@ -83,7 +83,8 @@ class TableController:
         self.model = TableModel()
         self.parent = parent
         self.table = table
-        
+        self.output_file_path = None
+
     def get_table_data(self):
         return self.model.get_data()
     
@@ -127,7 +128,7 @@ class TableController:
 
     def update_table(self, headers=None, data=None):
         """
-        Destroys the current table and creates a new table from CSV file.
+        Updates the current table from CSV file.
 
         Args:
             table   (Sheet) : Existing table will be destroyed and replaced.
@@ -135,6 +136,12 @@ class TableController:
             data    (List)  : List of values from CSV file if available.
         """
 
+        if headers:
+            self.table.headers(headers)
+        if data:
+            self.table.set_sheet_data(data)
+
+        self.adjust_cell_sizes(self.table)  # Adjust cell sizes to fit content
         if headers:
             self.table.headers(headers)
         if data:
@@ -158,7 +165,6 @@ class TableController:
         headers = self.table.headers()
         if not headers:
             headers = self.table.get_sheet_data(get_displayed=False, get_header=True, get_index=False, get_index_displayed=True, get_header_displayed=True)[0]
-            print(headers)
         
         # Create a dict to collect selected cell values by column
         data_dict = {header: [] for header in headers}
@@ -217,6 +223,71 @@ class TableController:
             # Set column width (multiply by a factor to account for font size)
             sheet.set_column_widths(column_widths)
 
+    def merge_tksheet_tables(self, table1_view, table2_view):
+        """
+        Merges two tksheet tables into one, aligning headers with the same name.
+
+        Args:
+            table1_view (Table Controller): The first tksheet table (destination table).
+            table2_view (Table Controller): The second tksheet table (source table).
+
+        Returns:
+            merged_data (list): A list of lists representing the merged table data.
+            merged_headers (list): A list of headers for the merged table.
+        """
+        table1 = table1_view.table
+        table2 = table2_view.sheet
+
+        # Get selected columns and rows for table2
+        selected_columns2 = table2.get_selected_columns()
+        selected_rows2 = table2.get_selected_rows()
+
+        # If no columns are selected, fallback to all columns
+        if not selected_columns2:
+            selected_columns2 = list(range(table2.total_columns()))
+
+        # If no rows are selected, fallback to all rows
+        if not selected_rows2:
+            selected_rows2 = list(range(table2.total_rows()))
+
+        # Get headers and data from both tables
+        headers1 = table1.get_sheet_data(get_header=True)[0]
+        headers2 = table2.get_sheet_data(get_header=True)[0]
+
+        # Filter headers based on selected columns
+        selected_headers2 = [headers2[col] for col in selected_columns2]
+
+        # Filter data based on selected columns and rows
+        data2 = [
+            [table2.get_cell_data(r=row, c=col) for col in selected_columns2]
+            for row in selected_rows2
+        ]
+
+        # Create a unified set of headers
+        merged_headers = headers1 + [header for header in selected_headers2 if header not in headers1]
+
+        # Create a mapping of header indices for both tables
+        header_index_map1 = {header: idx for idx, header in enumerate(headers1)}
+        header_index_map2 = {header: idx for idx, header in enumerate(selected_headers2)}
+        merged_header_index_map = {header: idx for idx, header in enumerate(merged_headers)}
+
+        # Initialize merged data with the first table's data
+        data1 = table1.get_sheet_data(get_displayed=False)
+        merged_data = [[None] * len(merged_headers) for _ in range(len(data1))]
+        for row_idx, row in enumerate(data1):
+            for header, col_idx in header_index_map1.items():
+                merged_data[row_idx][merged_header_index_map[header]] = row[col_idx]
+
+        # Append rows from the second table, aligning columns by header
+        for row in data2:
+            new_row = [None] * len(merged_headers)
+            for header, col_idx in header_index_map2.items():
+                new_row[merged_header_index_map[header]] = row[col_idx]
+            merged_data.append(new_row)
+
+        # Update table1 using its controller
+        table1_view.update_table(headers=merged_headers, data=merged_data)
+
     def import_csv(self):
         """
         Reads in a csv file to a new table instance. Prompts user for headers.
@@ -229,6 +300,7 @@ class TableController:
         )
 
         if file_path:
+            self.output_file_path = file_path  # Store the file path of the imported CSV
             df = pd.read_csv(file_path)
 
             ask_headers = messagebox.askyesno("Headers", "Does your data have headers?")
@@ -238,12 +310,12 @@ class TableController:
             else:
                 self.update_table(data = [df.columns.tolist()] + df.values.tolist())  # Table will keep default headings
 
-        self.log_operation(
-            selected_operations=f"Imported file: {file_path}\n",
-            dataType="CSV\n",  # Use a placeholder or infer from data if needed
-            results={"Rows": df.shape[0], "Columns": df.shape[1]},
-                
-        )
+            self.log_operation(
+                selected_operations=f"Imported file: {file_path}\n",
+                dataType="CSV\n",  # Use a placeholder or infer from data if needed
+                results={"Rows": df.shape[0], "Columns": df.shape[1]},
+                    
+            )
 
     def export_table(self):
         """ Export table to .csv (Comma delimited) or .tsv (Tab delimited) file """
@@ -299,6 +371,7 @@ class TableView(tk.Frame):
     TableView class to be displayed on application startup. Table will be empty until user imports a CSV or inputs data manually.
     All bindings must be enabled to allow for row/column selections and manual header changes.
     """
+    theme = "light blue"
     def __init__(self, parent, output=False):
         super().__init__(parent)
 
@@ -311,7 +384,6 @@ class TableView(tk.Frame):
         self.sheet.popup_menu_add_command("Dark Mode", lambda: self.update_table_theme("dark blue", self.sheet))
 
         self.controller = TableController(parent, self.sheet)
-
         self.toolbar = GUIToolbar(parent, self.controller, self.sheet, output)
 
     def view_update_table(self, headers=None, data=None):
@@ -408,6 +480,7 @@ class GUIToolbar:
             self.export_button.grid(row=1, column=0, sticky='ne')
 
         else:
+
             self.export_img = tk.PhotoImage(format='gif', data=
             'R0lGODlhGQAZAIcAAIjAYjFgpjFgpzFgqDFhqDJhqDJhqTJhqjJiqjJiqzJjrDNjrTNkrj'
             + 'NkrzNlsDRlsTRmsjRmszRntDVotTVotjVotzVptzVpuDVpuTVqujZqujdrujZquzZruzZ'

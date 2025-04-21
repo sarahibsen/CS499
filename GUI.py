@@ -133,6 +133,11 @@ class App(tk.Tk):
         viewmenu.add_command(label="Set Theme",
                              command=lambda: set_theme(self))
         menubar.add_cascade(label="View", menu=viewmenu)
+        # Add stat option for users
+        custommenu = Menu(menubar, tearoff=0)
+        custommenu.add_command(label="Add Custom Measure", command=self.add_custom_measure_popup)
+        menubar.add_cascade(label="Add", menu=custommenu)
+
         # ----
         # Create a container to hold pages
         self.container = tk.Frame(self, bg="white")
@@ -195,6 +200,47 @@ class App(tk.Tk):
                 print(
                     f"Warning: Page {page_name} ({type(page).__name__}) has no update_colors method or doesn't exist.")
         print("App finished updating UI colors.")
+
+    def add_custom_measure_popup(self):
+        def on_submit():
+            name = entry_name.get()
+            expr = text_expr.get("1.0", tk.END).strip()
+            if name and expr:
+                self.register_custom_stat(name, expr)
+                messagebox.showinfo("Success", f"Custom measure '{name}' added.")
+                self.get_page("MeasureSelectionPage").populate_treeview()
+                popup.destroy()
+
+        popup = tk.Toplevel(self)
+        popup.title("Add Custom Measure")
+        tk.Label(popup, text="Name:").pack()
+        entry_name = tk.Entry(popup)
+        entry_name.pack()
+
+        tk.Label(popup, text="Expression (use `data`):").pack()
+        text_expr = tk.Text(popup, height=4)
+        text_expr.pack()
+
+        tk.Button(popup, text="Add Measure", command=on_submit).pack()
+
+
+    def register_custom_stat(self, name, expression):
+
+        def custom_func(self):
+            data = self._clean_data()
+            try:
+                result = eval(expression, {"np": np, "pd": pd, "data": data})
+                return {name: result}
+            except Exception as e:
+                messagebox.showerror("Error", f"Error in custom measure:\n{e}")
+                return None
+
+        custom_func.__name__ = name.replace(" ", "_").lower()
+        decorated = statistic.register(name)(custom_func)
+        setattr(statistic, custom_func.__name__, decorated)
+        print("Registered Measures:", statistic.registered_measures.keys())
+
+
 
 
 class BasePage(tk.Frame):
@@ -611,6 +657,9 @@ class MeasureSelectionPage(BasePage):
             explanation = self.generate_skipped_explanations(skipped, data_frame)
             messagebox.showwarning("Incompatible Measures", explanation)
 
+            explanation = self.generate_skipped_explanations(skipped, data_frame)
+            messagebox.showwarning("Incompatible Measures", explanation)
+
 
         self.table.controller.log_operation(selected_measures, results, dataType="Detected")
         self.table.controller.add_log_separator()
@@ -628,9 +677,26 @@ class MeasureSelectionPage(BasePage):
                     return f"{measure}: " + "\n".join(f"{k}: {v}" for k, v in value.items()) if isinstance(value, dict) else str(value)
 
             result_str = "\n\n".join(format_result(k, v) for k, v in results.items())
+            def format_result(measure, value):
+                if isinstance(value, dict) and any(isinstance(v, dict) for v in value.values()):
+                    # This means it's a dictionary of dictionaries, like Sign Test with multiple options
+                    return f"{measure}:\n" + "\n".join(
+                        f"  ↳ {hypo}:\n    " + "\n    ".join(f"{k}: {v}" for k, v in stats.items())
+                        for hypo, stats in value.items()
+                    )
+                else:
+                    # Single-value or flat dict
+                    return f"{measure}: " + "\n".join(f"{k}: {v}" for k, v in value.items()) if isinstance(value, dict) else str(value)
+
+            result_str = "\n\n".join(format_result(k, v) for k, v in results.items())
             messagebox.showinfo("Calculated Statistics", result_str)
 
             self.gui_controller.pages["ResultsPage"].display_results(results)
+            #self.gui_controller.show_page("ResultsPage")
+            notification = tk.Label(self, text="✓ Results sent to Results Page", fg="green", bg="white", font=("Roboto", 12, "bold"))
+            notification.grid(row=7, column=1, pady=(10, 0), sticky="w")
+            # Auto-remove after 2 seconds
+            self.after(2000, notification.destroy)
             #self.gui_controller.show_page("ResultsPage")
             notification = tk.Label(self, text="✓ Results sent to Results Page", fg="green", bg="white", font=("Roboto", 12, "bold"))
             notification.grid(row=7, column=1, pady=(10, 0), sticky="w")
@@ -1645,6 +1711,23 @@ class ResultsPage(BasePage):
         # --- Initial Color Update ---
         self.update_colors()
 
+
+    def get_table_controller(self):
+        """
+        Retrieves the table controller from the MeasureSelectionPage.
+        This is used to access the file used at input for the calculations.
+        """
+        measure_page = self.controller.get_page("MeasureSelectionPage")
+
+        if not measure_page or not hasattr(measure_page, 'table'):
+            print("Error: MeasureSelectionPage or table attribute not found.")
+            return None
+        if not hasattr(measure_page.table, 'controller'):
+            print("Error: Table controller not found.")
+            return None
+        
+        return measure_page.table.controller
+
         # Create new table frame
         self.results_table_frame = tk.Frame(self.results_display_frame)
         self.results_table_frame.grid(row=0, column=0, sticky="nsew")
@@ -1714,14 +1797,29 @@ class ResultsPage(BasePage):
             self.placeholder_label.destroy()
             del self.placeholder_label
 
+        if "Date" not in self.result_headers:
+            self.result_headers.append("Date")
+        if "File Name" not in self.result_headers:
+            self.result_headers.append("File Name")
+
         # Process results
         self.display_headers(results)
         result_data = self.display_row_data(results)
 
+        table_controller = self.get_table_controller()
+        file_name = None
+        if table_controller and table_controller.output_file_path:
+            file_name = table_controller.output_file_path.split("/")[-1]
+
         # Create row data
         row_data = []
         for head in self.result_headers:
-            row_data.append(result_data.get(head, ""))
+            if head == "Date":
+                row_data.append(pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S"))
+            elif head == "File Name":
+                row_data.append(file_name)
+            else:
+                row_data.append(result_data.get(head, ""))
 
         self.result_rows[len(self.result_rows) + 1] = row_data
 
@@ -1736,9 +1834,11 @@ class ResultsPage(BasePage):
             self.results_table_frame.grid_columnconfigure(0, weight=1)
 
             # Create and populate table
-            table = TableView(self.results_table_frame, output=True)
-            table.grid(row=0, column=0, sticky='nsew')
-            table.controller.update_table(headers=self.result_headers, data=list(self.result_rows.values()))
+            self.table = TableView(self.results_table_frame, output=True)
+            self.table.sheet.change_theme(TableView.theme)
+            self.table.grid(row=0, column=0, sticky='nsew')
+            self.table.sheet.popup_menu_add_command("Merge to Input Table", lambda: (self.table.controller.merge_tksheet_tables(table_controller, self.table), self.controller.show_page("MeasureSelectionPage")))
+            self.table.controller.update_table(headers=self.result_headers, data=list(self.result_rows.values()))
 
 
 # Run the application
