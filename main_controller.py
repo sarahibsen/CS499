@@ -171,16 +171,30 @@ class Controller:
                     result = func(stat_instance, n=n, p=p)
 
                 elif m == "Percentiles":
-                    # Combine multiple selected options into one percentile array
-                    all_percentile_values = []
                     if options:
-                        for opt in options:
-                            partial_result = func(stat_instance, option=opt)
-                            if partial_result:
-                                all_percentile_values.append(partial_result)
-                        result = {"Percentiles": all_percentile_values}
+                        # Check if custom numeric values were passed
+                        if all(isinstance(opt, str) and opt.endswith("th Percentile") for opt in options):
+                            # Extract raw values from "90th Percentile" strings
+                            raw_values = []
+                            for opt in options:
+                                try:
+                                    val = int(opt.replace("th Percentile", "").strip())
+                                    raw_values.append(val)
+                                except:
+                                    continue
+                            result = func(stat_instance, option=raw_values)
+                        else:
+                            # Use predefined labels or lists
+                            result = None
+                            all_percentile_results = []
+                            for opt in options:
+                                partial = func(stat_instance, option=opt)
+                                if partial:
+                                    all_percentile_results.append(partial)
+                            result = {all_percentile_results}
                     else:
                         result = func(stat_instance)
+
                 elif m == "Probability Distribution":
                     result = None
                     if options:

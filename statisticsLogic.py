@@ -285,37 +285,45 @@ def coefficientOfVariation(self):
 @statistic.register("Percentiles")
 def percentiles(self, option=None):
     """
-    Calculates specific percentiles based on user-chosen option from measure_options_map.
+    Calculates percentiles. Accepts either predefined labels or a list of integers from custom input.
     """
     cleaned_data = self._clean_data()
     if cleaned_data is None or cleaned_data.size == 0:
         return None
 
-    # Default fallback
+    # Handle default
     selected_percentiles = [25, 50, 75]
+    label = "Selected: Quartiles (25, 50, 75)"
 
-    # Map UI options to actual percent values
-    option_map = {
-        "Quartiles (25, 50, 75)": [25, 50, 75],
-        "Median (50)": [50],
-        "Deciles (10, 20, ..., 90)": list(range(10, 100, 10)),
-        "90th Percentile": [90],
-        "95th Percentile": [95],
-        "99th Percentile": [99],
-    }
+    # If user provided a list of raw values (from input box)
+    if isinstance(option, list) and all(isinstance(x, int) and 0 <= x <= 100 for x in option):
+        selected_percentiles = option
+        label = f"Selected: {', '.join(str(p) for p in selected_percentiles)}"
 
-    if option in option_map:
-        selected_percentiles = option_map[option]
+    # Otherwise check if it's a predefined label
+    elif isinstance(option, str):
+        option_map = {
+            "Quartiles (25, 50, 75)": [25, 50, 75],
+            "Median (50)": [50],
+            "Deciles (10, 20, ..., 90)": list(range(10, 100, 10)),
+            "90th Percentile": [90],
+            "95th Percentile": [95],
+            "99th Percentile": [99],
+        }
+        if option in option_map:
+            selected_percentiles = option_map[option]
+            label = f"Selected: {option}"
 
     self.selected_percentiles = selected_percentiles
-    self.selected_percentile_label = f"Selected: {', '.join(str(p) for p in selected_percentiles)}"
+    self.selected_percentile_label = label
 
     percentile_values = np.percentile(cleaned_data, selected_percentiles, axis=0)
 
     return {
         "Percentiles": percentile_values,
-        "Selected": self.selected_percentile_label
+        "Selected": label
     }
+
 
         
 @statistic.register("Probability Distribution")

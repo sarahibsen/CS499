@@ -398,8 +398,22 @@ class MeasureSelectionPage(BasePage):
 
         self.chi_square_frame.grid(row=6, column=1, padx=10, pady=5, sticky="w")
         self.chi_square_frame.grid_remove()  # Hidden initially
+        # -- Percentiles --
+        self.percentile_input_frame = tk.Frame(self.measurement_frame, bg="#FFFFFF")
 
+        self.label_percentiles = tk.Label(
+            self.percentile_input_frame,
+            text="Custom Percentiles (comma-separated):",
+            font=("Roboto", 12),
+            bg="#FFFFFF"
+        )
+        self.entry_percentiles = tk.Entry(self.percentile_input_frame, font=("Roboto", 12), width=10)
 
+        self.label_percentiles.grid(row=0, column=0, padx=5, pady=2, sticky="w")
+        self.entry_percentiles.grid(row=0, column=1, padx=5, pady=2)
+
+        self.percentile_input_frame.grid(row=5, column=1, padx=10, pady=5, sticky="w")
+        self.percentile_input_frame.grid_remove()
         # ----- Toolbar ----- #
         # Create a canvas to hold toolbar
         self.canvas = Canvas(self, bg="#FFFFFF", bd=0, highlightthickness=0, relief="ridge")
@@ -467,7 +481,7 @@ class MeasureSelectionPage(BasePage):
 
             if measure in statistic.measure_options_map:
                 for option in statistic.measure_options_map[measure]:
-                    self.stat_treeview.insert(parent_id, tk.END, text=option, values=(option,))
+                    self.stat_treeview.insert(parent_id, tk.END, text=f"   ↳ {option}", values=(option,))
 
         self.stat_treeview.tag_configure("disabled", foreground="gray")
 
@@ -501,6 +515,11 @@ class MeasureSelectionPage(BasePage):
             self.chi_square_frame.grid()
         else:
             self.chi_square_frame.grid_remove()
+
+        if "Percentiles" in self.selected_stats:
+            self.percentile_input_frame.grid()
+        else:
+            self.percentile_input_frame.grid_remove()
 
         if self.selected_stats:
             display_text = "Selected: " + ", ".join(self.selected_stats)
@@ -568,10 +587,21 @@ class MeasureSelectionPage(BasePage):
             # If user didn’t change dropdowns or values are empty, fallback
             if selected_expected and selected_observed:
                 extra_params["Chi Square"] = {"expected": selected_expected, "observed": selected_observed}
+        if "Percentiles" in selected_measures:
+            input_str = self.entry_percentiles.get().strip()
+            try:
+                if input_str:
+                    custom_vals = [int(val.strip()) for val in input_str.split(",") if val.strip().isdigit()]
+                    if not all(0 <= v <= 100 for v in custom_vals):
+                        raise ValueError("Percentiles must be between 0 and 100.")
+                    extra_params["Percentiles"] = [f"{v}th Percentile" for v in custom_vals]
+            except Exception as e:
+                messagebox.showerror("Input Error", f"Invalid percentile input: {e}")
+                return
 
-        print("Final DataFrame sent to Controller:")
-        print(data_frame.dtypes)
-        print(data_frame.head())
+        # print("Final DataFrame sent to Controller:")
+        # print(data_frame.dtypes)
+        # print(data_frame.head())
 
         results, skipped = Controller.calculate_statistics(
             data_frame, selected_measures, extra_params=extra_params
