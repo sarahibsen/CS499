@@ -1,7 +1,0 @@
-Operation: Imported file: C:/Users/sarah/Desktop/Program/Senior Design/CS499/data/IntervalDataTest.csv
-, Data Type: CSV
-, Results: Rows: 100, Columns: 3
-Operation: ['Correlation', 'Mode', 'Sign Test'], Data Type: Continuous, Results: Correlation: {'R Value (Correlation Coefficient)': np.float64(0.9842576033894697)}, Mode: {'Mode': np.int64(78)}, Sign Test: {'Sign Count': 72, 'Positive Count': 0, 'Negative Count': 72, 'P-Value': np.float64(2.117582368135751e-22)}
---------------------------------------------------
-Operation: ['Median', 'Probability Distribution', 'Spearman Correlation'], Data Type: Continuous, Results: Median: {'Median': np.float64(74.0)}, Probability Distribution: {'Distribution': 'Normal', 'Mean': np.float64(73.805), 'Standard Deviation': np.float64(12.541809080033072)}, Spearman Correlation: {'R Value (Spearman Rank Correlation)': np.float64(0.9793762121756244), 'P-value (Spearman Rank Correlation)': np.float64(7.047370640030516e-70)}
---------------------------------------------------
