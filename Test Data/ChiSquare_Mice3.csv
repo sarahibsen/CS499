@@ -1,0 +1,10 @@
+Mice Color,Observed,Expected
+Entirely white,6,16
+Small white patch,3,23
+Large white patch,10,12
+Entirely brown,18,9
+Small brown patch,10,16
+Large brown patch,20,6
+Entirely black,16,7
+Small black patch,2,2
+Large black patch,15,9

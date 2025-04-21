@@ -1504,6 +1504,23 @@ class ResultsPage(BasePage):
         # --- Initial Color Update ---
         self.update_colors()
 
+
+    def get_table_controller(self):
+        """
+        Retrieves the table controller from the MeasureSelectionPage.
+        This is used to access the file used at input for the calculations.
+        """
+        measure_page = self.controller.get_page("MeasureSelectionPage")
+
+        if not measure_page or not hasattr(measure_page, 'table'):
+            print("Error: MeasureSelectionPage or table attribute not found.")
+            return None
+        if not hasattr(measure_page.table, 'controller'):
+            print("Error: Table controller not found.")
+            return None
+        
+        return measure_page.table.controller
+
     def update_colors(self):
         """Updates colors for non-ttk widgets and frames."""
         if not (hasattr(self.controller, 'colors') and self.controller.colors):
@@ -1562,32 +1579,47 @@ class ResultsPage(BasePage):
             self.placeholder_label.destroy()
             del self.placeholder_label
 
-        # Clear existing table if it exists
-        if hasattr(self, 'results_table_frame'):
-            self.results_table_frame.destroy()
-            del self.results_table_frame
+        if "Date" not in self.result_headers:
+            self.result_headers.append("Date")
+        if "File Name" not in self.result_headers:
+            self.result_headers.append("File Name")
 
         # Process results
         self.display_headers(results)
         result_data = self.display_row_data(results)
 
+        table_controller = self.get_table_controller()
+        file_name = None
+        if table_controller and table_controller.output_file_path:
+            file_name = table_controller.output_file_path.split("/")[-1]
+
         # Create row data
         row_data = []
         for head in self.result_headers:
-            row_data.append(result_data.get(head, ""))
+            if head == "Date":
+                row_data.append(pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S"))
+            elif head == "File Name":
+                row_data.append(file_name)
+            else:
+                row_data.append(result_data.get(head, ""))
 
         self.result_rows[len(self.result_rows) + 1] = row_data
 
-        # Create new table frame
-        self.results_table_frame = tk.Frame(self.results_display_frame)
-        self.results_table_frame.grid(row=0, column=0, sticky="nsew")
-        self.results_table_frame.grid_rowconfigure(0, weight=1)
-        self.results_table_frame.grid_columnconfigure(0, weight=1)
+        if hasattr(self, 'table'):
+            self.table.controller.update_table(headers=self.result_headers, data=list(self.result_rows.values()))
+        else:
+            # Create new table frame
+            self.results_table_frame = tk.Frame(self.results_display_frame)
+            self.results_table_frame.grid(row=0, column=0, sticky="nsew")
+            self.results_table_frame.grid_rowconfigure(0, weight=1)
+            self.results_table_frame.grid_columnconfigure(0, weight=1)
 
-        # Create and populate table
-        table = TableView(self.results_table_frame, output=True)
-        table.grid(row=0, column=0, sticky='nsew')
-        table.controller.update_table(headers=self.result_headers, data=self.result_rows.values())
+            # Create and populate table
+            self.table = TableView(self.results_table_frame, output=True)
+            self.table.sheet.change_theme(TableView.theme)
+            self.table.grid(row=0, column=0, sticky='nsew')
+            self.table.sheet.popup_menu_add_command("Merge to Input Table", lambda: (self.table.controller.merge_tksheet_tables(table_controller, self.table), self.controller.show_page("MeasureSelectionPage")))
+            self.table.controller.update_table(headers=self.result_headers, data=list(self.result_rows.values()))
 
 
 # Run the application
