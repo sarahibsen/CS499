@@ -430,23 +430,6 @@ class MeasureSelectionPage(BasePage):
         self.binomial_frame.grid(row=5, column=1, padx=10, pady=5, sticky="w")
         self.binomial_frame.grid_remove()  # Hide initially
 
-        # --- Chi-Square Column Selector --- #
-        self.chi_square_frame = tk.Frame(self.measurement_frame, bg="#FFFFFF")
-
-        self.label_expected = tk.Label(self.chi_square_frame, text="Expected Column:", bg="#FFFFFF", font=("Roboto", 12))
-        self.expected_dropdown = ttk.Combobox(self.chi_square_frame, state="readonly", font=("Roboto", 12))
-
-        self.label_observed = tk.Label(self.chi_square_frame, text="Observed Column:", bg="#FFFFFF", font=("Roboto", 12))
-        self.observed_dropdown = ttk.Combobox(self.chi_square_frame, state="readonly", font=("Roboto", 12))
-
-        self.label_expected.grid(row=0, column=0, padx=5, pady=2, sticky="w")
-        self.expected_dropdown.grid(row=0, column=1, padx=5, pady=2)
-
-        self.label_observed.grid(row=1, column=0, padx=5, pady=2, sticky="w")
-        self.observed_dropdown.grid(row=1, column=1, padx=5, pady=2)
-
-        self.chi_square_frame.grid(row=6, column=1, padx=10, pady=5, sticky="w")
-        self.chi_square_frame.grid_remove()  # Hidden initially
         # -- Percentiles --
         self.percentile_input_frame = tk.Frame(self.measurement_frame, bg="#FFFFFF")
 
@@ -463,6 +446,22 @@ class MeasureSelectionPage(BasePage):
 
         self.percentile_input_frame.grid(row=5, column=1, padx=10, pady=5, sticky="w")
         self.percentile_input_frame.grid_remove()
+
+        #--- Sign Test ----
+        self.sign_test_frame = tk.Frame(self.measurement_frame, bg="#FFFFFF")
+        self.sign_test_label = tk.Label(self.sign_test_frame, text="Hypothesis:", font=("Roboto", 12), bg="#FFFFFF")
+        self.sign_test_dropdown = ttk.Combobox(
+            self.sign_test_frame,
+            values=["two-sided", "greater", "less"],
+            state="readonly",
+            font=("Roboto", 12),
+            width=12
+        )
+        self.sign_test_label.grid(row=0, column=0, padx=5, pady=2, sticky="w")
+        self.sign_test_dropdown.grid(row=0, column=1, padx=5, pady=2)
+        self.sign_test_frame.grid(row=7, column=1, sticky="w", padx=10, pady=5)
+        self.sign_test_frame.grid_remove()
+
         # ----- Toolbar ----- #
         # Create a canvas to hold toolbar
         self.canvas = Canvas(self, bg="#FFFFFF", bd=0, highlightthickness=0, relief="ridge")
@@ -569,16 +568,16 @@ class MeasureSelectionPage(BasePage):
             self.binomial_frame.grid()  # Show the frame
         else:
             self.binomial_frame.grid_remove()  # Hide if not selected
-        if "Chi Square" in self.selected_stats:
-            self.update_chi_square_dropdowns()
-            self.chi_square_frame.grid()
-        else:
-            self.chi_square_frame.grid_remove()
 
         if "Percentiles" in self.selected_stats:
             self.percentile_input_frame.grid()
         else:
             self.percentile_input_frame.grid_remove()
+        if "Sign Test" in self.selected_stats:
+            self.sign_test_frame.grid()
+            self.sign_test_dropdown.set("two-sided")  # default
+        else:
+            self.sign_test_frame.grid_remove()
 
         if self.selected_stats:
             display_text = "Selected: " + ", ".join(self.selected_stats)
@@ -639,13 +638,6 @@ class MeasureSelectionPage(BasePage):
                 messagebox.showerror("Input Error", f"Invalid input for Binomial Distribution: {e}")
                 return
         
-        if "Chi Square" in selected_measures:
-            selected_expected = self.expected_dropdown.get()
-            selected_observed = self.observed_dropdown.get()
-
-            # If user didn’t change dropdowns or values are empty, fallback
-            if selected_expected and selected_observed:
-                extra_params["Chi Square"] = {"expected": selected_expected, "observed": selected_observed}
         if "Percentiles" in selected_measures:
             input_str = self.entry_percentiles.get().strip()
             try:
@@ -657,6 +649,10 @@ class MeasureSelectionPage(BasePage):
             except Exception as e:
                 messagebox.showerror("Input Error", f"Invalid percentile input: {e}")
                 return
+        if "Sign Test" in selected_measures:
+            sign_option = self.sign_test_dropdown.get()
+            if sign_option:
+                extra_params["Sign Test"] = [sign_option] 
 
         # print("Final DataFrame sent to Controller:")
         # print(data_frame.dtypes)
@@ -723,21 +719,6 @@ class MeasureSelectionPage(BasePage):
         """Return the selected measures (list of strings)."""
         return self.selected_stats
     
-    def update_chi_square_dropdowns(self):
-        df = self.table.controller.get_table_selection()
-
-        if df.empty or df.shape[1] < 2:
-            self.expected_dropdown["values"] = []
-            self.observed_dropdown["values"] = []
-            return
-
-        column_names = df.columns.tolist()
-        self.expected_dropdown["values"] = column_names
-        self.observed_dropdown["values"] = column_names
-
-        # Optionally pre-select the first two
-        self.expected_dropdown.set(column_names[0])
-        self.observed_dropdown.set(column_names[1])
 
     def generate_skipped_explanations(self, skipped_measures, df):
         """
