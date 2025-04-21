@@ -114,6 +114,8 @@ class App(tk.Tk):
 
         # Bind Escape key to close the application
         self.bind("<Escape>", lambda event: self.quit())
+        # Custom measures for user added input
+        self.custom_measures = set()
 
         # --- Creation of the menu bar here ---
         menubar = Menu(self)
@@ -225,7 +227,6 @@ class App(tk.Tk):
 
 
     def register_custom_stat(self, name, expression):
-
         def custom_func(self):
             data = self._clean_data()
             try:
@@ -238,6 +239,8 @@ class App(tk.Tk):
         custom_func.__name__ = name.replace(" ", "_").lower()
         decorated = statistic.register(name)(custom_func)
         setattr(statistic, custom_func.__name__, decorated)
+
+        self.custom_measures.add(name)  # <- Track it
         print("Registered Measures:", statistic.registered_measures.keys())
 
 
@@ -507,15 +510,25 @@ class MeasureSelectionPage(BasePage):
         data_frame.dropna(axis=0, how='all', inplace=True)
         data_frame.dropna(axis=1, how='all', inplace=True)
 
+        # all_measures = statistic.registered_measures.keys()
+        # compatible = Controller.get_compatible_measures(data_frame)
         all_measures = statistic.registered_measures.keys()
         compatible = Controller.get_compatible_measures(data_frame)
+        custom_measures = getattr(self.gui_controller, 'custom_measures', set())
+
         show_all = self.show_all_measures.get()
-
         for measure in sorted(all_measures):
-            is_compatible = measure in compatible
-
+            is_compatible = measure in compatible or measure in custom_measures
             if not is_compatible and not show_all:
                 continue
+
+      #  show_all = self.show_all_measures.get()
+
+        # for measure in sorted(all_measures):
+        #     is_compatible = measure in compatible
+
+        #     if not is_compatible and not show_all:
+        #         continue
 
             tags = ("disabled",) if not is_compatible else ()
             parent_id = self.stat_treeview.insert(
