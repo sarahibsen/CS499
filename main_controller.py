@@ -314,8 +314,7 @@ class Controller:
             return ["Vertical Bar Chart", "Horizontal Bar Chart"]
         elif measure == "Mode":
             return ["Vertical Bar Chart", "Horizontal Bar Chart", "Pie Chart"]
-        elif measure in ["Probability Distribution", "Standard Deviation", "Variance", 
-                         "Coefficient of Variation", "Binomial Distribution"]:
+        elif measure in ["Probability Distribution", "Standard Deviation", "Variance", "Coefficient of Variation", "Binomial Distribution"]:
             return ["Normal Distribution Curve"]
         elif measure == "Percentiles":
             return ["Normal Distribution Curve", "Vertical Bar Chart", "Horizontal Bar Chart"]
@@ -326,17 +325,20 @@ class Controller:
     @staticmethod
     def measure_supports_grouping(measure):
         """
-        Returns No grouping if the measure cannot be graphed with grouping, Must group if the measure can  only
-        be graphed with grouping, and Both if measure cna be grouped or not grouped
+        Returns "No grouping" if the measure cannot be graphed with grouping,
+        "Must group" if the measure can only be graphed with grouping,
+        and "Both" if the measure can be grouped or not grouped.
+        Custom measures default to "No grouping".
         """
-        # Default to "No grouping" for custom measures
-        if measure not in statistic.registered_measures:
+
+        # If it's a custom measure (registered but not listed in requirements)
+        if measure in statistic.registered_measures and measure not in statistic.measure_requirements:
             return "No grouping"
 
-        if measure in ["Standard Deviation", "Variance", "Percentiles","Binomial Distribution",
+        if measure in ["Standard Deviation", "Variance", "Percentiles", "Binomial Distribution",
                        "Probability Distribution", "Coefficient of Variation"]:
             return "No grouping"
-        elif measure in ["Chi Square", "Least Square Line", "Chi Square", "Correlation Coefficient", "Sign Test",
+        elif measure in ["Chi Square", "Least Square Line", "Correlation Coefficient", "Sign Test",
                          "Rank Sum", "Spearman Correlation", "Mode"]:
             return "Must group"
         return "Both"
