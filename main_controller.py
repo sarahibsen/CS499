@@ -299,7 +299,14 @@ class Controller:
 
     @staticmethod
     def plots_for_measure(measure):
-        # Default plots for custom measures
+        if isinstance(measure, list):
+            # Combine all unique valid plots for the list of measures
+            plots = set()
+            for m in measure:
+                plots.update(Controller.plots_for_measure(m))
+            return list(plots)
+
+            # Handle single measure
         if measure not in statistic.registered_measures:
             return ["Vertical Bar Chart", "Horizontal Bar Chart"]
 
@@ -331,7 +338,7 @@ class Controller:
                        "Probability Distribution", "Coefficient of Variation"]:
             return "No grouping"
         elif measure in ["Chi Square", "Least Square Line", "Chi Square", "Correlation Coefficient", "Sign Test",
-                         "Rank Sum", "Spearman Correlation"]:
+                         "Rank Sum", "Spearman Correlation", "Mode"]:
             return "Must group"
         return "Both"
 
