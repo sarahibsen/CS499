@@ -303,7 +303,7 @@ class Controller:
         if measure not in statistic.registered_measures:
             return ["Vertical Bar Chart", "Horizontal Bar Chart"]
 
-        if measure in ["Mean", "Median", "Chi Square", "Sign Test", "Rank Sum", "Correlation Coefficient"]:
+        if measure in ["Mean", "Median", "Chi Square", "Sign Test", "Rank Sum"]:
             return ["Vertical Bar Chart", "Horizontal Bar Chart"]
         elif measure == "Mode":
             return ["Vertical Bar Chart", "Horizontal Bar Chart", "Pie Chart"]
@@ -311,7 +311,7 @@ class Controller:
             return ["Normal Distribution Curve"]
         elif measure == "Percentiles":
             return ["Normal Distribution Curve", "Vertical Bar Chart", "Horizontal Bar Chart"]
-        elif measure in ["Spearman Correlation", "Least Square Line"]:
+        elif measure in ["Spearman Correlation", "Least Square Line", "Correlation Coefficient"]:
             return ["Scatter Plot"]
         elif measure == "Binomial Distribution":
             return ["Vertical Bar Chart", "Normal Distribution Curve"]
@@ -328,9 +328,9 @@ class Controller:
             return "No grouping"
 
         if measure in ["Standard Deviation", "Variance", "Percentiles","Binomial Distribution",
-                       "Probability Distribution", "Coefficient of Variation", "Correlation Coefficient"]:
+                       "Probability Distribution", "Coefficient of Variation"]:
             return "No grouping"
-        elif measure in ["Chi Square", "Least Square Line", "Chi Square", "Correlation", "Sign Test",
+        elif measure in ["Chi Square", "Least Square Line", "Chi Square", "Correlation Coefficient", "Sign Test",
                          "Rank Sum", "Spearman Correlation"]:
             return "Must group"
         return "Both"
