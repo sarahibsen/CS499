@@ -244,8 +244,6 @@ class App(tk.Tk):
         print("Registered Measures:", statistic.registered_measures.keys())
 
 
-
-
 class BasePage(tk.Frame):
     """Base class for all pages."""
 
@@ -1448,6 +1446,23 @@ class DashboardPage(BasePage):
             return None
 
         raw_data = selected_table.select_dtypes(include='number')
+
+        # Try to get the custom measure result
+        try:
+            stat_instance = statistic(raw_data)
+            custom_func = statistic.registered_measures.get(selected_measure)
+            if custom_func:
+                result = custom_func(stat_instance)
+                if isinstance(result, dict):
+                    # Convert to DataFrame for consistent handling
+                    return pd.DataFrame(result, index=[0])
+                else:
+                    return pd.DataFrame({selected_measure: [result]})
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not calculate custom measure: {e}")
+            return None
+
+
         selected_columns = raw_data.columns.tolist()
 
         graph_data = None
