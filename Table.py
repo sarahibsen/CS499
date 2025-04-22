@@ -346,8 +346,8 @@ class TableController:
 
     def log_operation(self, selected_operations, results, dataType = "Detected"):
         """ Log the operation performed. """
-        result_str = ", ".join([f"{k}: {v}" for k, v in results.items()])
-        operation = f"Operation: {selected_operations}, Data Type: {dataType}, Results: {result_str}"
+        result_str = " ".join([f"{k}: {v}" for k, v in results.items()])
+        operation = f"{selected_operations} | Data Type: {dataType} | Results: {result_str} |\n"
         self.operations_log.append(operation)
 
     def add_log_separator(self, separator_char="-", length=50):

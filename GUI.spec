@@ -6,13 +6,13 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[('assets', 'assets')],
+    hiddenimports=['Table.py', 'statisticsLogic.py', 'colors.py', 'main_controller.py', 'menu_functions.py'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
     excludes=[],
     noarchive=False,
     optimize=0,
-    hiddenimports=['main_controller', 'menu_functions', 'Table', 'statisticsLogic', 'colors']
 )
 pyz = PYZ(a.pure)
 
@@ -22,7 +22,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='STAT',
+    name='GUI',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
