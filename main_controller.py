@@ -299,31 +299,47 @@ class Controller:
 
     @staticmethod
     def plots_for_measure(measure):
-        if measure in ["Mean", "Median", "Chi Square", "Sign Test", "Rank Sum", "Correlation Coefficient"]:
+        if isinstance(measure, list):
+            # Combine all unique valid plots for the list of measures
+            plots = set()
+            for m in measure:
+                plots.update(Controller.plots_for_measure(m))
+            return list(plots)
+
+            # Handle single measure
+        if measure not in statistic.registered_measures:
+            return ["Vertical Bar Chart", "Horizontal Bar Chart"]
+
+        if measure in ["Mean", "Median", "Chi Square", "Sign Test", "Rank Sum"]:
             return ["Vertical Bar Chart", "Horizontal Bar Chart"]
         elif measure == "Mode":
             return ["Vertical Bar Chart", "Horizontal Bar Chart", "Pie Chart"]
-        elif measure in ["Probability Distribution", "Standard Deviation", "Variance", "Coefficient of Variation"]:
+        elif measure in ["Probability Distribution", "Standard Deviation", "Variance", "Coefficient of Variation", "Binomial Distribution"]:
             return ["Normal Distribution Curve"]
         elif measure == "Percentiles":
             return ["Normal Distribution Curve", "Vertical Bar Chart", "Horizontal Bar Chart"]
-        elif measure in ["Spearman Correlation", "Least Square Line"]:
+        elif measure in ["Spearman Correlation", "Least Square Line", "Correlation Coefficient"]:
             return ["Scatter Plot"]
-        elif measure == "Binomial Distribution":
-            return ["Vertical Bar Chart", "Normal Distribution Curve"]
-        return [" "]
+        return ["Vertical Bar Chart", "Horizontal Bar Chart"]
 
     @staticmethod
     def measure_supports_grouping(measure):
         """
-        Returns No grouping if the measure cannot be graphed with grouping, Must group if the measure can  only
-        be graphed with grouping, and Both if measure cna be grouped or not grouped
+        Returns "No grouping" if the measure cannot be graphed with grouping,
+        "Must group" if the measure can only be graphed with grouping,
+        and "Both" if the measure can be grouped or not grouped.
+        Custom measures default to "No grouping".
         """
-        if measure in ["Standard Deviation", "Variance", "Percentiles","Binomial Distribution",
-                       "Probability Distribution", "Coefficient of Variation", "Correlation Coefficient"]:
+
+        # If it's a custom measure (registered but not listed in requirements)
+        if measure in statistic.registered_measures and measure not in statistic.measure_requirements:
             return "No grouping"
-        elif measure in ["Chi Square", "Least Square Line", "Chi Square", "Correlation", "Sign Test",
-                         "Rank Sum", "Spearman Correlation"]:
+
+        if measure in ["Standard Deviation", "Variance", "Percentiles", "Binomial Distribution",
+                       "Probability Distribution", "Coefficient of Variation"]:
+            return "No grouping"
+        elif measure in ["Chi Square", "Least Square Line", "Correlation Coefficient", "Sign Test",
+                         "Rank Sum", "Spearman Correlation", "Mode"]:
             return "Must group"
         return "Both"
 
@@ -347,12 +363,15 @@ class Controller:
         return None, None
 
     @staticmethod
-    def get_compatible_measures(df):
+    def get_compatible_measures(df, selected_columns=None):
 
         type_map = TableModel().detect_data_type(df)
         present_types = set(type_map.values())
 
-        numeric_df = df.select_dtypes(include=[np.number]).dropna()
+        if selected_columns:
+            numeric_df = df[selected_columns].select_dtypes(include=[np.number]).dropna()
+        else:
+            numeric_df = df.select_dtypes(include=[np.number]).dropna()
         num_columns = numeric_df.shape[1]
         num_rows = numeric_df.shape[0]
 
@@ -405,8 +424,10 @@ class Controller:
 
             # Check row count using only the required number of numeric columns
             if "min_length" in rules:
+                # Allow more columns than exact if needed (especially for correlation-like measures)
                 if "exact_columns" in rules:
-                    sub_df = numeric_df.iloc[:, :rules["exact_columns"]]
+                    if num_columns < rules["exact_columns"]:
+                        continue
                 elif "min_columns" in rules:
                     sub_df = numeric_df.iloc[:, :rules["min_columns"]]
                 else:

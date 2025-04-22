@@ -244,8 +244,6 @@ class App(tk.Tk):
         print("Registered Measures:", statistic.registered_measures.keys())
 
 
-
-
 class BasePage(tk.Frame):
     """Base class for all pages."""
 
@@ -1086,24 +1084,11 @@ class DashboardPage(BasePage):
                     self.ax.set_ylabel(f'{selected_measure} Value')
 
             elif graph_type == "Vertical Bar Chart":
-                if selected_measure == "Correlation Coefficient":
-                    graph_data = graph_data.reset_index()
-                    graph_data['Pair'] = graph_data.apply(lambda row: f"{row.iloc[0]} vs {row.iloc[1]}", axis=1)
-
-                    self.ax.bar(graph_data['Pair'], graph_data['Correlation Coefficient'], color='steelblue')
-                    self.ax.set_ylabel("Correlation Coefficient")
-                    self.ax.set_xlabel("Variable Pair")
-                    self.ax.set_ylim(-1, 1)  # Correlation range
-                    self.ax.axhline(0, color='gray', linestyle='--')
-
-                    for i, v in enumerate(graph_data['Correlation Coefficient']):
-                        self.ax.text(i, v + 0.03 * np.sign(v), f"{v:.2f}", ha='center', va='bottom' if v >= 0 else 'top')
-                else:
-                    graph_data.plot(kind="bar", ax=self.ax).legend(loc='upper left', bbox_to_anchor=(1, 1))
-                    self.ax.set_ylabel(f'{selected_measure} Value')
+                graph_data.plot(kind="bar", ax=self.ax).legend(loc='upper left', bbox_to_anchor=(1, 1))
+                self.ax.set_ylabel(f'{selected_measure} Value')
 
             elif graph_type == "Pie Chart":
-                self.figure.clf()  # Make sure to fully clear everything again here too
+                self.figure.clf()  # Clear figure
                 num_cols = len(selected_columns)
                 for i, col in enumerate(selected_columns, 1):
                     ax = self.figure.add_subplot(1, num_cols, i)
@@ -1123,13 +1108,6 @@ class DashboardPage(BasePage):
                         return
                     mean = n_trials * prob
                     std_dev = np.sqrt(n_trials * prob * (1 - prob))
-                    if n_trials * prob < 5 or n_trials * (1 - prob) < 5:
-                        messagebox.showwarning(
-                            "Warning",
-                            "Normal approximation may not be accurate for small n or extreme probabilities. "
-                            "Please consider using Vertical Bar Chart instead."
-                        )
-
                     # Generate values for the x-axis
                     x_vals = np.linspace(0, n_trials, 1000)
                     normal_approx = stats.norm.pdf(x_vals, mean, std_dev)
@@ -1407,6 +1385,21 @@ class DashboardPage(BasePage):
                         trend = np.poly1d(coefficients)
                         self.ax.plot(x, trend(x), 'r--', label='Trend Line')
 
+                    elif selected_measure == "Correlation Coefficient":
+                        x = graph_data[selected_columns[0]]
+                        y = graph_data[selected_columns[1]]
+
+                        self.ax.scatter(x, y, label="Data Points")
+                        self.ax.set_xlabel(selected_columns[0])
+                        self.ax.set_ylabel(selected_columns[1])
+                        self.ax.set_title(f"Correlation Coefficient: {x.corr(y):.2f}")
+
+                        # Optional trend line
+                        coefficients = np.polyfit(x, y, 1)
+                        trend = np.poly1d(coefficients)
+                        self.ax.plot(x, trend(x), 'r--', label='Trend Line')
+
+
                     elif selected_measure == "Least Square Line":
                         x = graph_data[selected_columns[0]]  # should be graphed on the horizontal
                         y = graph_data[selected_columns[1]]  # vertical
@@ -1454,6 +1447,22 @@ class DashboardPage(BasePage):
             return None
 
         raw_data = selected_table.select_dtypes(include='number')
+
+        # Try to get the custom measure result only if it exists
+        custom_func = statistic.registered_measures.get(selected_measure)
+
+        if custom_func:
+            try:
+                stat_instance = statistic(raw_data)
+                result = custom_func(stat_instance)
+                if isinstance(result, dict):
+                    # Convert to DataFrame for consistent handling
+                    return pd.DataFrame(result, index=[0])
+                else:
+                    return pd.DataFrame({selected_measure: [result]})
+            except Exception as e:
+                return None
+
         selected_columns = raw_data.columns.tolist()
 
         graph_data = None
@@ -1469,21 +1478,6 @@ class DashboardPage(BasePage):
             graph_data = pd.DataFrame(raw_data.var()).T
         elif selected_measure == "Coefficient of Variation":
             graph_data = pd.DataFrame((raw_data.std() / raw_data.mean())).T
-        elif selected_measure == "Correlation Coefficient":
-            if len(selected_columns) < 2:
-                messagebox.showerror("Error", "Correlation requires at least two numeric columns.")
-                return None
-
-            # Compute the correlation matrix (pairwise Pearson)
-            correlation_matrix = raw_data.corr()
-
-            # Optional: keep only upper triangle (excluding diagonal)
-            mask = np.triu(np.ones(correlation_matrix.shape), k=1).astype(bool)
-            correlation_pairs = correlation_matrix.where(mask)
-
-            # Flatten to a Series with multi-index
-            stacked = correlation_pairs.stack()
-            graph_data = stacked.to_frame(name="Correlation Coefficient")
         elif selected_measure == "Percentiles":
             label, values = Controller.get_last_selected_percentiles()
             values = [v / 100 for v in values]
@@ -1508,6 +1502,7 @@ class DashboardPage(BasePage):
                 graph_data.index.name = "Number of Successes"
             except Exception as e:
                 messagebox.showerror("Error", f"Error calculating Binomial Distribution: {e}")
+                print(e)
                 return None
 
         return graph_data
@@ -1566,7 +1561,7 @@ class DashboardPage(BasePage):
                 int).values
             grouped_data.iloc[:, 1] = pd.to_numeric(grouped_data.iloc[:, 1], errors='coerce').dropna().astype(
                 int).values
-        elif selected_measure == "Correlation":
+        elif selected_measure == "Correlation Coefficient":
             grouped_data = grouped.apply(lambda x: x).reset_index()
         elif selected_measure == "Sign Test":
             if len(selected_columns) >= 2:
