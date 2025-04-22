@@ -208,7 +208,7 @@ def mode(self):
             counts = self.data[col].value_counts(dropna=True)
             if counts.empty or counts.max() == 1:
                 messagebox.showerror("Data Error", "There is no mode in the selected data.")
-                return None
+                raise TypeError("There is no mode in the selected data.")
             else:
                 modes = counts[counts == counts.max()].index.tolist()
                 result[col] = modes[0] if len(modes) == 1 else modes  # support multimodal
