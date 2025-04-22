@@ -299,6 +299,10 @@ class Controller:
 
     @staticmethod
     def plots_for_measure(measure):
+        # Default plots for custom measures
+        if measure not in statistic.registered_measures:
+            return ["Vertical Bar Chart", "Horizontal Bar Chart"]
+
         if measure in ["Mean", "Median", "Chi Square", "Sign Test", "Rank Sum", "Correlation Coefficient"]:
             return ["Vertical Bar Chart", "Horizontal Bar Chart"]
         elif measure == "Mode":
@@ -311,7 +315,7 @@ class Controller:
             return ["Scatter Plot"]
         elif measure == "Binomial Distribution":
             return ["Vertical Bar Chart", "Normal Distribution Curve"]
-        return [" "]
+        return ["Vertical Bar Chart", "Horizontal Bar Chart"]
 
     @staticmethod
     def measure_supports_grouping(measure):
@@ -319,6 +323,10 @@ class Controller:
         Returns No grouping if the measure cannot be graphed with grouping, Must group if the measure can  only
         be graphed with grouping, and Both if measure cna be grouped or not grouped
         """
+        # Default to "No grouping" for custom measures
+        if measure not in statistic.registered_measures:
+            return "No grouping"
+
         if measure in ["Standard Deviation", "Variance", "Percentiles","Binomial Distribution",
                        "Probability Distribution", "Coefficient of Variation", "Correlation Coefficient"]:
             return "No grouping"
