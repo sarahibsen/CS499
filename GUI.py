@@ -564,18 +564,24 @@ class MeasureSelectionPage(BasePage):
         self.selected_stats = sorted(selected_measures)  # Store unique, sorted measure names
 
         # toggle the visibility of the binomial input based if the user clicks on this measure
+        row_index = 5
+
         if "Binomial Distribution" in self.selected_stats:
-            self.binomial_frame.grid()  # Show the frame
+            self.binomial_frame.grid(row=row_index, column=1, padx=10, pady=5, sticky="w")
+            row_index += 1
         else:
-            self.binomial_frame.grid_remove()  # Hide if not selected
+            self.binomial_frame.grid_remove()
 
         if "Percentiles" in self.selected_stats:
-            self.percentile_input_frame.grid()
+            self.percentile_input_frame.grid(row=row_index, column=1, padx=10, pady=5, sticky="w")
+            row_index += 1
         else:
             self.percentile_input_frame.grid_remove()
+
         if "Sign Test" in self.selected_stats:
-            self.sign_test_frame.grid()
+            self.sign_test_frame.grid(row=row_index, column=1, padx=10, pady=5, sticky="w")
             self.sign_test_dropdown.set("two-sided")  # default
+            row_index += 1
         else:
             self.sign_test_frame.grid_remove()
 
