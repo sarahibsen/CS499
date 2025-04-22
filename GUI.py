@@ -1399,6 +1399,21 @@ class DashboardPage(BasePage):
                         trend = np.poly1d(coefficients)
                         self.ax.plot(x, trend(x), 'r--', label='Trend Line')
 
+                    elif selected_measure == "Correlation Coefficient":
+                        x = graph_data[selected_columns[0]]
+                        y = graph_data[selected_columns[1]]
+
+                        self.ax.scatter(x, y, label="Data Points")
+                        self.ax.set_xlabel(selected_columns[0])
+                        self.ax.set_ylabel(selected_columns[1])
+                        self.ax.set_title(f"Correlation Coefficient: {x.corr(y):.2f}")
+
+                        # Optional trend line
+                        coefficients = np.polyfit(x, y, 1)
+                        trend = np.poly1d(coefficients)
+                        self.ax.plot(x, trend(x), 'r--', label='Trend Line')
+
+
                     elif selected_measure == "Least Square Line":
                         x = graph_data[selected_columns[0]]  # should be graphed on the horizontal
                         y = graph_data[selected_columns[1]]  # vertical
@@ -1478,21 +1493,6 @@ class DashboardPage(BasePage):
             graph_data = pd.DataFrame(raw_data.var()).T
         elif selected_measure == "Coefficient of Variation":
             graph_data = pd.DataFrame((raw_data.std() / raw_data.mean())).T
-        elif selected_measure == "Correlation Coefficient":
-            if len(selected_columns) < 2:
-                messagebox.showerror("Error", "Correlation requires at least two numeric columns.")
-                return None
-
-            # Compute the correlation matrix (pairwise Pearson)
-            correlation_matrix = raw_data.corr()
-
-            # Optional: keep only upper triangle (excluding diagonal)
-            mask = np.triu(np.ones(correlation_matrix.shape), k=1).astype(bool)
-            correlation_pairs = correlation_matrix.where(mask)
-
-            # Flatten to a Series with multi-index
-            stacked = correlation_pairs.stack()
-            graph_data = stacked.to_frame(name="Correlation Coefficient")
         elif selected_measure == "Percentiles":
             label, values = Controller.get_last_selected_percentiles()
             values = [v / 100 for v in values]
@@ -1575,7 +1575,7 @@ class DashboardPage(BasePage):
                 int).values
             grouped_data.iloc[:, 1] = pd.to_numeric(grouped_data.iloc[:, 1], errors='coerce').dropna().astype(
                 int).values
-        elif selected_measure == "Correlation":
+        elif selected_measure == "Correlation Coefficient":
             grouped_data = grouped.apply(lambda x: x).reset_index()
         elif selected_measure == "Sign Test":
             if len(selected_columns) >= 2:
