@@ -372,6 +372,13 @@ class Controller:
                 if percent_diff > 0.01:  # 1% tolerance
                     continue
 
+            # MODE SPECIFIC CHECKS
+            if measure == "Mode":
+                flattened_values = numeric_df.values.flatten()
+                unique, counts = np.unique(flattened_values, return_counts=True)
+                if all(count == 1 for count in counts):
+                    continue  # No mode if all values are unique
+
             # GENERAL CHECKS FOR ALL MEASURES
             # Column count rules
             if "exact_columns" in rules and num_columns != rules["exact_columns"]:
