@@ -24,7 +24,6 @@ import sys
 from menu_functions import set_theme, about_the_app, show_help
 from data_utils import clean_numeric_data
 
-
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
     try:
@@ -1020,9 +1019,11 @@ class DashboardPage(BasePage):
                 print("Error: Table controller not found.")
                 return
 
+            selected_table = self.main_control.load_data_from_table(table_controller)
+
             # Get all columns and selected columns
             data_frame = self.main_control.load_entire_table(table_controller)
-            selected_columns = data_frame.select_dtypes(include='number').columns.tolist()
+            selected_columns = list(selected_table.columns)
 
             # Validate selections
             if not selected_measure or selected_measure == "Select value":
@@ -1089,12 +1090,33 @@ class DashboardPage(BasePage):
                 self.ax.set_ylabel(f'{selected_measure} Value')
 
             elif graph_type == "Pie Chart":
-                self.figure.clf()  # Clear figure
-                num_cols = len(selected_columns)
-                for i, col in enumerate(selected_columns, 1):
-                    ax = self.figure.add_subplot(1, num_cols, i)
-                    graph_data[col].plot(kind="pie", ax=ax, autopct='%1.1f%%', title=col)
-                    ax.set_ylabel('')  # Remove Y-axis label
+                self.figure.clf()
+
+                # Reset and clean data
+                graph_data = graph_data.reset_index(drop=True)
+
+                # Find the numeric column to use as the pie values (besides the grouping column)
+                value_col = None
+                for col in graph_data.select_dtypes(include='number').columns:
+                    if col != 'index':
+                        value_col = col
+                        break
+
+                if value_col is None:
+                    messagebox.showerror("Error", "No numeric column found for pie chart.")
+                    return
+
+                # Determine label column
+                label_col = groupby_column if groupby_column in graph_data.columns else "State"  # fallback
+
+                # Plot the pie chart
+                ax = self.figure.add_subplot(111)
+                ax.pie(
+                    graph_data[value_col],
+                    labels=graph_data[label_col],
+                    explode=[0.05] * len(graph_data)
+                )
+                ax.set_title(f"{selected_measure} by {label_col}")
                 self.canvas_widget.draw()
 
             elif graph_type == "Normal Distribution Curve":
@@ -1423,8 +1445,9 @@ class DashboardPage(BasePage):
                     self.ax.legend()
 
             # Set labels and title
+            print("Selected columns:", selected_columns)
             column_names = ", ".join(selected_columns)
-            if groupby_column == "No Grouping":
+            if groupby_column == "No Grouping" or grouping_eligible == "No grouping":
                 self.ax.set_title(f"{selected_measure} of {column_names}")
             else:
                 self.ax.set_title(f"{selected_measure} of {column_names} by {groupby_column}")
@@ -1468,11 +1491,25 @@ class DashboardPage(BasePage):
 
         graph_data = None
         if selected_measure == "Mean":
-            graph_data = pd.DataFrame(raw_data.mean()).T
+            # graph_data = pd.DataFrame(raw_data.mean()).T
+            mean_series = raw_data.mean().iloc[0]
+            graph_data = pd.DataFrame({
+                "Column": mean_series.index,
+                "Mode": mean_series.values
+            })
         elif selected_measure == "Median":
-            graph_data = pd.DataFrame(raw_data.median()).T
+            # graph_data = pd.DataFrame(raw_data.median()).T
+            median_series = raw_data.median().iloc[0]
+            graph_data = pd.DataFrame({
+                "Column": median_series.index,
+                "Median": median_series.values
+            })
         elif selected_measure == "Mode":
-            graph_data = pd.DataFrame(raw_data.mode().iloc[0]).T
+            mode_series = raw_data.mode().iloc[0]
+            graph_data = pd.DataFrame({
+                "Column": mode_series.index,
+                "Mode": mode_series.values
+            })
         elif selected_measure == "Standard Deviation":
             graph_data = pd.DataFrame(raw_data.std()).T
         elif selected_measure == "Variance":
@@ -1543,10 +1580,20 @@ class DashboardPage(BasePage):
         # Perform statistical measure on grouped data and create dataframe
         if selected_measure == "Mean":
             grouped_data = grouped.mean()
+            grouped_data = grouped_data.reset_index()
+            # Melt the result into long format: Group | Column | Mean
+            grouped_data = pd.melt(grouped_data, id_vars=[groupby_column], var_name="Column", value_name="Mean")
         elif selected_measure == "Median":
             grouped_data = grouped.median()
+            grouped_data = grouped_data.reset_index()
+            # Melt the result into long format: Group | Column | Median
+            grouped_data = pd.melt(grouped_data, id_vars=[groupby_column], var_name="Column", value_name="Median")
         elif selected_measure == "Mode":
             grouped_data = grouped.agg(lambda x: x.mode().iloc[0] if not x.mode().empty else None)
+            grouped_data = grouped_data.reset_index()
+
+            # Melt the result into long format: Group | Column | Mode
+            grouped_data = pd.melt(grouped_data, id_vars=[groupby_column], var_name="Column", value_name="Mode")
         elif selected_measure == "Probability Distribution":
             # calculating the frequency of each group
             group_counts = grouped.size()  # Get counts for each group
