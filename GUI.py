@@ -1374,7 +1374,7 @@ class DashboardPage(BasePage):
                                 self.ax.legend([f"{col}"])
 
             elif graph_type == "Scatter Plot":  # X-Y Graph
-                    if selected_measure == "Spearman Correlation":
+                    if selected_measure == "Spearman Rank Correlation":
                         x = graph_data[selected_columns[0]]
                         y = graph_data[selected_columns[1]]
 
@@ -1588,7 +1588,7 @@ class DashboardPage(BasePage):
         elif selected_measure == "Rank Sum":
             grouped_data = grouped.mean()
             ranked_data = grouped_data.rank(numeric_only=True, method='average')
-        elif selected_measure == "Spearman Correlation":
+        elif selected_measure == "Spearman Rank Correlation":
             grouped_data = grouped.apply(lambda x: x).reset_index()
         else:
             messagebox.showerror("Error", "Invalid measure selected.")
