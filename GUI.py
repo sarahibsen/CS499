@@ -22,6 +22,7 @@ import pathlib
 import os
 import sys
 from menu_functions import set_theme, about_the_app, show_help
+from data_utils import clean_numeric_data
 
 
 def resource_path(relative_path):
@@ -540,16 +541,16 @@ class MeasureSelectionPage(BasePage):
                     self.stat_treeview.insert(parent_id, tk.END, text=f"   ↳ {option}", values=(option,))
 
         self.stat_treeview.tag_configure("disabled", foreground="gray")
-
+        
     def on_row_click(self, event):
-        """Allows multi-selection on treeview without Ctrl key, skips disabled rows."""
-        item = self.stat_treeview.identify_row(event.y)
-        if item and "disabled" not in self.stat_treeview.item(item, "tags"):
-            if item in self.stat_treeview.selection():
-                self.stat_treeview.selection_remove(item)
-            else:
-                self.stat_treeview.selection_add(item)
-        return "break"
+         """Allows multi-selection on treeview without Ctrl key, skips disabled rows."""
+         item = self.stat_treeview.identify_row(event.y)
+         if item and "disabled" not in self.stat_treeview.item(item, "tags"):
+             if item in self.stat_treeview.selection():
+                 self.stat_treeview.selection_remove(item)
+             else:
+                 self.stat_treeview.selection_add(item)
+         return "break"
 
     def on_stat_measure_selected(self, selected_item):
         """Handles selection changes in the statistics treeview."""
@@ -1059,6 +1060,10 @@ class DashboardPage(BasePage):
             self.ax = self.figure.add_subplot(111)
             plt.style.use('seaborn-v0_8-deep')
 
+            print("Graph data received:")
+            print(graph_data)
+
+
             # Generate the selected graph
             if graph_type == "Horizontal Bar Chart":
                 if selected_measure == "Correlation Coefficient":
@@ -1369,7 +1374,7 @@ class DashboardPage(BasePage):
                                 self.ax.legend([f"{col}"])
 
             elif graph_type == "Scatter Plot":  # X-Y Graph
-                    if selected_measure == "Spearman Correlation":
+                    if selected_measure == "Spearman Rank Correlation":
                         x = graph_data[selected_columns[0]]
                         y = graph_data[selected_columns[1]]
 
@@ -1583,7 +1588,7 @@ class DashboardPage(BasePage):
         elif selected_measure == "Rank Sum":
             grouped_data = grouped.mean()
             ranked_data = grouped_data.rank(numeric_only=True, method='average')
-        elif selected_measure == "Spearman Correlation":
+        elif selected_measure == "Spearman Rank Correlation":
             grouped_data = grouped.apply(lambda x: x).reset_index()
         else:
             messagebox.showerror("Error", "Invalid measure selected.")

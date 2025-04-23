@@ -14,6 +14,7 @@ from tkinter import simpledialog, messagebox
 import tkinter
 from tkinter import Toplevel, Label, Radiobutton, Button, StringVar, W
 import sys # To check for existing root
+from data_utils import clean_numeric_data
 
 
 class statistic():
@@ -125,25 +126,12 @@ class statistic():
 #TODO: change this so that we check if the data that was selected by the user
 # depending on the data types in the selected data, depends on what statistical functions they can actually use 
 
-    def _clean_data(self, allow_any = False):
-        if isinstance(self.data, pd.DataFrame):
-            if allow_any:
-                return self.data.dropna()  # Allow all types
-            else:
-                return self.data.select_dtypes(include=[np.number]).dropna().to_numpy()
-        elif isinstance(self.data, (list, np.ndarray)):
-            return np.array(self.data)
-        return np.array([[0]])
-
-
-        return cleaned_data if len(cleaned_data) > 0 else np.array([[0]])
-
 
     def calculate(self, measure, option=None):
         """
         Perform the calculation for the specified measure.
         """
-        cleaned_data = self._clean_data()
+        cleaned_data = self.data
 
         if measure == "Mean":
             return {"Mean": np.mean(cleaned_data)}
@@ -187,7 +175,7 @@ def mean(self):
     """
     Return the mean (average) of the data set
     """
-    cleaned_data = self._clean_data()
+    cleaned_data = self.data
     return {"Mean": np.mean(cleaned_data)}
     
 @statistic.register("Median")
@@ -195,7 +183,7 @@ def median(self):
     """
     Return the median of the data set
     """
-    cleaned_data = self._clean_data()
+    cleaned_data = self.data
     return {"Median": np.median(cleaned_data)}
     
 @statistic.register("Mode")
@@ -203,7 +191,7 @@ def mode(self):
     """
     mode is the only data set in where the user can select multiple data types and still compute 
     """
-    cleaned_data = self._clean_data(allow_any=True)
+    cleaned_data = self.data
 
     if isinstance(self.data, pd.DataFrame):
         result = {}
@@ -230,7 +218,7 @@ def standardDeviation(self):
 
     using an online calculator to confirm results : https://www.calculator.net/standard-deviation-calculator.html?numberinputs=12%2C1%2C1%2C2&ctype=s&x=Calculate
     """
-    cleaned_data = self._clean_data()
+    cleaned_data = self.data
     # Validate the data
     if not isinstance(cleaned_data, (list, np.ndarray)):
         raise TypeError("Data must be a list or NumPy array of numbers")
@@ -254,7 +242,7 @@ def variance(self, variance_type = "Population"):
     """
 
     # TODO: a.any or a.all to check if all values are the same 
-    cleaned_data = self._clean_data()
+    cleaned_data = self.data
     # Validate the data
     if not isinstance(cleaned_data, (list, np.ndarray)):
         raise TypeError("Data must be a list or NumPy array of numbers")
@@ -273,7 +261,7 @@ def variance(self, variance_type = "Population"):
 
 @statistic.register("Coefficient of Variation")
 def coefficientOfVariation(self):
-    cleaned_data = self._clean_data()
+    cleaned_data = self.data
     if not isinstance(cleaned_data, (list, np.ndarray)):
         raise TypeError("Data must be a list or NumPy array of numbers")
     if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in cleaned_data.flatten()):
@@ -291,7 +279,7 @@ def percentiles(self, option=None):
     """
     Calculates percentiles. Accepts either predefined labels or a list of integers from custom input.
     """
-    cleaned_data = self._clean_data()
+    cleaned_data = self.data
     if cleaned_data is None or cleaned_data.size == 0:
         return None
 
@@ -332,7 +320,7 @@ def percentiles(self, option=None):
         
 @statistic.register("Probability Distribution")
 def probabilityDistribution(self, option=None):
-    cleaned_data = self._clean_data()
+    cleaned_data = self.data
     if cleaned_data is None or cleaned_data.size == 0:
         messagebox.showerror("Data Error", "Cannot calculate distribution on empty or invalid data.")
         return None
@@ -389,7 +377,7 @@ def probabilityDistribution(self, option=None):
 
 @statistic.register("Binomial Distribution")
 def binomialDistribution(self, n=None, p=None):
-    selected_data = self._clean_data()
+    selected_data = self.data
 
     # Fallback to default if not supplied
     n = 10 if n is None or n <= 0 else n
@@ -410,42 +398,32 @@ def binomialDistribution(self, n=None, p=None):
 def leastSquareLine(self):
     """
     Only works for interval & frequency datasets
-    Parameters: 
-        Grabs two arrays (can be np.array) as x and as y columns.
-            (e.g. Expected/Actual Freq. Data). 
     Returns:
         the slope, intercept, and equation of the regression line.
     """
-    cleaned_data = self._clean_data()
-    # the user should be able to choose their own columns--however, they must be the same length 
+    cleaned_data = self.data
 
-    # Rows will always have the same number due to the main_controller filling NA with 0's
-    if np.isnan(cleaned_data).any():
-        messagebox.showerror("Error", "Both columns must have the same row length.")
-        raise ValueError("Both columns must have the same row length")
-        
-        # Checks to ensure number of columns are equal
-    if cleaned_data.shape[1] % 2 != 0:
-        messagebox.showerror("Error", "The number of columns must be even.")
-        raise ValueError("The number of columns must be even")
-        
-    x, y = np.hsplit(cleaned_data, 2)
-        
-    # find the mean of the x and y columns 
-    x_mean = np.mean(x)
-    y_mean = np.mean(y)
+    if cleaned_data.shape[1] != 2:
+        raise ValueError("Least Square Line requires exactly two columns.")
 
-    numerator = np.sum((x - x_mean) * (y - y_mean))
-    denominator = np.sum((x - x_mean)** 2)
+    x, y = cleaned_data.iloc[:, 0].to_numpy(), cleaned_data.iloc[:, 1].to_numpy()
 
-    if denominator == 0:
-        messagebox.showerror("Error", "Denominator is zero. Ensure that you select at least two (x,y) pairs.")
-        raise ZeroDivisionError("Cannot divide by zero!")
-        
-    slope = numerator / denominator
-    intercept = y_mean - slope * x_mean
-        
-    return {"Slope": slope, "Y-Intercept": intercept}
+    if len(x) != len(y):
+        raise ValueError("Columns must have the same number of values.")
+
+    if len(x) < 2:
+        raise ValueError("At least two data points are required.")
+
+    slope, intercept = np.polyfit(x, y, 1)
+    equation = f"y = {slope:.3f}x + {intercept:.3f}"
+
+    return {
+        "Slope": slope,
+        "Intercept": intercept,
+        "Equation": equation
+    }
+
+
 
 @statistic.register("Chi Square")
 def chiSquared(self, expected=None, observed=None, rel_tolerance=1e-8):
@@ -538,8 +516,7 @@ def correlationCoefficient(self):
         the correlation coefficient R Value
     """
 
-    cleaned_data = self._clean_data()
-    print(cleaned_data)
+    cleaned_data = self.data
     print(cleaned_data)
 
         # Rows will always have the same number due to the main_controller filling NA with 0's
@@ -568,7 +545,7 @@ def signTest(self, option=None):
     Performs Sign Test for one-sample or paired-sample with optional multiple hypothesis types.
     If multiple hypothesis options are passed, all are calculated and returned.
     """
-    cleaned_data = self._clean_data()
+    cleaned_data = self.data
 
     # Determine sample type
     if cleaned_data.shape[1] == 1:
@@ -617,7 +594,7 @@ def rankSum(self):
     Performs the Mann-Whitney U Rank Sum test (non-parametric).
     Requires exactly two numeric columns with non-missing values.
     """
-    cleaned_data = self._clean_data()
+    cleaned_data = self.data
     
     if cleaned_data.shape[1] < 2:
         messagebox.showerror("Rank Sum Error", "You need to select at least two numeric columns.")
@@ -649,42 +626,31 @@ def rankSum(self):
         return None
 
 
-@statistic.register("Spearman Correlation")
+@statistic.register("Spearman Rank Correlation")
 def spearmanRankCorrelation(self):
-    """
-    Computes Spearman's Rank Correlation Coefficient between two numeric columns.
-    """
-    cleaned_data = self._clean_data()
+    cleaned_data = self.data
 
-    # Check if we have at least two columns
-    if cleaned_data.shape[1] < 2:
-        messagebox.showerror("Spearman Correlation Error", "Please select at least two numeric columns.")
+    if cleaned_data is None or cleaned_data.shape[1] != 2:
+        messagebox.showerror("Input Error", "Spearman Rank Correlation requires exactly two numeric columns.")
+        return None
+
+    x = cleaned_data.iloc[:, 0].to_numpy()
+    y = cleaned_data.iloc[:, 1].to_numpy()
+
+    if len(x) < 3:
+        messagebox.showerror("Input Error", "Spearman Rank Correlation requires at least 3 data points.")
         return None
 
     try:
-        x, y = np.hsplit(cleaned_data[:, :2], 2)  # Only use first two columns
-        x = x.ravel()
-        y = y.ravel()
-
-        # Drop NaNs (align lengths)
-        mask = ~np.isnan(x) & ~np.isnan(y)
-        x = x[mask]
-        y = y[mask]
-
-        if len(x) < 2 or len(y) < 2:
-            messagebox.showerror("Spearman Correlation Error", "Need at least 2 valid values in each column.")
-            return None
-
-        coef, p_value = stats.spearmanr(x, y)
-
+        rho, p = stats.spearmanr(x, y)
         return {
-            "Spearman Correlation": f"{coef:.4f}",
-            "P-Value": f"{p_value:.4e}"
+            "Spearman Correlation Coefficient (ρ)": rho,
+            "p-value": p
         }
-
     except Exception as e:
-        messagebox.showerror("Spearman Correlation Error", f"An error occurred: {e}")
+        messagebox.showerror("Computation Error", f"Failed to compute Spearman correlation: {e}")
         return None
+
 
 
 class plotCreation():
