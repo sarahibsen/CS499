@@ -342,9 +342,9 @@ class Controller:
             return "No grouping"
 
         if measure in ["Standard Deviation", "Variance", "Percentiles", "Binomial Distribution",
-                       "Probability Distribution", "Coefficient of Variation"]:
+                       "Probability Distribution", "Coefficient of Variation", "Sign Test"]:
             return "No grouping"
-        elif measure in ["Chi Square", "Least Square Line", "Correlation Coefficient", "Sign Test",
+        elif measure in ["Chi Square", "Least Square Line", "Correlation Coefficient", 
                          "Rank Sum", "Spearman Correlation", "Mode"]:
             return "Must group"
         return "Both"
@@ -366,6 +366,15 @@ class Controller:
         instance = Controller.last_stat_instance
         if instance and hasattr(instance, 'selected_percentiles'):
             return instance.selected_percentile_label, instance.selected_percentiles
+        return None, None
+    
+    @staticmethod
+    def get_last_selected_signs():
+        instance = Controller.last_stat_instance
+        if instance and hasattr(instance, 'n_positive') and hasattr(instance, 'n_negative'):
+            print("get last selected signs")
+            print(instance.n_positive, instance.n_negative)
+            return instance.n_positive, instance.n_negative
         return None, None
 
     @staticmethod

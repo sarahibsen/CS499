@@ -588,6 +588,9 @@ def signTest(self, option=None):
     n_positive = sum(d > 0 for d in diffs)
     n_negative = sum(d < 0 for d in diffs)
 
+    self.n_positive = n_positive
+    self.n_negative = n_negative
+
     # Normalize options
     if isinstance(option, str):
         option = [option]
