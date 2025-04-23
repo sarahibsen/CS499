@@ -200,6 +200,9 @@ def median(self):
     
 @statistic.register("Mode")
 def mode(self):
+    """
+    mode is the only data set in where the user can select multiple data types and still compute 
+    """
     cleaned_data = self._clean_data(allow_any=True)
 
     if isinstance(self.data, pd.DataFrame):

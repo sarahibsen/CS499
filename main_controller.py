@@ -42,6 +42,11 @@ class Controller:
         # Filter non-zero data only
         data = data[(data != 0).any(axis=1)]
         data = data.dropna(axis=1, how='all')  # Drop columns with all NaN values
+        # filter if there are mixed data types 
+        data = data.select_dtypes(include=[np.number]).dropna()
+
+
+        
 
         #print(f"Data loaded into Controller:\n{data}")
         return data
@@ -127,16 +132,17 @@ class Controller:
         #print(data_frame)
 
         # Clean up string-based numeric data
-        for col in data_frame.columns:
-            if data_frame[col].dtype == object:
-                # Try to strip string values, but avoid NaNs turning into "nan"
-                data_frame[col] = data_frame[col].apply(lambda x: str(x).strip() if pd.notna(x) else x)
+        object_cols = data_frame.select_dtypes(include='object').columns
+        for col in object_cols:
+            data_frame[col] = data_frame[col].apply(lambda x: str(x).strip() if pd.notna(x) else x)
 
         # Convert to numeric where possible
         data_frame = data_frame.apply(pd.to_numeric, errors='coerce')
 
-        #print("After coercion:")
-        #print(data_frame)
+
+        print("After coercion:")
+        data_frame = data_frame.dropna(axis=1, how='all')  # Drop columns with all NaN values
+        print(data_frame)
 
         # Drop rows where all values are NaN
         data_frame.dropna(how='all', inplace=True)
