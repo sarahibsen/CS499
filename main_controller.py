@@ -293,10 +293,10 @@ class Controller:
             return "No grouping"
 
         if measure in ["Standard Deviation", "Variance", "Percentiles", "Binomial Distribution",
-                       "Probability Distribution", "Coefficient of Variation"]:
+                       "Probability Distribution", "Coefficient of Variation", "Sign Test"]:
             return "No grouping"
         elif measure in ["Chi Square", "Least Square Line", "Correlation Coefficient",
-                         "Rank Sum", "Spearman Rank Correlation", "Mode", "Sign Test"]:
+                         "Rank Sum", "Spearman Rank Correlation", "Mode"]:
             return "Must group"
         return "Both"
 
