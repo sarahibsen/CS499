@@ -1084,6 +1084,38 @@ class DashboardPage(BasePage):
                 graph_data.plot(kind="bar", ax=self.ax).legend(loc='upper left', bbox_to_anchor=(1, 1))
                 self.ax.set_ylabel(f'{selected_measure} Value')
 
+
+            elif graph_type == "Pie Chart":
+
+                self.figure.clf()
+
+                # Reset and clean data
+                graph_data = graph_data.reset_index(drop=True)
+
+                # Find the numeric column to use as the pie values (besides the grouping column)
+                value_col = None
+                for col in graph_data.select_dtypes(include='number').columns:
+                    if col != 'index':
+                        value_col = col
+                        break
+                if value_col is None:
+                    messagebox.showerror("Error", "No numeric column found for pie chart.")
+                    return
+
+                # Determine label column
+                label_col = groupby_column if groupby_column in graph_data.columns else "State"  # fallback
+
+                # Plot the pie chart
+                ax = self.figure.add_subplot(111)
+                ax.pie(
+                    graph_data[value_col],
+                    labels=graph_data[label_col],
+                    autopct='%1.0f%%',
+                    explode=[0.05] * len(graph_data)
+                )
+                ax.set_title(f"{selected_measure} by {label_col}")
+                self.canvas_widget.draw()
+
             elif graph_type == "Normal Distribution Curve":
                 if selected_measure == "Binomial Distribution":
 
@@ -1459,7 +1491,11 @@ class DashboardPage(BasePage):
         elif selected_measure == "Median":
             graph_data = pd.DataFrame(raw_data.median()).T
         elif selected_measure == "Mode":
-            graph_data = pd.DataFrame(raw_data.mode().iloc[0]).T
+            mode_series = raw_data.mode().iloc[0]
+            graph_data = pd.DataFrame({
+                "Column": mode_series.index,
+                "Mode": mode_series.values
+            })
         elif selected_measure == "Standard Deviation":
             graph_data = pd.DataFrame(raw_data.std()).T
         elif selected_measure == "Variance":
@@ -1540,6 +1576,10 @@ class DashboardPage(BasePage):
             grouped_data = grouped.median()
         elif selected_measure == "Mode":
             grouped_data = grouped.agg(lambda x: x.mode().iloc[0] if not x.mode().empty else None)
+            grouped_data = grouped_data.reset_index()
+
+            # Melt the result into long format: Group | Column | Mode
+            graph_data = pd.melt(grouped_data, id_vars=[groupby_column], var_name="Column", value_name="Mode")
         elif selected_measure == "Probability Distribution":
             # calculating the frequency of each group
             group_counts = grouped.size()  # Get counts for each group
