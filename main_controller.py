@@ -46,10 +46,6 @@ class Controller:
         # filter if there are mixed data types 
         data = data.select_dtypes(include=[np.number]).dropna()
 
-
-        
-
-        #print(f"Data loaded into Controller:\n{data}")
         return data
 
     @staticmethod
@@ -297,10 +293,9 @@ class Controller:
             # Handle single measure
         if measure not in statistic.registered_measures:
             return ["Vertical Bar Chart", "Horizontal Bar Chart"]
-
-        if measure in ["Mean", "Median", "Chi Square", "Sign Test", "Rank Sum"]:
+        if measure in ["Chi Square", "Sign Test", "Rank Sum"]:
             return ["Vertical Bar Chart", "Horizontal Bar Chart"]
-        elif measure == "Mode":
+        elif measure in ["Mean", "Median", "Mode"]:
             return ["Vertical Bar Chart", "Horizontal Bar Chart", "Pie Chart"]
         elif measure in ["Probability Distribution", "Standard Deviation", "Variance", "Coefficient of Variation", "Binomial Distribution"]:
             return ["Normal Distribution Curve"]
