@@ -564,7 +564,7 @@ class MeasureSelectionPage(BasePage):
                     )
                 else:
                     # Single-value or flat dict
-                    return f"{measure}: " + "\n".join(f"{k}: {v}" for k, v in value.items()) if isinstance(value, dict) else str(value)
+                    return f"{measure}: " + "\n".join(f"{k}: {v}" if k != measure else f"{v}" for k, v in value.items()) if isinstance(value, dict) else str(value)
 
             result_str = "\n\n".join(format_result(k, v) for k, v in results.items())
             messagebox.showinfo("Calculated Statistics", result_str)

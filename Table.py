@@ -155,9 +155,7 @@ class TableController:
 
         selected_cells = self.table.get_selected_cells()
         all_data = []
-        headers = self.table.headers()
-        if not headers:
-            headers = self.table.get_sheet_data(get_displayed=False, get_header=True, get_index=False, get_index_displayed=True, get_header_displayed=True)[0]
+        headers = self.table.get_sheet_data(get_displayed=False, get_header=True, get_index=False, get_index_displayed=True, get_header_displayed=True)[0]
         
         # Create a dict to collect selected cell values by column
         data_dict = {header: [] for header in headers}
