@@ -549,11 +549,11 @@ def signTest(self, option=None):
 
     # Determine sample type
     if cleaned_data.shape[1] == 1:
-        x = cleaned_data.ravel()
+        x = cleaned_data.iloc[:, 0].to_numpy().ravel()
         median = np.median(x)
         diffs = [xi - median for xi in x if xi != median]
     elif cleaned_data.shape[1] == 2:
-        x, y = np.hsplit(cleaned_data, 2)
+        x, y = np.hsplit(cleaned_data.to_numpy(), 2)
         x = x.ravel()
         y = y.ravel()
         diffs = [xi - yi for xi, yi in zip(x, y) if xi != yi]
