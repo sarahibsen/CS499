@@ -1091,8 +1091,48 @@ class DashboardPage(BasePage):
 
             elif graph_type == "Pie Chart":
                 self.figure.clf()
+                raw_data = selected_table.select_dtypes(include='number')
 
-                # Reset and clean data
+                # Process data so it can be graphed in pie chart
+                if selected_measure == "Mean":
+                    if groupby_column == "No Grouping":
+                        mean_series = raw_data.mean(numeric_only=True)
+                        graph_data = pd.DataFrame({
+                            "Column": mean_series.index,
+                            "Mean": mean_series.values
+                        })
+                    else:
+                        grouped_data = graph_data.reset_index()
+                        # Melt the result into long format: Group | Column | Mean
+                        graph_data = pd.melt(grouped_data, id_vars=[groupby_column], var_name="Column",
+                                               value_name="Mean")
+
+                if selected_measure == "Median":
+                    if groupby_column == "No Grouping":
+                        median_series = raw_data.median(numeric_only=True)
+                        graph_data = pd.DataFrame({
+                            "Column": median_series.index,
+                            "Mean": median_series.values
+                        })
+                    else:
+                        grouped_data = graph_data.reset_index()
+                        # Melt the result into long format: Group | Column | Median
+                        graph_data = pd.melt(grouped_data, id_vars=[groupby_column], var_name="Column",
+                                               value_name="Median")
+
+                if selected_measure == "Mode":
+                    if groupby_column == "No Grouping":
+                        mode_series = raw_data.mode(numeric_only=True)
+                        graph_data = pd.DataFrame({
+                            "Column": mode_series.index,
+                            "Mode": mode_series.values
+                        })
+                    else:
+                        grouped_data = graph_data.reset_index()
+                        # Melt the result into long format: Group | Column | Mode
+                        graph_data = pd.melt(grouped_data, id_vars=[groupby_column], var_name="Column",
+                                               value_name="Mode")
+
                 graph_data = graph_data.reset_index(drop=True)
 
                 # Find the numeric column to use as the pie values (besides the grouping column)
@@ -1491,25 +1531,11 @@ class DashboardPage(BasePage):
 
         graph_data = None
         if selected_measure == "Mean":
-            # graph_data = pd.DataFrame(raw_data.mean()).T
-            mean_series = raw_data.mean().iloc[0]
-            graph_data = pd.DataFrame({
-                "Column": mean_series.index,
-                "Mode": mean_series.values
-            })
+            graph_data = pd.DataFrame(raw_data.mean()).T
         elif selected_measure == "Median":
-            # graph_data = pd.DataFrame(raw_data.median()).T
-            median_series = raw_data.median().iloc[0]
-            graph_data = pd.DataFrame({
-                "Column": median_series.index,
-                "Median": median_series.values
-            })
+            graph_data = pd.DataFrame(raw_data.median()).T
         elif selected_measure == "Mode":
-            mode_series = raw_data.mode().iloc[0]
-            graph_data = pd.DataFrame({
-                "Column": mode_series.index,
-                "Mode": mode_series.values
-            })
+            graph_data = pd.DataFrame(raw_data.mode()).T
         elif selected_measure == "Standard Deviation":
             graph_data = pd.DataFrame(raw_data.std()).T
         elif selected_measure == "Variance":
@@ -1525,6 +1551,18 @@ class DashboardPage(BasePage):
         elif selected_measure == "Probability Distribution":
             freq = raw_data.apply(lambda col: col.value_counts(normalize=True))
             graph_data = freq.fillna(0).T
+        elif selected_measure == "Sign Test":
+            # Get the last selected n_positive and n_negative for vertical bar graph
+            n_positive, n_negative = Controller.get_last_signs()
+            if n_positive is None or n_negative is None:
+                messagebox.showerror("Error",
+                                     "No sign test parameters found. Please run Sign Test measure first.")
+                return None
+
+            graph_data = pd.DataFrame({
+                "Sign": ["Positive", "Negative"],
+                "Count": [n_positive, n_negative]
+            })
         elif selected_measure == "Binomial Distribution":
             n_trials, prob = self.main_control.get_last_binomial_params()
             print(n_trials, prob)
@@ -1580,20 +1618,10 @@ class DashboardPage(BasePage):
         # Perform statistical measure on grouped data and create dataframe
         if selected_measure == "Mean":
             grouped_data = grouped.mean()
-            grouped_data = grouped_data.reset_index()
-            # Melt the result into long format: Group | Column | Mean
-            grouped_data = pd.melt(grouped_data, id_vars=[groupby_column], var_name="Column", value_name="Mean")
         elif selected_measure == "Median":
             grouped_data = grouped.median()
-            grouped_data = grouped_data.reset_index()
-            # Melt the result into long format: Group | Column | Median
-            grouped_data = pd.melt(grouped_data, id_vars=[groupby_column], var_name="Column", value_name="Median")
         elif selected_measure == "Mode":
             grouped_data = grouped.agg(lambda x: x.mode().iloc[0] if not x.mode().empty else None)
-            grouped_data = grouped_data.reset_index()
-
-            # Melt the result into long format: Group | Column | Mode
-            grouped_data = pd.melt(grouped_data, id_vars=[groupby_column], var_name="Column", value_name="Mode")
         elif selected_measure == "Probability Distribution":
             # calculating the frequency of each group
             group_counts = grouped.size()  # Get counts for each group
@@ -1610,6 +1638,11 @@ class DashboardPage(BasePage):
             grouped_data.iloc[:, 1] = pd.to_numeric(grouped_data.iloc[:, 1], errors='coerce').dropna().astype(
                 int).values
         elif selected_measure == "Correlation Coefficient":
+            grouped_data = grouped.apply(lambda x: x).reset_index()
+        elif selected_measure == "Rank Sum":
+            grouped_data = grouped.mean()
+            ranked_data = grouped_data.rank(numeric_only=True, method='average')
+        elif selected_measure == "Spearman Rank Correlation":
             grouped_data = grouped.apply(lambda x: x).reset_index()
         elif selected_measure == "Sign Test":
             if len(selected_columns) >= 2:
@@ -1632,11 +1665,6 @@ class DashboardPage(BasePage):
                 return pd.Series({'Positive Count': pos, 'Negative Count': neg})
 
             grouped_data = data_frame.groupby(groupby_column)[value_col].apply(sign_counts).unstack().reset_index()
-        elif selected_measure == "Rank Sum":
-            grouped_data = grouped.mean()
-            ranked_data = grouped_data.rank(numeric_only=True, method='average')
-        elif selected_measure == "Spearman Rank Correlation":
-            grouped_data = grouped.apply(lambda x: x).reset_index()
         else:
             messagebox.showerror("Error", "Invalid measure selected.")
             return None
