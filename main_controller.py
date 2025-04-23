@@ -218,31 +218,7 @@ class Controller:
             except Exception as e:
                 print(f"Error computing {m}: {e}")
 
-
-
         return results, incompatible
-    
-    @staticmethod
-    def get_compatible_measures(data_frame):
-        if data_frame.empty:
-            return []
-
-        numeric_columns = data_frame.select_dtypes(include='number').columns
-        compatible = []
-
-        for measure, requirements in statistic.measure_requirements.items():
-            min_cols = requirements.get("min_columns", 1)
-            exact_cols = requirements.get("exact_columns")
-            if exact_cols is not None:
-                if len(numeric_columns) >= exact_cols:
-                    compatible.append(measure)
-            elif len(numeric_columns) >= min_cols:
-                compatible.append(measure)
-
-        return compatible
-
-
-
 
     @staticmethod
     def export_results(results, filename=None):
@@ -260,8 +236,6 @@ class Controller:
 
         pd.DataFrame(detailed_results).to_csv(filename, index=False)
         print(f"Results exported to {filename}")
-
-
 
     @staticmethod
     def measures_for_data_type(data_type):
@@ -321,8 +295,8 @@ class Controller:
         if measure in ["Standard Deviation", "Variance", "Percentiles", "Binomial Distribution",
                        "Probability Distribution", "Coefficient of Variation"]:
             return "No grouping"
-        elif measure in ["Chi Square", "Least Square Line", "Correlation Coefficient", "Sign Test",
-                         "Rank Sum", "Spearman Rank Correlation", "Mode"]:
+        elif measure in ["Chi Square", "Least Square Line", "Correlation Coefficient",
+                         "Rank Sum", "Spearman Rank Correlation", "Mode", "Sign Test"]:
             return "Must group"
         return "Both"
 
@@ -423,3 +397,12 @@ class Controller:
             compatible.append(measure)
 
         return compatible
+
+    @staticmethod
+    def get_last_selected_signs():
+        instance = Controller.last_stat_instance
+        if instance and hasattr(instance, 'n_positive') and hasattr(instance, 'n_negative'):
+            print("get last selected signs")
+            print(instance.n_positive, instance.n_negative)
+            return instance.n_positive, instance.n_negative
+        return None, None
