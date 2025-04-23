@@ -109,7 +109,7 @@ class Controller:
             "Correlation": stat_instance.correlationCoefficient,
             "Sign Test": stat_instance.signTest,
             "Rank Sum": stat_instance.rankSum,
-            "Spearman Correlation": stat_instance.spearmanRankCorrelation,
+            "Spearman Rank Correlation": stat_instance.spearmanRankCorrelation,
         }
 
         results = {}
@@ -306,7 +306,7 @@ class Controller:
             return ["Normal Distribution Curve"]
         elif measure == "Percentiles":
             return ["Normal Distribution Curve", "Vertical Bar Chart", "Horizontal Bar Chart"]
-        elif measure in ["Spearman Correlation", "Least Square Line", "Correlation Coefficient"]:
+        elif measure in ["Spearman Rank Correlation", "Least Square Line", "Correlation Coefficient"]:
             return ["Scatter Plot"]
         return ["Vertical Bar Chart", "Horizontal Bar Chart"]
 
@@ -327,7 +327,7 @@ class Controller:
                        "Probability Distribution", "Coefficient of Variation"]:
             return "No grouping"
         elif measure in ["Chi Square", "Least Square Line", "Correlation Coefficient", "Sign Test",
-                         "Rank Sum", "Spearman Correlation", "Mode"]:
+                         "Rank Sum", "Spearman Rank Correlation", "Mode"]:
             return "Must group"
         return "Both"
 
