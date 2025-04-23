@@ -8,6 +8,7 @@ import datetime
 from tkinter import filedialog
 import numpy as np
 from tkinter import messagebox
+from data_utils import clean_numeric_data
 
 # adding warning diflection from pandas 
 pd.set_option('future.no_silent_downcasting', True)
@@ -128,38 +129,13 @@ class Controller:
         if data_frame.empty:
             return {}, selected_measures
 
-        #print("Before coercion:")
-        #print(data_frame)
-
-        # Clean up string-based numeric data
-        object_cols = data_frame.select_dtypes(include='object').columns
-        for col in object_cols:
-            data_frame[col] = data_frame[col].apply(lambda x: str(x).strip() if pd.notna(x) else x)
-
-        # Convert to numeric where possible
-        data_frame = data_frame.apply(pd.to_numeric, errors='coerce')
-
-
-        print("After coercion:")
-        data_frame = data_frame.dropna(axis=1, how='all')  # Drop columns with all NaN values
+        data_frame = clean_numeric_data(data_frame)
+        print("After cleaning:")
         print(data_frame)
 
-        # Drop rows where all values are NaN
-        data_frame.dropna(how='all', inplace=True)
-
-        #print("Final cleaned numeric data:")
-        #print(data_frame)
-
-        # Filter rows where at least one numeric column is not null
-        #data_frame = data_frame[numeric_df.notna().any(axis=1)]
-
-       # print("Cleaned numeric data:", data_frame.head())
-
-       # compatible = Controller.get_compatible_measures(data_frame)
         all_measures = list(statistic.registered_measures.keys())
         compatible = all_measures + selected_measures
         incompatible = [m for m in selected_measures if m not in compatible]
-        #print("\nIncompatible: {}\n".format(incompatible))  # Debugging
         valid = [m for m in selected_measures if m in compatible]
 
         stat_instance = statistic(data_frame)
@@ -169,8 +145,6 @@ class Controller:
         for m in valid:
             try:
                 func = statistic.registered_measures.get(m)
-
-                # Pull optional sub-option (if available)
                 options = extra_params.get(m) if extra_params else None
 
                 if m == "Binomial Distribution":
@@ -258,11 +232,19 @@ class Controller:
             return []
 
         numeric_columns = data_frame.select_dtypes(include='number').columns
-        if numeric_columns.empty:
-            return []
+        compatible = []
 
-        # Allow all registered measures by default 
-        return list(statistic.registered_measures.keys())
+        for measure, requirements in statistic.measure_requirements.items():
+            min_cols = requirements.get("min_columns", 1)
+            exact_cols = requirements.get("exact_columns")
+            if exact_cols is not None:
+                if len(numeric_columns) >= exact_cols:
+                    compatible.append(measure)
+            elif len(numeric_columns) >= min_cols:
+                compatible.append(measure)
+
+        return compatible
+
 
 
 

@@ -22,6 +22,7 @@ import pathlib
 import os
 import sys
 from menu_functions import set_theme, about_the_app, show_help
+from data_utils import clean_numeric_data
 
 
 def resource_path(relative_path):
@@ -540,16 +541,16 @@ class MeasureSelectionPage(BasePage):
                     self.stat_treeview.insert(parent_id, tk.END, text=f"   ↳ {option}", values=(option,))
 
         self.stat_treeview.tag_configure("disabled", foreground="gray")
-
+        
     def on_row_click(self, event):
-        """Allows multi-selection on treeview without Ctrl key, skips disabled rows."""
-        item = self.stat_treeview.identify_row(event.y)
-        if item and "disabled" not in self.stat_treeview.item(item, "tags"):
-            if item in self.stat_treeview.selection():
-                self.stat_treeview.selection_remove(item)
-            else:
-                self.stat_treeview.selection_add(item)
-        return "break"
+         """Allows multi-selection on treeview without Ctrl key, skips disabled rows."""
+         item = self.stat_treeview.identify_row(event.y)
+         if item and "disabled" not in self.stat_treeview.item(item, "tags"):
+             if item in self.stat_treeview.selection():
+                 self.stat_treeview.selection_remove(item)
+             else:
+                 self.stat_treeview.selection_add(item)
+         return "break"
 
     def on_stat_measure_selected(self, selected_item):
         """Handles selection changes in the statistics treeview."""
@@ -1058,6 +1059,10 @@ class DashboardPage(BasePage):
             self.figure.clf()
             self.ax = self.figure.add_subplot(111)
             plt.style.use('seaborn-v0_8-deep')
+
+            print("Graph data received:")
+            print(graph_data)
+
 
             # Generate the selected graph
             if graph_type == "Horizontal Bar Chart":
