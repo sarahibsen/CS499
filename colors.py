@@ -6,12 +6,12 @@ class ColorPalette:
         """Sets the colors for light or dark mode."""
         if mode == "light":
             self.background = "#FEFEFE"  # White
-            self.primary = "#3567DB"  # Blue
+            self.primary = "#FEFEFE" #"#3567DB"  # Blue
             self.text = "#030710"  # Black (cool-toned)
 
         elif mode == "dark":
             self.background = "#181818"  # Black
-            self.primary = "#2353C5"  # Blue
+            self.primary = "#181818" # "#2353C5"  # Blue
             self.text = "#F0F4FC"  # White (cool-toned)
 
 
