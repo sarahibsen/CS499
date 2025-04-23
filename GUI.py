@@ -1553,7 +1553,7 @@ class DashboardPage(BasePage):
             graph_data = freq.fillna(0).T
         elif selected_measure == "Sign Test":
             # Get the last selected n_positive and n_negative for vertical bar graph
-            n_positive, n_negative = Controller.get_last_signs()
+            n_positive, n_negative = Controller.get_last_selected_signs()
             if n_positive is None or n_negative is None:
                 messagebox.showerror("Error",
                                      "No sign test parameters found. Please run Sign Test measure first.")
@@ -1644,27 +1644,6 @@ class DashboardPage(BasePage):
             ranked_data = grouped_data.rank(numeric_only=True, method='average')
         elif selected_measure == "Spearman Rank Correlation":
             grouped_data = grouped.apply(lambda x: x).reset_index()
-        elif selected_measure == "Sign Test":
-            if len(selected_columns) >= 2:
-                col1, col2 = selected_columns[:2]
-                data_frame[col1] = pd.to_numeric(data_frame[col1], errors='coerce')
-                data_frame[col2] = pd.to_numeric(data_frame[col2], errors='coerce')
-                data_frame['diff'] = data_frame[col1] - data_frame[col2]
-                value_col = 'diff'
-            elif len(selected_columns) == 1:
-                col = selected_columns[0]
-                data_frame[col] = pd.to_numeric(data_frame[col], errors='coerce')
-                value_col = col
-            else:
-                messagebox.showerror("Error", "Select at least one column for Sign Test.")
-                return
-
-            def sign_counts(series):
-                pos = (series > 0).sum()
-                neg = (series < 0).sum()
-                return pd.Series({'Positive Count': pos, 'Negative Count': neg})
-
-            grouped_data = data_frame.groupby(groupby_column)[value_col].apply(sign_counts).unstack().reset_index()
         else:
             messagebox.showerror("Error", "Invalid measure selected.")
             return None
