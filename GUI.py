@@ -15,13 +15,15 @@ from PIL import Image, ImageTk
 from Table import TableView
 from colors import ColorPalette
 from statisticsLogic import statistic
+from tkinter.messagebox import showinfo
+
 
 # using the controller class to handle the communication between all components
 from main_controller import Controller
 import pathlib
 import os
 import sys
-from menu_functions import set_theme, about_the_app, show_help
+from menu_functions import set_theme, about_the_app, show_help, apply_theme
 from data_utils import clean_numeric_data
 
 def resource_path(relative_path):
@@ -162,6 +164,10 @@ class App(tk.Tk):
             ("ResultsPage", ResultsPage)
         ]:
             self.add_page(page_name, page_class)
+
+        # Automatically apply the light theme at startup
+        # TODO: Apply this maybe . . . it's a bit buggy
+        # apply_theme("light", self, theme_window=None)
 
         # Show the initial page
         self.show_page("LaunchPage")
@@ -465,7 +471,7 @@ class MeasureSelectionPage(BasePage):
         self.canvas = Canvas(self, bg="#FFFFFF", bd=0, highlightthickness=0, relief="ridge")
         self.canvas.grid(row=0, column=0, sticky="nsew")
 
-        self.toolbarBackground = self.canvas.create_rectangle(0, 0, 100, self.winfo_height(), fill="#D9D9D9",
+        self.toolbarBackground = self.canvas.create_rectangle(0, 0, 100, self.winfo_height(), fill="#181818",
                                                               outline="")
         self.canvas.bind("<Configure>", self.resize_toolbar)  # Bind the resize event
 
@@ -767,7 +773,7 @@ class DashboardPage(BasePage):
 
         # Background
         self.toolbarBackground = self.canvas.create_rectangle(0, 0, 100, self.winfo_height(),
-                                                              fill="#D9D9D9", outline="")
+                                                              fill="#181818", outline="")
         self.canvas.bind("<Configure>", self.resize_toolbar)
 
         # Buttons
@@ -1712,7 +1718,7 @@ class ResultsPage(BasePage):
         self.canvas = Canvas(self, bg="#FFFFFF", bd=0, highlightthickness=0, relief="ridge")
         self.canvas.grid(row=0, column=0, sticky="nsew")
 
-        self.toolbarBackground = self.canvas.create_rectangle(0, 0, 100, self.winfo_height(), fill="#D9D9D9",
+        self.toolbarBackground = self.canvas.create_rectangle(0, 0, 100, self.winfo_height(), fill="#181818",
                                                               outline="")
         self.canvas.bind("<Configure>", self.resize_toolbar)  # Bind the resize event
 
@@ -1761,6 +1767,13 @@ class ResultsPage(BasePage):
         # --- Initial Color Update ---
         self.update_colors()
 
+    # download button handler
+    @staticmethod
+    def handle_click(self):
+        showinfo(
+            title='Information',
+            message='Download button clicked!'
+        )
 
     def get_table_controller(self):
         """
