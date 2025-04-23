@@ -578,11 +578,11 @@ def signTest(self, option=None):
     for hypo in option:
         result = stats.binomtest(n_positive, n, p=0.5, alternative=hypo)
         results[hypo] = {
-            "Sign Count": n,
-            "Positive Count": n_positive,
-            "Negative Count": n_negative,
-            "P-Value": result.pvalue,
-            "Alternative": hypo
+            "Sign Count (Sign Test)": n,
+            "Positive Count (Sign Test)": n_positive,
+            "Negative Count (Sign Test)": n_negative,
+            "P-Value (Sign Test)": result.pvalue,
+            "Alternative (Sign Test)": hypo
         }
 
     return results if len(results) > 1 else list(results.values())[0]
@@ -617,8 +617,8 @@ def rankSum(self):
         stat, p_value = stats.mannwhitneyu(col1, col2, alternative='two-sided')
 
         return {
-            "U-Statistic": f"{stat:.4f}",
-            "P-Value": f"{p_value:.4e}"
+            "U-Statistic (Rank Sum)": f"{stat:.4f}",
+            "P-Value (Rank Sum)": f"{p_value:.4e}"
         }
 
     except Exception as e:
@@ -644,8 +644,8 @@ def spearmanRankCorrelation(self):
     try:
         rho, p = stats.spearmanr(x, y)
         return {
-            "Spearman Correlation Coefficient (ρ)": rho,
-            "p-value": p
+            "Spearman Correlation": f"{coef:.4f}",
+            "P-Value (Spearman Correlation)": f"{p_value:.4e}"
         }
     except Exception as e:
         messagebox.showerror("Computation Error", f"Failed to compute Spearman correlation: {e}")
