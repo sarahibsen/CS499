@@ -1055,7 +1055,7 @@ class DashboardPage(BasePage):
             selected_measure = self.measure_dropdown.get()
             groupby_column = self.column_dropdown.get()
             graph_type = self.graph_dropdown.get()
-
+            
             # Ensure the table controller is available
             table_controller = self.get_table_controller()
             if not table_controller:
@@ -1109,28 +1109,33 @@ class DashboardPage(BasePage):
 
 
             # Generate the selected graph
-            if graph_type == "Horizontal Bar Chart":
-                if selected_measure == "Correlation Coefficient":
-                    graph_data = graph_data.reset_index()
-                    graph_data['Pair'] = graph_data.apply(lambda row: f"{row.iloc[0]} vs {row.iloc[1]}", axis=1)
+            if graph_type in ["Horizontal Bar Chart", "Vertical Bar Chart"]:
+                if graph_data is None or graph_data.empty:
+                    print(f"Skipping {graph_type}: graph_data is empty or None.")
+                    messagebox.showwarning("Warning", f"'{selected_measure}' has no data to plot.")
+                    return
 
+                if graph_type == "Horizontal Bar Chart":
+                    if selected_measure == "Correlation Coefficient":
+                        graph_data = graph_data.reset_index()
+                        graph_data['Pair'] = graph_data.apply(lambda row: f"{row.iloc[0]} vs {row.iloc[1]}", axis=1)
 
-                    self.ax.barh(graph_data['Pair'], graph_data['Correlation Coefficient'], color='skyblue')
-                    self.ax.set_xlabel("Correlation Coefficient")
-                    self.ax.set_ylabel("Variable Pair")
-                    self.ax.set_xlim(-1, 1)
-                    self.ax.axvline(0, color='gray', linestyle='--')
+                        self.ax.barh(graph_data['Pair'], graph_data['Correlation Coefficient'], color='skyblue')
+                        self.ax.set_xlabel("Correlation Coefficient")
+                        self.ax.set_ylabel("Variable Pair")
+                        self.ax.set_xlim(-1, 1)
+                        self.ax.axvline(0, color='gray', linestyle='--')
 
-                    for i, v in enumerate(graph_data['Correlation Coefficient']):
-                        self.ax.text(v + 0.03 * np.sign(v), i, f"{v:.2f}", va='center',
-                                     ha='left' if v >= 0 else 'right')
-                else:
-                    graph_data.plot(kind="barh", ax=self.ax).legend(loc='upper left', bbox_to_anchor=(1, 1))
+                        for i, v in enumerate(graph_data['Correlation Coefficient']):
+                            self.ax.text(v + 0.03 * np.sign(v), i, f"{v:.2f}", va='center',
+                                        ha='left' if v >= 0 else 'right')
+                    else:
+                        graph_data.plot(kind="barh", ax=self.ax).legend(loc='upper left', bbox_to_anchor=(1, 1))
+                        self.ax.set_ylabel(f'{selected_measure} Value')
+
+                elif graph_type == "Vertical Bar Chart":
+                    graph_data.plot(kind="bar", ax=self.ax).legend(loc='upper left', bbox_to_anchor=(1, 1))
                     self.ax.set_ylabel(f'{selected_measure} Value')
-
-            elif graph_type == "Vertical Bar Chart":
-                graph_data.plot(kind="bar", ax=self.ax).legend(loc='upper left', bbox_to_anchor=(1, 1))
-                self.ax.set_ylabel(f'{selected_measure} Value')
 
             elif graph_type == "Pie Chart":
                 self.figure.clf()
@@ -1607,10 +1612,14 @@ class DashboardPage(BasePage):
             graph_data = pd.DataFrame((raw_data.std() / raw_data.mean())).T
         elif selected_measure == "Percentiles":
             label, values = Controller.get_last_selected_percentiles()
+            if not values:
+                messagebox.showerror("Error", "No percentiles selected. Please configure percentiles first.")
+                return None
             values = [v / 100 for v in values]
             percentiles_df = raw_data.quantile(values)
             percentiles_df.index = [f"{int(v * 100)}th" for v in values]
             graph_data = percentiles_df
+
         elif selected_measure == "Probability Distribution":
             freq = raw_data.apply(lambda col: col.value_counts(normalize=True))
             graph_data = freq.fillna(0).T
