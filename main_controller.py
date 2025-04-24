@@ -271,10 +271,9 @@ class Controller:
             return ["Vertical Bar Chart", "Horizontal Bar Chart"]
         elif measure in ["Mean", "Median", "Mode"]:
             return ["Vertical Bar Chart", "Horizontal Bar Chart", "Pie Chart"]
-        elif measure in ["Probability Distribution", "Standard Deviation", "Variance", "Coefficient of Variation", "Binomial Distribution"]:
+        elif measure in ["Probability Distribution", "Standard Deviation", "Variance", "Coefficient of Variation",
+                         "Percentiles", "Binomial Distribution"]:
             return ["Normal Distribution Curve"]
-        elif measure == "Percentiles":
-            return ["Normal Distribution Curve", "Vertical Bar Chart", "Horizontal Bar Chart"]
         elif measure in ["Spearman Rank Correlation", "Least Square Line", "Correlation Coefficient"]:
             return ["Scatter Plot"]
         return ["Vertical Bar Chart", "Horizontal Bar Chart"]
@@ -375,9 +374,14 @@ class Controller:
             # MODE SPECIFIC CHECKS
             if measure == "Mode":
                 flattened_values = numeric_df.values.flatten()
+                flattened_values = flattened_values[~pd.isnull(flattened_values)]  # remove NaNs
+                if len(flattened_values) == 0:
+                    continue  # Skip if no valid data
+
                 unique, counts = np.unique(flattened_values, return_counts=True)
+
                 if all(count == 1 for count in counts):
-                    continue  # No mode if all values are unique
+                    continue  # No mode across all columns
 
             # GENERAL CHECKS FOR ALL MEASURES
             # Column count rules
