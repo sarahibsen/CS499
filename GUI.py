@@ -34,7 +34,7 @@ def resource_path(relative_path):
         # Use pathlib to ensure the path is absolute and correct
         base_path = pathlib.Path(__file__).parent.absolute()
         # If assets are relative to the *project root* instead of the script file, adjust:
-        # base_path = pathlib.Path('.').absolute() 
+        # base_path = pathlib.Path('.').absolute()
 
     return os.path.join(base_path, relative_path)
 
@@ -73,15 +73,25 @@ def add_button(canvas, x, y, w, h, normal_image, hover_image, message, callback=
         if callback:
             callback()
 
+    # Create custom style for borderless buttons
+    style = ttk.Style()
+    style_name = "Flat.TButton"
+    if not style.lookup(style_name, "relief"):  # Only define it once
+        style.configure(style_name,
+                        borderwidth=0,
+                        relief="flat",
+                        highlightthickness=0,
+                        focuscolor=style.configure(".")["background"])  # Match to background
+
     button = ttk.Button(
         canvas,
         image=normal_image_file,
-        command=button_command,  # Use the defined command
-        style="TButton"  # Use TButton style to manage button appearance
+        command=button_command,
+        style=style_name
     )
 
     button.place(x=x, y=y, width=w, height=h)
-    button.image = normal_image_file  # Keep reference to avoid garbage collection
+    button.image = normal_image_file
 
     def on_hover(event):
         button.config(image=hover_image_file)
@@ -376,6 +386,7 @@ class MeasureSelectionPage(BasePage):
             wraplength=300,
             justify="left",
             anchor="nw",
+            bg="White"
         )
         self.selected_stat_label.grid(row=3, column=1, padx=10, pady=10, sticky="nw")
 
@@ -387,12 +398,16 @@ class MeasureSelectionPage(BasePage):
 
         # --- Buttons --- #
         # Button to toggle show all or show only compatible measures
+        style = ttk.Style()
+        style.configure("White.TCheckbutton", background="white")
+
         self.show_all_measures = tk.BooleanVar(value=False)
         self.toggle_show_all = ttk.Checkbutton(
             self.measurement_frame,
             text="Show all measures",
             variable=self.show_all_measures,
-            command=self.populate_treeview
+            command=self.populate_treeview,
+            style="White.TCheckbutton"
         )
         self.toggle_show_all.grid(row=1, column=1, sticky="w", padx=10, pady=5)
 
@@ -465,7 +480,7 @@ class MeasureSelectionPage(BasePage):
         self.canvas = Canvas(self, bg="#FFFFFF", bd=0, highlightthickness=0, relief="ridge")
         self.canvas.grid(row=0, column=0, sticky="nsew")
 
-        self.toolbarBackground = self.canvas.create_rectangle(0, 0, 100, self.winfo_height(), fill="#D9D9D9",
+        self.toolbarBackground = self.canvas.create_rectangle(0, 0, 100, self.winfo_height(), fill="#DAE3E7",#fill="#181818",
                                                               outline="")
         self.canvas.bind("<Configure>", self.resize_toolbar)  # Bind the resize event
 
@@ -490,7 +505,7 @@ class MeasureSelectionPage(BasePage):
     def populate_treeview(self, event=None):
         """Populate the treeview based on compatibility toggle."""
        # print("Refreshing Treeview...")  # Debug print
-        
+
         self.stat_treeview.delete(*self.stat_treeview.get_children())
 
         data_frame = self.table.controller.get_table_selection()
@@ -540,7 +555,7 @@ class MeasureSelectionPage(BasePage):
                     self.stat_treeview.insert(parent_id, tk.END, text=f"   ↳ {option}", values=(option,))
 
         self.stat_treeview.tag_configure("disabled", foreground="gray")
-        
+
     def on_row_click(self, event):
          """Allows multi-selection on treeview without Ctrl key, skips disabled rows."""
          item = self.stat_treeview.identify_row(event.y)
@@ -641,7 +656,7 @@ class MeasureSelectionPage(BasePage):
             except Exception as e:
                 messagebox.showerror("Input Error", f"Invalid input for Binomial Distribution: {e}")
                 return
-        
+
         if "Percentiles" in selected_measures:
             input_str = self.entry_percentiles.get().strip()
             try:
@@ -656,7 +671,7 @@ class MeasureSelectionPage(BasePage):
         if "Sign Test" in selected_measures:
             sign_option = self.sign_test_dropdown.get()
             if sign_option:
-                extra_params["Sign Test"] = [sign_option] 
+                extra_params["Sign Test"] = [sign_option]
 
         # print("Final DataFrame sent to Controller:")
         # print(data_frame.dtypes)
@@ -713,7 +728,7 @@ class MeasureSelectionPage(BasePage):
     def get_selected_measures(self):
         """Return the selected measures (list of strings)."""
         return self.selected_stats
-    
+
 
     def generate_skipped_explanations(self, skipped_measures, df):
         """
@@ -761,8 +776,8 @@ class DashboardPage(BasePage):
         self.canvas.grid(row=0, column=0, sticky="nsew")
 
         # Background
-        self.toolbarBackground = self.canvas.create_rectangle(0, 0, 100, self.winfo_height(),
-                                                              fill="#D9D9D9", outline="")
+        self.toolbarBackground = self.canvas.create_rectangle(0, 0, 100, self.winfo_height(), fill="#DAE3E7",#fill="#181818",
+                                                              outline="")
         self.canvas.bind("<Configure>", self.resize_toolbar)
 
         # Buttons
@@ -1055,7 +1070,7 @@ class DashboardPage(BasePage):
             selected_measure = self.measure_dropdown.get()
             groupby_column = self.column_dropdown.get()
             graph_type = self.graph_dropdown.get()
-            
+
             # Ensure the table controller is available
             table_controller = self.get_table_controller()
             if not table_controller:
@@ -1107,35 +1122,14 @@ class DashboardPage(BasePage):
             print("Graph data received:")
             print(graph_data)
 
-
             # Generate the selected graph
-            if graph_type in ["Horizontal Bar Chart", "Vertical Bar Chart"]:
-                if graph_data is None or graph_data.empty:
-                    print(f"Skipping {graph_type}: graph_data is empty or None.")
-                    messagebox.showwarning("Warning", f"'{selected_measure}' has no data to plot.")
-                    return
+            if graph_type == "Horizontal Bar Chart":
+                graph_data.plot(kind="barh", ax=self.ax).legend(loc='upper left', bbox_to_anchor=(1, 1))
+                self.ax.set_ylabel(f'{selected_measure} Value')
 
-                if graph_type == "Horizontal Bar Chart":
-                    if selected_measure == "Correlation Coefficient":
-                        graph_data = graph_data.reset_index()
-                        graph_data['Pair'] = graph_data.apply(lambda row: f"{row.iloc[0]} vs {row.iloc[1]}", axis=1)
-
-                        self.ax.barh(graph_data['Pair'], graph_data['Correlation Coefficient'], color='skyblue')
-                        self.ax.set_xlabel("Correlation Coefficient")
-                        self.ax.set_ylabel("Variable Pair")
-                        self.ax.set_xlim(-1, 1)
-                        self.ax.axvline(0, color='gray', linestyle='--')
-
-                        for i, v in enumerate(graph_data['Correlation Coefficient']):
-                            self.ax.text(v + 0.03 * np.sign(v), i, f"{v:.2f}", va='center',
-                                        ha='left' if v >= 0 else 'right')
-                    else:
-                        graph_data.plot(kind="barh", ax=self.ax).legend(loc='upper left', bbox_to_anchor=(1, 1))
-                        self.ax.set_ylabel(f'{selected_measure} Value')
-
-                elif graph_type == "Vertical Bar Chart":
-                    graph_data.plot(kind="bar", ax=self.ax).legend(loc='upper left', bbox_to_anchor=(1, 1))
-                    self.ax.set_ylabel(f'{selected_measure} Value')
+            elif graph_type == "Vertical Bar Chart":
+                graph_data.plot(kind="bar", ax=self.ax).legend(loc='upper left', bbox_to_anchor=(1, 1))
+                self.ax.set_ylabel(f'{selected_measure} Value')
 
             elif graph_type == "Pie Chart":
                 self.figure.clf()
@@ -1195,7 +1189,10 @@ class DashboardPage(BasePage):
                     return
 
                 # Determine label column
-                label_col = groupby_column if groupby_column in graph_data.columns else "State"  # fallback
+                if groupby_column == "No Grouping":
+                    label_col = "Column"
+                else:
+                    label_col = groupby_column if groupby_column in graph_data.columns else "Column"
 
                 # Plot the pie chart
                 ax = self.figure.add_subplot(111)
@@ -1355,7 +1352,7 @@ class DashboardPage(BasePage):
                             return
 
                         # Calculate and display variance for each column
-                        variance_values = data_frame[numeric_cols].var()
+                        variance_values = data_frame[numeric_cols].var(ddof=1)
 
                         # Plot normal distribution of the actual data
                         for col in numeric_cols:
@@ -1367,6 +1364,8 @@ class DashboardPage(BasePage):
                                 # Add vertical line at mean
                                 mean_val = col_data.mean()
                                 self.ax.axvline(mean_val, color='r', linestyle='--', alpha=0.5)
+                            if len(col_data.unique()) < 2:
+                                continue  # Skip columns with no variability
 
                         if len(numeric_cols) > 0:
                             self.ax.set_title("Data Distribution with Variance")
@@ -1547,17 +1546,19 @@ class DashboardPage(BasePage):
             elif graph_type in ["Normal Distribution Curve", "Vertical Bar Chart", "Horizontal Bar Chart", "Scatter Plot", "Pie Chart"]:
                 try:
                     custom_func = statistic.registered_measures.get(selected_measure)
+                    print("custom", custom_func)
                     if custom_func:
-                        stat_instance = statistic(selected_table) 
+                        stat_instance = statistic(selected_table)
                         result = custom_func(stat_instance)
 
                         x, y = self.extract_plot_data(result)
 
                         if x is not None and y is not None:
                             self.render_plot(x, y, graph_type)
-                            return  
+                            return
                         else:
-                            messagebox.showwarning("Graph Warning", f"Cannot graph data for '{selected_measure}'")
+                            #messagebox.showwarning("Graph Warning", f"Cannot graph data for '{selected_measure}'")
+                            None
                 except Exception as e:
                     print(f"Fallback plot failed: {e}")
                     messagebox.showerror("Graph Error", f"Failed to plot '{selected_measure}': {e}")
@@ -1619,7 +1620,6 @@ class DashboardPage(BasePage):
             percentiles_df = raw_data.quantile(values)
             percentiles_df.index = [f"{int(v * 100)}th" for v in values]
             graph_data = percentiles_df
-
         elif selected_measure == "Probability Distribution":
             freq = raw_data.apply(lambda col: col.value_counts(normalize=True))
             graph_data = freq.fillna(0).T
@@ -1784,7 +1784,7 @@ class ResultsPage(BasePage):
         self.canvas = Canvas(self, bg="#FFFFFF", bd=0, highlightthickness=0, relief="ridge")
         self.canvas.grid(row=0, column=0, sticky="nsew")
 
-        self.toolbarBackground = self.canvas.create_rectangle(0, 0, 100, self.winfo_height(), fill="#D9D9D9",
+        self.toolbarBackground = self.canvas.create_rectangle(0, 0, 100, self.winfo_height(), fill="#DAE3E7",#fill="#181818",
                                                               outline="")
         self.canvas.bind("<Configure>", self.resize_toolbar)  # Bind the resize event
 
@@ -1817,7 +1817,7 @@ class ResultsPage(BasePage):
         self.add_graph_button.pack(side="right", padx=5)
 
         # Results display area
-        self.results_display_frame = tk.Frame(self.main_frame, bg="#D9D9D9")
+        self.results_display_frame = tk.Frame(self.main_frame, bg="#FFFFFF")
         self.results_display_frame.grid(row=1, column=0, sticky="nsew")
         self.results_display_frame.grid_rowconfigure(0, weight=1)
         self.results_display_frame.grid_columnconfigure(0, weight=1)
@@ -1827,7 +1827,7 @@ class ResultsPage(BasePage):
             self.results_display_frame,
             text="Calculate a statistical measure to see results",
             font=("Arial", 16),
-            bg="#D9D9D9"
+            bg="#FFFFFF"
         )
         self.placeholder_label.grid(row=0, column=0)
         # --- Initial Color Update ---
@@ -1847,7 +1847,7 @@ class ResultsPage(BasePage):
         if not hasattr(measure_page.table, 'controller'):
             print("Error: Table controller not found.")
             return None
-        
+
         return measure_page.table.controller
 
         # Create new table frame
