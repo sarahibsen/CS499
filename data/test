@@ -1,7 +1,0 @@
-Imported file: C:/Users/sarah/Desktop/Program/Senior Design/CS499/data/FrequencyDataTest.csv
- | Data Type: CSV
- | Results: Rows: 7 Columns: 3 |
-
-['Least Square Line', 'Median', 'Probability Distribution'] | Data Type: Detected | Results: Least Square Line: {'Slope': np.float64(2.438331083742888), 'Y-Intercept': np.float64(-339.3790129356833)} Median: {'Median': np.float64(269.0)} Probability Distribution: {'Distribution': 'Normal', 'Mean': np.float64(329.9), 'Standard Deviation': np.float64(228.04405276174163)} |
-
---------------------------------------------------

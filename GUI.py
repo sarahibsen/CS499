@@ -1545,6 +1545,7 @@ class DashboardPage(BasePage):
                     if custom_func:
                         stat_instance = statistic(selected_table) 
                         result = custom_func(stat_instance)
+
                         x, y = self.extract_plot_data(result)
 
                         if x is not None and y is not None:
