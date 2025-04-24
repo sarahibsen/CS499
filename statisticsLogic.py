@@ -647,8 +647,8 @@ def spearmanRankCorrelation(self):
     try:
         rho, p = stats.spearmanr(x, y)
         return {
-            "Spearman Correlation": f"{coef:.4f}",
-            "P-Value (Spearman Correlation)": f"{p_value:.4e}"
+            "Spearman Correlation Coefficient (ρ)": rho,
+            "P-Value (Spearman Correlation)": p
         }
     except Exception as e:
         messagebox.showerror("Computation Error", f"Failed to compute Spearman correlation: {e}")
