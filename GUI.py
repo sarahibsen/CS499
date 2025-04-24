@@ -376,6 +376,7 @@ class MeasureSelectionPage(BasePage):
             wraplength=300,
             justify="left",
             anchor="nw",
+            bg="White"
         )
         self.selected_stat_label.grid(row=3, column=1, padx=10, pady=10, sticky="nw")
 
@@ -387,12 +388,16 @@ class MeasureSelectionPage(BasePage):
 
         # --- Buttons --- #
         # Button to toggle show all or show only compatible measures
+        style = ttk.Style()
+        style.configure("White.TCheckbutton", background="white")
+
         self.show_all_measures = tk.BooleanVar(value=False)
         self.toggle_show_all = ttk.Checkbutton(
             self.measurement_frame,
             text="Show all measures",
             variable=self.show_all_measures,
-            command=self.populate_treeview
+            command=self.populate_treeview,
+            style="White.TCheckbutton"
         )
         self.toggle_show_all.grid(row=1, column=1, sticky="w", padx=10, pady=5)
 
@@ -465,7 +470,7 @@ class MeasureSelectionPage(BasePage):
         self.canvas = Canvas(self, bg="#FFFFFF", bd=0, highlightthickness=0, relief="ridge")
         self.canvas.grid(row=0, column=0, sticky="nsew")
 
-        self.toolbarBackground = self.canvas.create_rectangle(0, 0, 100, self.winfo_height(), fill="#D9D9D9",
+        self.toolbarBackground = self.canvas.create_rectangle(0, 0, 100, self.winfo_height(), fill="#181818",
                                                               outline="")
         self.canvas.bind("<Configure>", self.resize_toolbar)  # Bind the resize event
 
@@ -762,7 +767,7 @@ class DashboardPage(BasePage):
 
         # Background
         self.toolbarBackground = self.canvas.create_rectangle(0, 0, 100, self.winfo_height(),
-                                                              fill="#D9D9D9", outline="")
+                                                              fill="#181818", outline="")
         self.canvas.bind("<Configure>", self.resize_toolbar)
 
         # Buttons
@@ -1350,7 +1355,7 @@ class DashboardPage(BasePage):
                             return
 
                         # Calculate and display variance for each column
-                        variance_values = data_frame[numeric_cols].var()
+                        variance_values = data_frame[numeric_cols].var(ddof=1)
 
                         # Plot normal distribution of the actual data
                         for col in numeric_cols:
@@ -1362,6 +1367,8 @@ class DashboardPage(BasePage):
                                 # Add vertical line at mean
                                 mean_val = col_data.mean()
                                 self.ax.axvline(mean_val, color='r', linestyle='--', alpha=0.5)
+                            if len(col_data.unique()) < 2:
+                                continue  # Skip columns with no variability
 
                         if len(numeric_cols) > 0:
                             self.ax.set_title("Data Distribution with Variance")
@@ -1775,7 +1782,7 @@ class ResultsPage(BasePage):
         self.canvas = Canvas(self, bg="#FFFFFF", bd=0, highlightthickness=0, relief="ridge")
         self.canvas.grid(row=0, column=0, sticky="nsew")
 
-        self.toolbarBackground = self.canvas.create_rectangle(0, 0, 100, self.winfo_height(), fill="#D9D9D9",
+        self.toolbarBackground = self.canvas.create_rectangle(0, 0, 100, self.winfo_height(), fill="#181818",
                                                               outline="")
         self.canvas.bind("<Configure>", self.resize_toolbar)  # Bind the resize event
 
@@ -1808,7 +1815,7 @@ class ResultsPage(BasePage):
         self.add_graph_button.pack(side="right", padx=5)
 
         # Results display area
-        self.results_display_frame = tk.Frame(self.main_frame, bg="#D9D9D9")
+        self.results_display_frame = tk.Frame(self.main_frame, bg="#FFFFFF")
         self.results_display_frame.grid(row=1, column=0, sticky="nsew")
         self.results_display_frame.grid_rowconfigure(0, weight=1)
         self.results_display_frame.grid_columnconfigure(0, weight=1)
@@ -1818,7 +1825,7 @@ class ResultsPage(BasePage):
             self.results_display_frame,
             text="Calculate a statistical measure to see results",
             font=("Arial", 16),
-            bg="#D9D9D9"
+            bg="#FFFFFF"
         )
         self.placeholder_label.grid(row=0, column=0)
         # --- Initial Color Update ---
