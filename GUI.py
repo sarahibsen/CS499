@@ -228,7 +228,7 @@ class App(tk.Tk):
 
     def register_custom_stat(self, name, expression):
         def custom_func(self):
-            data = self._clean_data()
+            data = self.data
             try:
                 result = eval(expression, {"np": np, "pd": pd, "data": data})
                 return {name: result}
@@ -680,26 +680,21 @@ class MeasureSelectionPage(BasePage):
         if results:
             def format_result(measure, value):
                 if isinstance(value, dict) and any(isinstance(v, dict) for v in value.values()):
-                    # This means it's a dictionary of dictionaries, like Sign Test with multiple options
+                    # Nested dict (e.g., Sign Test with multiple hypotheses)
                     return f"{measure}:\n" + "\n".join(
                         f"  ↳ {hypo}:\n    " + "\n    ".join(f"{k}: {v}" for k, v in stats.items())
                         for hypo, stats in value.items()
                     )
+                elif isinstance(value, dict):
+                    # Flat dict
+                    if len(value) == 1:
+                        key, val = next(iter(value.items()))
+                        if key.lower() == measure.lower():
+                            return f"{measure}: {val}"
+                    return f"{measure}:\n" + "\n".join(f"{k}: {v}" for k, v in value.items())
                 else:
-                    # Single-value or flat dict
-                    return f"{measure}: " + "\n".join(f"{k}: {v}" if k != measure else f"{v}" for k, v in value.items()) if isinstance(value, dict) else str(value)
+                    return f"{measure}: {value}"
 
-            result_str = "\n\n".join(format_result(k, v) for k, v in results.items())
-            def format_result(measure, value):
-                if isinstance(value, dict) and any(isinstance(v, dict) for v in value.values()):
-                    # This means it's a dictionary of dictionaries, like Sign Test with multiple options
-                    return f"{measure}:\n" + "\n".join(
-                        f"  ↳ {hypo}:\n    " + "\n    ".join(f"{k}: {v}" for k, v in stats.items())
-                        for hypo, stats in value.items()
-                    )
-                else:
-                    # Single-value or flat dict
-                    return f"{measure}: " + "\n".join(f"{k}: {v}" for k, v in value.items()) if isinstance(value, dict) else str(value)
 
             result_str = "\n\n".join(format_result(k, v) for k, v in results.items())
             messagebox.showinfo("Calculated Statistics", result_str)
@@ -840,6 +835,54 @@ class DashboardPage(BasePage):
 
         # --- Initial Color Update ---
         self.update_colors()
+
+    def extract_plot_data(self, result_dict):
+        if not isinstance(result_dict, dict):
+            return None, None
+
+        # Handle standard distributions
+        if "X" in result_dict:
+            if "PDF Values" in result_dict:
+                return result_dict["X"], result_dict["PDF Values"]
+            elif "CDF Values" in result_dict:
+                return result_dict["X"], result_dict["CDF Values"]
+
+        # Binomial Distribution
+        if "Binomial Distribution" in result_dict:
+            values = result_dict["Binomial Distribution"]
+            return list(range(len(values))), values
+
+        # Flat dictionary like Mean, Std Dev, etc.
+        if all(isinstance(v, (int, float)) for v in result_dict.values()):
+            return list(result_dict.keys()), list(result_dict.values())
+
+        # Least Square Line approximation
+        if "Slope" in result_dict and "Intercept" in result_dict:
+            x = list(range(10))
+            y = [result_dict["Slope"] * xi + result_dict["Intercept"] for xi in x]
+            return x, y
+
+        return None, None
+
+    def render_plot(self, x, y, graph_type="Line Chart"):
+        self.ax.clear()
+
+        if graph_type == "Scatter Plot":
+            self.ax.scatter(x, y)
+        elif graph_type == "Pie Chart":
+            self.ax.pie(y, labels=x, autopct="%1.1f%%")
+        elif graph_type == "Horizontal Bar Chart":
+            self.ax.barh(x, y)
+        elif graph_type == "Vertical Bar Chart":
+            self.ax.bar(x, y)
+        elif graph_type == "Normal Distribution Curve":
+            self.ax.plot(x, y)
+        else:
+            self.ax.plot(x, y)  # Fallback
+
+        self.ax.set_title(graph_type)
+        self.canvas_widget.draw()
+
 
     def on_measure_change(self, event=None):
         selected_measure = self.measure_dropdown.get()
@@ -1494,6 +1537,25 @@ class DashboardPage(BasePage):
 
             if graph_type != "Pie Chart":
                 self.ax.tick_params(axis='x', rotation=45)
+
+            # fallback
+            elif graph_type in ["Normal Distribution Curve", "Vertical Bar Chart", "Horizontal Bar Chart", "Scatter Plot", "Pie Chart"]:
+                try:
+                    custom_func = statistic.registered_measures.get(selected_measure)
+                    if custom_func:
+                        stat_instance = statistic(selected_table) 
+                        result = custom_func(stat_instance)
+                        x, y = self.extract_plot_data(result)
+
+                        if x is not None and y is not None:
+                            self.render_plot(x, y, graph_type)
+                            return  
+                        else:
+                            messagebox.showwarning("Graph Warning", f"Cannot graph data for '{selected_measure}'")
+                except Exception as e:
+                    print(f"Fallback plot failed: {e}")
+                    messagebox.showerror("Graph Error", f"Failed to plot '{selected_measure}': {e}")
+
 
             # Redraw the canvas
             self.canvas_widget.draw()

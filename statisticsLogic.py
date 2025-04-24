@@ -12,9 +12,9 @@ from tkinter import simpledialog, messagebox
 
 
 import tkinter
-from tkinter import Toplevel, Label, Radiobutton, Button, StringVar, W
+#from tkinter import Toplevel, Label, Radiobutton, Button, StringVar, W
 import sys # To check for existing root
-from data_utils import clean_numeric_data
+#from data_utils import clean_numeric_data
 
 
 class statistic():
@@ -220,8 +220,10 @@ def standardDeviation(self):
     """
     cleaned_data = self.data
     # Validate the data
-    if not isinstance(cleaned_data, (list, np.ndarray)):
+    if not isinstance(cleaned_data, pd.DataFrame):
         raise TypeError("Data must be a list or NumPy array of numbers")
+    else:
+        cleaned_data = cleaned_data.select_dtypes(include=[np.number]).to_numpy()
 
     # Flatten the data to check for all values // multi column support will still be there
     if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in cleaned_data.flatten()):
@@ -229,39 +231,41 @@ def standardDeviation(self):
 
     if len(cleaned_data) < 2 :
         return 0 # Prevent errors if all values are zero
+    if not np.issubdtype(cleaned_data.dtype, np.number):
+        raise TypeError("All elements in the data must be numbers")
         
     # Calculate and return the standard deviation
     return {"Standard Deviation": np.std(cleaned_data, ddof=1)}
 
 @statistic.register("Variance")
-def variance(self, variance_type = "Population"):
-    """
-    Calculate and return the sample variance of the given data set.
-    Returns:
-        float: The sample variance of the data.
-    """
-
-    # TODO: a.any or a.all to check if all values are the same 
+def variance(self, variance_type="Population"):
     cleaned_data = self.data
-    # Validate the data
+
+    # Convert to NumPy array if it's a DataFrame
+    if isinstance(cleaned_data, pd.DataFrame):
+        cleaned_data = cleaned_data.select_dtypes(include=[np.number]).to_numpy()
+
     if not isinstance(cleaned_data, (list, np.ndarray)):
-        raise TypeError("Data must be a list or NumPy array of numbers")
+        raise TypeError("Data must be a list, DataFrame, or NumPy array of numbers")
+    
     if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in cleaned_data.flatten()):
         raise TypeError("All elements in the data must be numbers")
-    if len(cleaned_data) == 0:
+
+    if cleaned_data.size == 0:
         raise ValueError("Data cannot be empty")
-        
+
     if variance_type == "Sample":
-        return {"Sample Variance": np.var(cleaned_data, ddof=1)} # Sample variance
+        return {"Sample Variance": np.var(cleaned_data, ddof=1)}
     else:
-        return {"Population Variance": np.var(cleaned_data, ddof=0)} # Population variance
-        
-    # Calculate and return the variance
-    return {"Variance": np.var(cleaned_data, ddof=1)}
+        return {"Population Variance": np.var(cleaned_data, ddof=0)}
+
 
 @statistic.register("Coefficient of Variation")
 def coefficientOfVariation(self):
     cleaned_data = self.data
+    if isinstance(cleaned_data, pd.DataFrame):
+        cleaned_data = cleaned_data.select_dtypes(include=[np.number]).to_numpy()
+    
     if not isinstance(cleaned_data, (list, np.ndarray)):
         raise TypeError("Data must be a list or NumPy array of numbers")
     if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in cleaned_data.flatten()):
@@ -321,6 +325,9 @@ def percentiles(self, option=None):
 @statistic.register("Probability Distribution")
 def probabilityDistribution(self, option=None):
     cleaned_data = self.data
+    if isinstance(cleaned_data, pd.DataFrame):
+        cleaned_data = cleaned_data.select_dtypes(include=[np.number]).to_numpy()
+
     if cleaned_data is None or cleaned_data.size == 0:
         messagebox.showerror("Data Error", "Cannot calculate distribution on empty or invalid data.")
         return None
@@ -378,6 +385,11 @@ def probabilityDistribution(self, option=None):
 @statistic.register("Binomial Distribution")
 def binomialDistribution(self, n=None, p=None):
     selected_data = self.data
+    # data is now pd data frame
+    if isinstance(selected_data, pd.DataFrame):
+        selected_data = selected_data.select_dtypes(include=[np.number]).to_numpy().flatten()
+
+    selected_data = selected_data[~np.isnan(selected_data)]
 
     # Fallback to default if not supplied
     n = 10 if n is None or n <= 0 else n
@@ -516,28 +528,29 @@ def correlationCoefficient(self):
         the correlation coefficient R Value
     """
 
-    cleaned_data = self.data
-    print(cleaned_data)
+    if isinstance(self.data, pd.DataFrame):
+        if self.data.shape[1] != 2:
+            raise ValueError("Correlation Coefficient requires exactly two numeric columns.")
 
-        # Rows will always have the same number due to the main_controller filling NA with 0's
-    if np.isnan(cleaned_data).any():
-        messagebox.showerror("Error", "Both columns must have the same row length.")
-        raise ValueError("Both columns must have the same row length")
-        
-        # Checks to ensure number of columns are equal
-    if cleaned_data.shape[1] % 2 != 0:
-        messagebox.showerror("Error", "The number of columns must be even.")
-        raise ValueError("The number of columns must be even")
+        col1 = self.data.iloc[:, 0].dropna()
+        col2 = self.data.iloc[:, 1].dropna()
 
-    x, y = np.hsplit(cleaned_data, 2)
+        # Make sure lengths match
+        min_len = min(len(col1), len(col2))
+        col1 = col1.iloc[:min_len]
+        col2 = col2.iloc[:min_len]
 
-    if len(x) < 2 or len(y) < 2:
-        messagebox.showerror("Error", "Correlation Coefficient requires at least 2 data points in each column.")
-        raise ValueError("Correlation Coefficient requires at least 2 data points in each column.")
+        if min_len < 2:
+            raise ValueError("Need at least two data points for correlation.")
 
-    correlation = np.corrcoef(x.T,y.T)
-    correlation_coefficient = correlation[0, 1]  # Extract the correlation coefficient from the matrix
-    return {"R Value (Correlation Coefficient)": correlation_coefficient}
+        corr, p = stats.pearsonr(col1, col2)
+
+        return {
+            "Correlation Coefficient": f"{corr:.4f}",
+            "P-Value": f"{p:.4e}"
+        }
+
+    raise ValueError("Correlation Coefficient requires a DataFrame.")
     
 @statistic.register("Sign Test")
 def signTest(self, option=None):
@@ -605,13 +618,12 @@ def rankSum(self):
 
     # Use the first two columns
     try:
-        col1, col2 = np.hsplit(cleaned_data[:, :2], 2)
-        col1 = col1.ravel()
-        col2 = col2.ravel()
+        col1 = cleaned_data.iloc[:, 0].dropna().values
+        col2 = cleaned_data.iloc[:, 1].dropna().values
 
         # Remove NaNs (must align lengths)
-        col1 = col1[~np.isnan(col1)]
-        col2 = col2[~np.isnan(col2)]
+        # col1 = col1[~np.isnan(col1)]
+        # col2 = col2[~np.isnan(col2)]
 
         if len(col1) < 2 or len(col2) < 2:
             messagebox.showerror("Rank Sum Error", "Each group needs at least 2 valid values.")
@@ -647,8 +659,8 @@ def spearmanRankCorrelation(self):
     try:
         rho, p = stats.spearmanr(x, y)
         return {
-            "Spearman Correlation": f"{coef:.4f}",
-            "P-Value (Spearman Correlation)": f"{p_value:.4e}"
+            "Spearman Correlation": f"{rho:.4f}",
+            "P-Value (Spearman Correlation)": f"{p:.4e}"
         }
     except Exception as e:
         messagebox.showerror("Computation Error", f"Failed to compute Spearman correlation: {e}")
