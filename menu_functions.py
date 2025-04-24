@@ -180,6 +180,7 @@ def add_custom_measure_popup(self):
             messagebox.showinfo("Success", f"Custom measure '{name}' added.")
             self.get_page("MeasureSelectionPage").populate_treeview()
             popup.destroy()
+        
 
     popup = tk.Toplevel(self)
     popup.title("Add Custom Measure")

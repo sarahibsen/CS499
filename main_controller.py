@@ -1,11 +1,14 @@
 # Refactored Controller as a lightweight Component
 import pandas as pd
+
+import statisticsLogic
 from Table import TableController, TableModel
 from statisticsLogic import statistic
 import datetime
 from tkinter import filedialog
 import numpy as np
 from tkinter import messagebox
+from data_utils import clean_numeric_data
 
 # adding warning diflection from pandas 
 pd.set_option('future.no_silent_downcasting', True)
@@ -18,6 +21,9 @@ class Controller:
     """
 
     last_stat_instance = None
+
+    def __init__(self):
+        self.binomial_params = {'n': None, 'p': None}
 
     @staticmethod
     def load_data_from_table(table_controller):
@@ -37,8 +43,9 @@ class Controller:
         # Filter non-zero data only
         data = data[(data != 0).any(axis=1)]
         data = data.dropna(axis=1, how='all')  # Drop columns with all NaN values
+        # filter if there are mixed data types 
+        data = data.select_dtypes(include=[np.number]).dropna()
 
-        #print(f"Data loaded into Controller:\n{data}")
         return data
 
     @staticmethod
@@ -71,7 +78,6 @@ class Controller:
         print("Data validation successful!")
         return True
 
-
     @staticmethod
     def perform_statistics(data_frame, selected_measures, data_type, variance_type=None, extra_params=None):
         if data_frame is None or data_frame.empty:
@@ -99,7 +105,7 @@ class Controller:
             "Correlation": stat_instance.correlationCoefficient,
             "Sign Test": stat_instance.signTest,
             "Rank Sum": stat_instance.rankSum,
-            "Spearman Correlation": stat_instance.spearmanRankCorrelation,
+            "Spearman Rank Correlation": stat_instance.spearmanRankCorrelation,
         }
 
         results = {}
@@ -119,15 +125,10 @@ class Controller:
         if data_frame.empty:
             return {}, selected_measures
 
-        # Only drop rows that are fully NaN in numeric columns
-        numeric_df = data_frame.select_dtypes(include='number')
+        data_frame = clean_numeric_data(data_frame)
+        print("After cleaning:")
+        print(data_frame)
 
-        # Filter rows where at least one numeric column is not null
-        data_frame = data_frame[numeric_df.notna().any(axis=1)]
-
-        print("Cleaned numeric data:", data_frame.head())
-
-       # compatible = Controller.get_compatible_measures(data_frame)
         all_measures = list(statistic.registered_measures.keys())
         compatible = all_measures + selected_measures
         incompatible = [m for m in selected_measures if m not in compatible]
@@ -140,8 +141,6 @@ class Controller:
         for m in valid:
             try:
                 func = statistic.registered_measures.get(m)
-
-                # Pull optional sub-option (if available)
                 options = extra_params.get(m) if extra_params else None
 
                 if m == "Binomial Distribution":
@@ -150,16 +149,30 @@ class Controller:
                     result = func(stat_instance, n=n, p=p)
 
                 elif m == "Percentiles":
-                    # Combine multiple selected options into one percentile array
-                    all_percentile_values = []
                     if options:
-                        for opt in options:
-                            partial_result = func(stat_instance, option=opt)
-                            if partial_result:
-                                all_percentile_values.append(partial_result)
-                        result = {"Percentiles": all_percentile_values}
+                        # Check if custom numeric values were passed
+                        if all(isinstance(opt, str) and opt.endswith("th Percentile") for opt in options):
+                            # Extract raw values from "90th Percentile" strings
+                            raw_values = []
+                            for opt in options:
+                                try:
+                                    val = int(opt.replace("th Percentile", "").strip())
+                                    raw_values.append(val)
+                                except:
+                                    continue
+                            result = func(stat_instance, option=raw_values)
+                        else:
+                            # Use predefined labels or lists
+                            result = None
+                            all_percentile_results = []
+                            for opt in options:
+                                partial = func(stat_instance, option=opt)
+                                if partial:
+                                    all_percentile_results.append(partial)
+                            result = {all_percentile_results}
                     else:
                         result = func(stat_instance)
+
                 elif m == "Probability Distribution":
                     result = None
                     if options:
@@ -175,11 +188,17 @@ class Controller:
                     result = func(stat_instance, expected=expected_col, observed=observed_col)
 
                 elif m == "Variance":
-                    if options and isinstance(options, list):
-                        # Just use the first one (since Variance expects one option)
-                        result = func(stat_instance, variance_type=options[0])
+                    # Auto-pick based on sample size if not provided
+                    selected_option = None
+
+                    if options and isinstance(options, list) and options:
+                        selected_option = options[0]  # User explicitly chose
                     else:
-                        result = func(stat_instance, variance_type=(options[0] if options else "Population"))
+                        row_count = len(data_frame)
+                        selected_option = "Population" if row_count > 30 else "Sample"
+
+                    result = func(stat_instance, variance_type=selected_option)
+
                 elif m == "Sign Test":
                     if options and isinstance(options, list):
                         result = func(stat_instance, option=options)
@@ -199,23 +218,7 @@ class Controller:
             except Exception as e:
                 print(f"Error computing {m}: {e}")
 
-
-
         return results, incompatible
-    
-    @staticmethod
-    def get_compatible_measures(data_frame):
-        if data_frame.empty:
-            return []
-
-        numeric_columns = data_frame.select_dtypes(include='number').columns
-        if numeric_columns.empty:
-            return []
-
-        # Allow all registered measures by default 
-        return list(statistic.registered_measures.keys())
-
-
 
     @staticmethod
     def export_results(results, filename=None):
@@ -233,8 +236,6 @@ class Controller:
 
         pd.DataFrame(detailed_results).to_csv(filename, index=False)
         print(f"Results exported to {filename}")
-
-
 
     @staticmethod
     def measures_for_data_type(data_type):
@@ -256,27 +257,60 @@ class Controller:
 
     @staticmethod
     def plots_for_measure(measure):
-        if measure in ["Mean", "Median", "Chi Square", "Sign Test", "Rank Sum"]:
+        if isinstance(measure, list):
+            # Combine all unique valid plots for the list of measures
+            plots = set()
+            for m in measure:
+                plots.update(Controller.plots_for_measure(m))
+            return list(plots)
+
+            # Handle single measure
+        if measure not in statistic.registered_measures:
             return ["Vertical Bar Chart", "Horizontal Bar Chart"]
-        elif measure == "Mode":
+        if measure in ["Chi Square", "Sign Test", "Rank Sum"]:
+            return ["Vertical Bar Chart", "Horizontal Bar Chart"]
+        elif measure in ["Mean", "Median", "Mode"]:
             return ["Vertical Bar Chart", "Horizontal Bar Chart", "Pie Chart"]
-        elif measure in ["Probability Distribution", "Standard Deviation", "Variance", "Coefficient Of Variation"]:
+        elif measure in ["Probability Distribution", "Standard Deviation", "Variance", "Coefficient of Variation", "Binomial Distribution"]:
             return ["Normal Distribution Curve"]
         elif measure == "Percentiles":
             return ["Normal Distribution Curve", "Vertical Bar Chart", "Horizontal Bar Chart"]
-        elif measure in ["Correlation", "Spearman Correlation", "Least Square Line"]:
+        elif measure in ["Spearman Rank Correlation", "Least Square Line", "Correlation Coefficient"]:
             return ["Scatter Plot"]
-        elif measure == "Binomial Distribution":
-            return ["Vertical Bar Chart", "Normal Distribution Curve"]
-        return [" "]
-
+        return ["Vertical Bar Chart", "Horizontal Bar Chart"]
 
     @staticmethod
-    def get_last_binomial_params():
-        instance = Controller.last_stat_instance
-        if instance and hasattr(instance, 'n') and hasattr(instance, 'p'):
-            return instance.n, instance.p
-        return None, None
+    def measure_supports_grouping(measure):
+        """
+        Returns "No grouping" if the measure cannot be graphed with grouping,
+        "Must group" if the measure can only be graphed with grouping,
+        and "Both" if the measure can be grouped or not grouped.
+        Custom measures default to "No grouping".
+        """
+
+        # If it's a custom measure (registered but not listed in requirements)
+        if measure in statistic.registered_measures and measure not in statistic.measure_requirements:
+            return "No grouping"
+
+        if measure in ["Standard Deviation", "Variance", "Percentiles", "Binomial Distribution",
+                       "Probability Distribution", "Coefficient of Variation", "Sign Test"]:
+            return "No grouping"
+        elif measure in ["Chi Square", "Least Square Line", "Correlation Coefficient",
+                         "Rank Sum", "Spearman Rank Correlation", "Mode"]:
+            return "Must group"
+        return "Both"
+
+    def set_binomial_params(self, n, p):
+        """Store the binomial parameters"""
+        self.binomial_params = {'n': n, 'p': p}
+        print(self.binomial_params)
+
+    def get_last_binomial_params(self):
+        """Returns the last used binomial parameters (n, p)"""
+        print("get")
+        print(self.binomial_params)
+        return self.binomial_params.get('n'), self.binomial_params.get('p')
+
 
     @staticmethod
     def get_last_selected_percentiles():
@@ -286,11 +320,96 @@ class Controller:
         return None, None
 
     @staticmethod
-    def get_compatible_measures(df):
+    def get_compatible_measures(df, selected_columns=None):
+
         type_map = TableModel().detect_data_type(df)
         present_types = set(type_map.values())
 
-        return [
-            measure for measure, valid_types in statistic.measure_name_map.items()
-            if any(t in valid_types for t in present_types)
-        ]
+        if selected_columns:
+            numeric_df = df[selected_columns].select_dtypes(include=[np.number]).dropna()
+        else:
+            numeric_df = df.select_dtypes(include=[np.number]).dropna()
+        num_columns = numeric_df.shape[1]
+        num_rows = numeric_df.shape[0]
+
+        compatible = []
+
+        for measure, rules in statistic.measure_requirements.items():
+            # Skip if no columns match required types
+            required_types = set(rules["types"])
+            if not required_types.intersection(present_types):
+                continue
+
+            # CHI-SQUARE SPECIFIC CHECKS
+            if measure == "Chi Square":
+                # Must have exactly 2 numeric columns
+                if num_columns != 2:
+                    continue
+
+                # Both columns must be convertible to integers
+                try:
+                    col1 = pd.to_numeric(df.iloc[:, 0], errors='coerce').dropna().astype(int)
+                    col2 = pd.to_numeric(df.iloc[:, 1], errors='coerce').dropna().astype(int)
+                except:
+                    continue
+
+                # Check for negative values
+                if (col1 < 0).any() or (col2 < 0).any():
+                    continue
+
+                # Check equal length after dropping NA
+                if len(col1) != len(col2):
+                    continue
+
+                # NEW: Check frequency sums are within 1% tolerance
+                sum1 = np.sum(col1)
+                sum2 = np.sum(col2)
+
+                if sum1 == 0 or sum2 == 0:
+                    continue  # Skip if either sum is zero
+
+                percent_diff = abs(sum1 - sum2) / max(sum1, sum2)
+                if percent_diff > 0.01:  # 1% tolerance
+                    continue
+
+            # MODE SPECIFIC CHECKS
+            if measure == "Mode":
+                flattened_values = numeric_df.values.flatten()
+                unique, counts = np.unique(flattened_values, return_counts=True)
+                if all(count == 1 for count in counts):
+                    continue  # No mode if all values are unique
+
+            # GENERAL CHECKS FOR ALL MEASURES
+            # Column count rules
+            if "exact_columns" in rules and num_columns != rules["exact_columns"]:
+                continue
+            if "min_columns" in rules and num_columns < rules["min_columns"]:
+                continue
+
+            # Check row count using only the required number of numeric columns
+            if "min_length" in rules:
+                # Allow more columns than exact if needed (especially for correlation-like measures)
+                if "exact_columns" in rules:
+                    if num_columns < rules["exact_columns"]:
+                        continue
+                elif "min_columns" in rules:
+                    sub_df = numeric_df.iloc[:, :rules["min_columns"]]
+                else:
+                    sub_df = numeric_df
+
+                valid_rows = sub_df.dropna()
+                if valid_rows.shape[0] < rules["min_length"]:
+                    continue
+
+            compatible.append(measure)
+
+        return compatible
+
+    @staticmethod
+    def get_last_selected_signs():
+        instance = Controller.last_stat_instance
+        if instance and hasattr(instance, 'n_positive') and hasattr(instance, 'n_negative'):
+            print("get last selected signs")
+            print(instance.n_positive, instance.n_negative)
+            return instance.n_positive, instance.n_negative
+        return None, None
