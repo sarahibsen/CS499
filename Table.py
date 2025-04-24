@@ -43,6 +43,7 @@ class TableModel:
         return data_types
   
 
+
     def celldType(self, value):
         """ Infers datatype (String, Float, Int, None) of each value in table.
             This method should be called whenever we need to retrieve data from the table.
@@ -141,6 +142,12 @@ class TableController:
             self.table.set_sheet_data(data)
 
         self.adjust_cell_sizes(self.table)  # Adjust cell sizes to fit content
+        if headers:
+            self.table.headers(headers)
+        if data:
+            self.table.set_sheet_data(data)
+
+        self.adjust_cell_sizes(self.table)  # Adjust cell sizes to fit content
 
     def get_table_selection(self):
         """ Creates a 2D list that matches the dimensions of the tksheet table and fills row list with None.
@@ -176,10 +183,19 @@ class TableController:
             return pd.DataFrame()  # Empty selection
 
         df = pd.DataFrame(all_data)
-        print("Raw selected data:")
-        print(df.head())
+       # print("Raw selected data:")
+       # print(df.head())
 
         return df
+    
+    def table_select_event(self, event):
+        """
+        Event handler for table selection changes.
+        This method is called whenever the selection in the table changes.
+        """
+        print(f"event: {self.get_table_selection()}")
+        return self.get_table_selection()
+
     
     def adjust_cell_sizes(self, sheet):
         """
@@ -328,8 +344,8 @@ class TableController:
 
     def log_operation(self, selected_operations, results, dataType = "Detected"):
         """ Log the operation performed. """
-        result_str = ", ".join([f"{k}: {v}" for k, v in results.items()])
-        operation = f"Operation: {selected_operations}, Data Type: {dataType}, Results: {result_str}"
+        result_str = " ".join([f"{k}: {v}" for k, v in results.items()])
+        operation = f"{selected_operations} | Data Type: {dataType} | Results: {result_str} |\n"
         self.operations_log.append(operation)
 
     def add_log_separator(self, separator_char="-", length=50):
@@ -368,7 +384,13 @@ class TableView(tk.Frame):
         self.controller = TableController(parent, self.sheet)
         self.toolbar = GUIToolbar(parent, self.controller, self.sheet, output)
 
-        self.update_table_theme(theme, self.sheet)  # Set the initial theme
+    def view_update_table(self, headers=None, data=None):
+        if headers:
+            self.sheet.headers(headers)
+        if data:
+            self.sheet.set_sheet_data(data)
+
+        self.controller.adjust_cell_sizes(self.sheet)  # Adjust cell sizes to fit content
 
     def update_table_theme(self, to_theme, table):
         table.change_theme(to_theme)

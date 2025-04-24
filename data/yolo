@@ -1,8 +1,0 @@
-Operation: Imported file: C:/Users/sarah/Desktop/Program/Senior Design/CS499/data/OrdinalDataTest.csv
-, Data Type: CSV
-, Results: Rows: 50, Columns: 6
-Operation: ['Binomial Distribution'], Data Type: Detected, Results: Binomial Distribution: {'Binomial Distribution': array([7, 2, 6, 3, 5, 7, 4, 3, 3, 1, 5, 8, 5, 6, 7, 4, 8, 3, 5, 8],
-      dtype=int32)}
---------------------------------------------------
-Operation: ['Binomial Distribution'], Data Type: Detected, Results: Binomial Distribution: {'Binomial Distribution': array([7, 2, 6, 3, 5, 7, 4, 3, 3, 1, 5, 8, 5, 6, 7, 4, 8, 3, 5, 8],
-      dtype=int32)}
