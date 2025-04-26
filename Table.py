@@ -1,12 +1,41 @@
+import os
+import sys
+import pathlib
 import pandas as pd
-from tkinter import filedialog, messagebox
-from tksheet import Sheet
-from tkinter import ttk, PhotoImage
 import tkinter as tk
+from pathlib import Path
+from tksheet import Sheet
+from tkinter import filedialog, messagebox
+from tkinter import ttk, PhotoImage
 from PIL import Image, ImageTk
-import numpy as np
 
 theme = "light blue" # Default theme for the table
+
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        # In development or --onedir mode, use the script's directory
+        # Use pathlib to ensure the path is absolute and correct
+        base_path = pathlib.Path(__file__).parent.absolute()
+        # If assets are relative to the *project root* instead of the script file, adjust:
+        # base_path = pathlib.Path('.').absolute()
+
+    return os.path.join(base_path, relative_path)
+
+
+# ----- Supplementary Functions ----- #
+def relative_to_assets(path: str) -> Path:
+    """
+    Get the full path to a resource file located in the assets directory.
+    """
+    assets_path = Path(__file__).parent / Path(
+        r"assets"
+
+    )
+    return assets_path / Path(path)
 
 class TableModel:
     def __init__(self):
@@ -42,7 +71,6 @@ class TableModel:
 
         return data_types
   
-
 
     def celldType(self, value):
         """ Infers datatype (String, Float, Int, None) of each value in table.
@@ -93,10 +121,9 @@ class TableController:
         global theme
         theme = to_theme # Update the global theme variable
 
-    # TODO: Get selected rows
+    # Get selected rows
     def get_selected_rows(self):
         selected_rows = self.table.get_selected_rows()
-        print("Selected Rows:", selected_rows)  # Debugging statement
         return selected_rows
 
     def get_entire_table(self):
@@ -183,8 +210,6 @@ class TableController:
             return pd.DataFrame()  # Empty selection
 
         df = pd.DataFrame(all_data)
-       # print("Raw selected data:")
-       # print(df.head())
 
         return df
     
@@ -193,7 +218,6 @@ class TableController:
         Event handler for table selection changes.
         This method is called whenever the selection in the table changes.
         """
-        print(f"event: {self.get_table_selection()}")
         return self.get_table_selection()
 
     
@@ -511,7 +535,7 @@ class GUIToolbar:
             self.export_button.grid(row=1, column=0, sticky='ne')
 
             # Add Export Operations Log Button with an Icon this will be the output
-            self.export_log_img = Image.open("assets/txticon.png")
+            self.export_log_img = Image.open(resource_path("assets/txticon.png"))
             self.export_log_img = self.export_log_img.resize((28, 28))  # Resize to 32x32 (adjust the size as necessary)
             self.export_log_img = ImageTk.PhotoImage(self.export_log_img)  # Convert to a Tkinter-compatible format
 
