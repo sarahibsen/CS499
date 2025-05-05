@@ -22,7 +22,7 @@ import pathlib
 import os
 import sys
 from menu_functions import set_theme, about_the_app, show_help
-from data_utils import clean_numeric_data
+from plot_registry import plot_registry
 
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
@@ -712,7 +712,7 @@ class MeasureSelectionPage(BasePage):
 
 
             result_str = "\n\n".join(format_result(k, v) for k, v in results.items())
-            messagebox.showinfo("Calculated Statistics", result_str)
+            #messagebox.showinfo("Calculated Statistics", result_str)
 
             self.gui_controller.pages["ResultsPage"].display_results(results)
             #self.gui_controller.show_page("ResultsPage")
@@ -881,22 +881,16 @@ class DashboardPage(BasePage):
 
     def render_plot(self, x, y, graph_type="Line Chart"):
         self.ax.clear()
+        plot_func = plot_registry.get_plot(graph_type)
 
-        if graph_type == "Scatter Plot":
-            self.ax.scatter(x, y)
-        elif graph_type == "Pie Chart":
-            self.ax.pie(y, labels=x, autopct="%1.1f%%")
-        elif graph_type == "Horizontal Bar Chart":
-            self.ax.barh(x, y)
-        elif graph_type == "Vertical Bar Chart":
-            self.ax.bar(x, y)
-        elif graph_type == "Normal Distribution Curve":
-            self.ax.plot(x, y)
+        if plot_func:
+            try:
+                plot_func(self.ax, x, y)
+                self.canvas_widget.draw()
+            except Exception as e:
+                messagebox.showerror("Plot Error", f"Failed to render plot: {e}")
         else:
-            self.ax.plot(x, y)  # Fallback
-
-        self.ax.set_title(graph_type)
-        self.canvas_widget.draw()
+            messagebox.showerror("Plot Error", f"No plot registered for '{graph_type}'")
 
 
     def on_measure_change(self, event=None):
@@ -988,9 +982,7 @@ class DashboardPage(BasePage):
         valid_measures = [measure for measure in selected_measures if measure not in skipped]
 
         # Set measure dropdown
-        print(selected_measures)
-        print(skipped)
-        print(valid_measures)
+
         if valid_measures:
             measure_options = ["Select a measure"] + valid_measures
             self.measure_dropdown["values"] = measure_options
@@ -1119,453 +1111,39 @@ class DashboardPage(BasePage):
             self.ax = self.figure.add_subplot(111)
             plt.style.use('seaborn-v0_8-deep')
 
-            print("Graph data received:")
-            print(graph_data)
 
-            # Generate the selected graph
-            if graph_type == "Horizontal Bar Chart":
-                graph_data.plot(kind="barh", ax=self.ax).legend(loc='upper left', bbox_to_anchor=(1, 1))
-                self.ax.set_ylabel(f'{selected_measure} Value')
-
-            elif graph_type == "Vertical Bar Chart":
-                graph_data.plot(kind="bar", ax=self.ax).legend(loc='upper left', bbox_to_anchor=(1, 1))
-                self.ax.set_ylabel(f'{selected_measure} Value')
-
-            elif graph_type == "Pie Chart":
-                self.figure.clf()
-                raw_data = selected_table.select_dtypes(include='number')
-
-                # Process data so it can be graphed in pie chart
-                if selected_measure == "Mean":
-                    if groupby_column == "No Grouping":
-                        mean_series = raw_data.mean(numeric_only=True)
-                        graph_data = pd.DataFrame({
-                            "Column": mean_series.index,
-                            "Mean": mean_series.values
-                        })
-                    else:
-                        grouped_data = graph_data.reset_index()
-                        # Melt the result into long format: Group | Column | Mean
-                        graph_data = pd.melt(grouped_data, id_vars=[groupby_column], var_name="Column",
-                                               value_name="Mean")
-
-                if selected_measure == "Median":
-                    if groupby_column == "No Grouping":
-                        median_series = raw_data.median(numeric_only=True)
-                        graph_data = pd.DataFrame({
-                            "Column": median_series.index,
-                            "Mean": median_series.values
-                        })
-                    else:
-                        grouped_data = graph_data.reset_index()
-                        # Melt the result into long format: Group | Column | Median
-                        graph_data = pd.melt(grouped_data, id_vars=[groupby_column], var_name="Column",
-                                               value_name="Median")
-
-                if selected_measure == "Mode":
-                    if groupby_column == "No Grouping":
-                        mode_series = raw_data.mode(numeric_only=True)
-                        graph_data = pd.DataFrame({
-                            "Column": mode_series.index,
-                            "Mode": mode_series.values
-                        })
-                    else:
-                        grouped_data = graph_data.reset_index()
-                        # Melt the result into long format: Group | Column | Mode
-                        graph_data = pd.melt(grouped_data, id_vars=[groupby_column], var_name="Column",
-                                               value_name="Mode")
-
-                graph_data = graph_data.reset_index(drop=True)
-
-                # Find the numeric column to use as the pie values (besides the grouping column)
-                value_col = None
-                for col in graph_data.select_dtypes(include='number').columns:
-                    if col != 'index':
-                        value_col = col
-                        break
-
-                if value_col is None:
-                    messagebox.showerror("Error", "No numeric column found for pie chart.")
-                    return
-
-                # Determine label column
-                if groupby_column == "No Grouping":
-                    label_col = "Column"
+            # Prepare data
+            if isinstance(graph_data, pd.DataFrame):
+                if graph_data.shape[1] == 1:
+                    x = graph_data.index.tolist()
+                    y = graph_data.iloc[:, 0].tolist()
+                elif graph_data.shape[1] == 2:
+                    x = graph_data.iloc[:, 0].tolist()
+                    y = graph_data.iloc[:, 1].tolist()
                 else:
-                    label_col = groupby_column if groupby_column in graph_data.columns else "Column"
-
-                # Plot the pie chart
-                ax = self.figure.add_subplot(111)
-                ax.pie(
-                    graph_data[value_col],
-                    labels=graph_data[label_col],
-                    explode=[0.05] * len(graph_data)
-                )
-                ax.set_title(f"{selected_measure} by {label_col}")
-                self.canvas_widget.draw()
-
-            elif graph_type == "Normal Distribution Curve":
-                if selected_measure == "Binomial Distribution":
-
-                    # Get parameters from controller
-                    n_trials, prob = self.main_control.get_last_binomial_params()
-
-                    if n_trials is None or prob is None:
-                        messagebox.showerror("Error",
-                                             "No binomial parameters found. Please run Binomial Distribution measure first.")
-                        return
-                    mean = n_trials * prob
-                    std_dev = np.sqrt(n_trials * prob * (1 - prob))
-                    # Generate values for the x-axis
-                    x_vals = np.linspace(0, n_trials, 1000)
-                    normal_approx = stats.norm.pdf(x_vals, mean, std_dev)
-
-                    # Plot the normal approximation curve
-                    self.ax.plot(x_vals, normal_approx, color='green',
-                                 label=f"Normal Approximation (μ={mean:.2f}, σ={std_dev:.2f})")
-                    self.ax.set_xlabel("Number of Successes (k)")
-                    self.ax.set_ylabel("Probability Density")
-                    self.ax.legend()
-
-                elif selected_measure == "Percentiles":
-                    # Plot the percentiles for the selected measure
-                    self.plot_normal_distribution_with_percentiles(graph_data, data_frame, selected_columns)
-
-                elif selected_measure == "Standard Deviation":
-                    try:
-                        # Clear previous plot
-                        self.figure.clf()
-                        self.ax = self.figure.add_subplot(111)
-
-                        # Get the original data
-                        table_controller = self.get_table_controller()
-
-                        if not table_controller:
-                            messagebox.showerror("Error", "Could not access table data")
-                            return
-
-                        data_frame = self.main_control.load_data_from_table(table_controller)
-
-                        if data_frame.empty:
-                            messagebox.showerror("Error", "No data available for plotting")
-                            return
-
-                        # Select only numeric columns
-                        numeric_cols = data_frame.select_dtypes(include=['number']).columns
-
-                        if len(numeric_cols) == 0:
-                            messagebox.showerror("Error", "No numeric columns found for calculation")
-                            return
-
-                        # Calculate standard deviation for each column
-                        std_values = {}
-                        for col in numeric_cols:
-                            col_data = data_frame[col].dropna()
-                            if len(col_data) > 1:  # Need at least 2 points for std dev
-                                std = col_data.std()
-                                std_values[col] = std
-
-                        if not std_values:
-                            messagebox.showerror("Error", "Could not calculate standard deviation")
-                            return
-
-                        # Plot normal distribution of the actual data with std dev in legend
-                        for col, std in std_values.items():
-                            col_data = data_frame[col].dropna()
-
-                            # Plot KDE of actual data
-                            sns.kdeplot(col_data, ax=self.ax, fill=True,
-                                        label=f"{col} (σ={std:.2f})")
-
-                            # Calculate reference values
-                            mean_val = col_data.mean()
-
-                            # Add vertical lines with labels
-                            mean_line = self.ax.axvline(mean_val, color='r', linestyle='--', alpha=0.7,
-                                                        label=f'{col} Mean ({mean_val:.2f})')
-                            upper_line = self.ax.axvline(mean_val + std, color='g', linestyle=':', alpha=0.7,
-                                                         label=f'{col} Mean+σ ({mean_val + std:.2f})')
-                            lower_line = self.ax.axvline(mean_val - std, color='g', linestyle=':', alpha=0.7,
-                                                         label=f'{col} Mean-σ ({mean_val - std:.2f})')
-
-                            # Add text labels near the lines
-                            y_max = self.ax.get_ylim()[1]
-                            offset = y_max * 0.05  # Small offset from lines
-                            self.ax.text(mean_val, y_max - offset, 'Mean',
-
-                                         color='red', ha='center', va='bottom',
-                                         bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
-
-                            self.ax.text(mean_val + std, y_max - offset * 2, '+σ',
-                                         color='green', ha='center', va='bottom',
-                                         bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
-
-                            self.ax.text(mean_val - std, y_max - offset * 2, '-σ',
-                                         color='green', ha='center', va='bottom',
-                                         bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
-
-                            # Shade the ±1σ region
-                            self.ax.axvspan(mean_val - std, mean_val + std,
-                                            color='green', alpha=0.1,
-                                            label=f'{col} ±1σ range')
-
-                        # Add plot decorations
-                        self.ax.set_title("Data Distribution with Standard Deviation")
-                        self.ax.set_xlabel("Values")
-                        self.ax.set_ylabel("Density")
-
-                        # Create legend with all elements
-                        handles, labels = self.ax.get_legend_handles_labels()
-
-                        # Remove duplicate labels while preserving order
-                        unique = [(h, l) for i, (h, l) in enumerate(zip(handles, labels)) if l not in labels[:i]]
-                        self.ax.legend(*zip(*unique), loc='upper right')
-                        self.canvas_widget.draw()
-
-                    except Exception as e:
-                        messagebox.showerror("Error", f"Failed to plot Standard Deviation: {str(e)}")
-                        print(f"Error plotting Std Dev: {e}")
-
-                elif selected_measure == "Variance":
-                    try:
-                        # Clear previous plot
-                        self.figure.clf()
-                        self.ax = self.figure.add_subplot(111)
-
-                        # Get the original data, not just the variance values
-                        table_controller = self.get_table_controller()
-
-                        if not table_controller:
-                            messagebox.showerror("Error", "Could not access table data")
-                            return
-
-                        data_frame = self.main_control.load_data_from_table(table_controller)
-
-                        if data_frame.empty:
-                            messagebox.showerror("Error", "No data available for plotting")
-                            return
-
-                        # Select only numeric columns
-                        numeric_cols = data_frame.select_dtypes(include=['number']).columns
-                        if len(numeric_cols) == 0:
-                            messagebox.showerror("Error", "No numeric columns found for variance calculation")
-                            return
-
-                        # Calculate and display variance for each column
-                        variance_values = data_frame[numeric_cols].var(ddof=1)
-
-                        # Plot normal distribution of the actual data
-                        for col in numeric_cols:
-                            col_data = data_frame[col].dropna()
-                            if len(col_data) > 1:  # Need at least 2 points for variance
-                                # Plot KDE of actual data
-                                sns.kdeplot(col_data, ax=self.ax, fill=True,
-                                            label=f"{col} (σ²={variance_values[col]:.2f})")
-                                # Add vertical line at mean
-                                mean_val = col_data.mean()
-                                self.ax.axvline(mean_val, color='r', linestyle='--', alpha=0.5)
-                            if len(col_data.unique()) < 2:
-                                continue  # Skip columns with no variability
-
-                        if len(numeric_cols) > 0:
-                            self.ax.set_title("Data Distribution with Variance")
-                            self.ax.set_xlabel("Values")
-                            self.ax.set_ylabel("Density")
-                            self.ax.legend()
-                            self.canvas_widget.draw()
-                        else:
-                            messagebox.showwarning("Warning", "No plottable data found")
-
-
-                    except Exception as e:
-                        messagebox.showerror("Error", f"Failed to plot variance: {str(e)}")
-                        print(f"Error plotting variance: {e}")
-
-                elif selected_measure == "Coefficient of Variation":
-                    try:
-                        # Clear previous plot
-                        self.figure.clf()
-                        self.ax = self.figure.add_subplot(111)
-
-                        # Get the original data
-                        table_controller = self.get_table_controller()
-                        if not table_controller:
-                            messagebox.showerror("Error", "Could not access table data")
-                            return
-
-                        data_frame = self.main_control.load_data_from_table(table_controller)
-                        if data_frame.empty:
-                            messagebox.showerror("Error", "No data available for plotting")
-                            return
-
-                        # Select only numeric columns
-                        numeric_cols = data_frame.select_dtypes(include=['number']).columns
-
-                        if len(numeric_cols) == 0:
-                            messagebox.showerror("Error", "No numeric columns found for calculation")
-                            return
-
-                        # Calculate coefficient of variation for each column
-                        cv_values = {}
-                        for col in numeric_cols:
-                            col_data = data_frame[col].dropna()
-                            if len(col_data) > 1 and col_data.mean() != 0:  # Need at least 2 points and non-zero mean
-                                cv = col_data.std() / col_data.mean()
-                                cv_values[col] = cv
-
-                        if not cv_values:
-                            messagebox.showerror("Error", "Could not calculate CV (possibly zero mean values)")
-                            return
-
-                        # Plot normal distribution of the actual data with CV in legend
-                        for col, cv in cv_values.items():
-                            col_data = data_frame[col].dropna()
-                            # Plot KDE of actual data
-                            sns.kdeplot(col_data, ax=self.ax, fill=True,
-                                        label=f"{col} (CV={cv:.2f})")
-
-                            # Calculate reference values
-                            mean_val = col_data.mean()
-                            std_val = col_data.std()
-
-                            # Add vertical lines with labels
-                            mean_line = self.ax.axvline(mean_val, color='r', linestyle='--', alpha=0.7,
-                                                        label=f'{col} Mean ({mean_val:.2f})')
-
-                            upper_line = self.ax.axvline(mean_val + std_val, color='g', linestyle=':', alpha=0.7,
-                                                         label=f'{col} Mean+1σ ({mean_val + std_val:.2f})')
-
-                            lower_line = self.ax.axvline(mean_val - std_val, color='g', linestyle=':', alpha=0.7,
-                                                         label=f'{col} Mean-1σ ({mean_val - std_val:.2f})')
-
-                            # Add text labels near the lines
-                            y_max = self.ax.get_ylim()[1]
-                            offset = y_max * 0.05  # Small offset from lines
-
-                            self.ax.text(mean_val, y_max - offset, 'Mean',
-                                         color='red', ha='center', va='bottom',
-                                         bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
-
-                            self.ax.text(mean_val + std_val, y_max - offset * 2, '+1σ',
-                                         color='green', ha='center', va='bottom',
-                                         bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
-
-                            self.ax.text(mean_val - std_val, y_max - offset * 2, '-1σ',
-                                         color='green', ha='center', va='bottom',
-                                         bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
-
-                        # Add plot decorations
-                        self.ax.set_title("Data Distribution with Coefficient of Variation")
-                        self.ax.set_xlabel("Values")
-                        self.ax.set_ylabel("Density")
-
-                        # Create legend with all elements
-                        handles, labels = self.ax.get_legend_handles_labels()
-                        # Remove duplicate labels while preserving order
-                        unique = [(h, l) for i, (h, l) in enumerate(zip(handles, labels)) if l not in labels[:i]]
-                        self.ax.legend(*zip(*unique), loc='upper right')
-
-                        self.canvas_widget.draw()
-
-                    except Exception as e:
-                        messagebox.showerror("Error", f"Failed to plot Coefficient of Variation: {str(e)}")
-                        print(f"Error plotting CV: {e}")
-
-                elif isinstance(graph_data, pd.Series):
-                    sns.kdeplot(graph_data, ax=self.ax, fill=True, label=selected_measure)
-
-                else:
-                    for col in selected_columns:
-                        if col in data_frame.columns:
-                            col_data = pd.to_numeric(data_frame[col], errors='coerce').dropna()
-                            if not col_data.empty:
-                                sns.kdeplot(col_data, ax=self.ax, fill=True, label=col)
-                                self.ax.legend([f"{col}"])
-
-            elif graph_type == "Scatter Plot":  # X-Y Graph
-                    if selected_measure == "Spearman Rank Correlation":
-                        x = graph_data[selected_columns[0]]
-                        y = graph_data[selected_columns[1]]
-
-                        self.ax.scatter(x, y, label=groupby_column)
-                        self.ax.set_xlabel(selected_columns[0])
-                        self.ax.set_ylabel(selected_columns[1])
-
-                        coefficients = np.polyfit(x, y, 1)
-                        trend = np.poly1d(coefficients)
-                        self.ax.plot(x, trend(x), 'r--', label='Trend Line')
-
-                    elif selected_measure == "Correlation Coefficient":
-                        x = graph_data[selected_columns[0]]
-                        y = graph_data[selected_columns[1]]
-
-                        self.ax.scatter(x, y, label="Data Points")
-                        self.ax.set_xlabel(selected_columns[0])
-                        self.ax.set_ylabel(selected_columns[1])
-                        self.ax.set_title(f"Correlation Coefficient: {x.corr(y):.2f}")
-
-                        # Optional trend line
-                        coefficients = np.polyfit(x, y, 1)
-                        trend = np.poly1d(coefficients)
-                        self.ax.plot(x, trend(x), 'r--', label='Trend Line')
-
-
-                    elif selected_measure == "Least Square Line":
-                        x = graph_data[selected_columns[0]]  # should be graphed on the horizontal
-                        y = graph_data[selected_columns[1]]  # vertical
-                        coefficients = np.polyfit(x, y, 1)
-                        slope = coefficients[0]
-                        intercept = coefficients[1]
-
-                        # Create the line of best fit
-                        line = slope * x + intercept
-
-                        # Plot the original data points
-                        self.ax.scatter(x, y, label='Data Points')
-
-                        # Plot the least squares line
-                        self.ax.plot(x, line, color='red', label='Least Square Line')
-
-                    else:
-                        for col in selected_columns:
-                            self.ax.scatter(graph_data.index, graph_data[col], label=col)
-                    self.ax.legend()
-
-            # Set labels and title
-            print("Selected columns:", selected_columns)
-            column_names = ", ".join(selected_columns)
-            if groupby_column == "No Grouping" or grouping_eligible == "No grouping":
-                self.ax.set_title(f"{selected_measure} of {column_names}")
+                    x = list(graph_data.columns)
+                    y = graph_data.iloc[0].tolist()
+            elif isinstance(graph_data, pd.Series):
+                x = graph_data.index.tolist()
+                y = graph_data.values.tolist()
             else:
-                self.ax.set_title(f"{selected_measure} of {column_names} by {groupby_column}")
+                messagebox.showerror("Plot Error", "Graph data format not supported.")
+                return
 
-            if graph_type != "Pie Chart":
-                self.ax.tick_params(axis='x', rotation=45)
+            # Use registered plot
+            self.ax.clear()
+            plot_func = plot_registry.get_plot(graph_type)
 
-            # fallback
-            elif graph_type in ["Normal Distribution Curve", "Vertical Bar Chart", "Horizontal Bar Chart", "Scatter Plot", "Pie Chart"]:
+            if plot_func:
                 try:
-                    custom_func = statistic.registered_measures.get(selected_measure)
-                    print("custom", custom_func)
-                    if custom_func:
-                        stat_instance = statistic(selected_table)
-                        result = custom_func(stat_instance)
-
-                        x, y = self.extract_plot_data(result)
-
-                        if x is not None and y is not None:
-                            self.render_plot(x, y, graph_type)
-                            return
-                        else:
-                            #messagebox.showwarning("Graph Warning", f"Cannot graph data for '{selected_measure}'")
-                            None
+                    plot_func(self.ax, x, y, measure=selected_measure)
+                    self.ax.set_title(f"{selected_measure} - {graph_type}")
+                    self.canvas_widget.draw()
                 except Exception as e:
-                    print(f"Fallback plot failed: {e}")
-                    messagebox.showerror("Graph Error", f"Failed to plot '{selected_measure}': {e}")
+                    messagebox.showerror("Plot Error", f"Failed to render plot: {e}")
+            else:
+                messagebox.showerror("Plot Error", f"No registered plot for '{graph_type}'")
 
-
-            # Redraw the canvas
-            self.canvas_widget.draw()
 
     def process_non_grouped_data(self, selected_measure):
         # Ensure the table controller is available
